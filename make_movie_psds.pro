@@ -171,7 +171,8 @@ pro make_movie_psds, atm_psds0, fit_atm_psds0, layer_list, ca, $
         thisframe = all_data[*,*,t]
         thisframe_byte = byte(rebin(round(thisframe), $
                                     n*3*ufac, n*ufac, /samp))
-        fname = 'tmp/img'+number_string(t, per_len+ 1)+'.gif'
+        ; fname = 'tmp/img'+number_string(t, per_len+ 1)+'.gif'
+        fname = 'tmp/img'+STRING(t,FORMAT='(I2.2)')+'.gif'
         write_gif, fname, thisframe_byte
 
         ;; add in notation for the temporal frequency

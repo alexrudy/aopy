@@ -137,15 +137,15 @@ pro process_fmodes, obs, per_len=pflag, more=moreflag
   print, ' '
   stop
 
-
+  help,fit_data
   ;;;; these require ImageMagick!
   make_wind_map, wind_data, obs, /old, /png
   make_layer_freq_image, fit_data, wind_data, obs, /png
-
+  help,fit_data
   stop
-
-  wset, 3 & make_layer_freq_image, fit_data.est_omegas_peaks/(2*!pi)*obs.rate, wind_data.layer_list, obs, maxv=10.
-
+  window, 3
+  ; wset, 3 & make_layer_freq_image, fit_data.est_omegas_peaks/(2*!pi)*obs.rate, wind_data.layer_list, obs, maxv=10.
+  wset, 3 & make_layer_freq_image, fit_data, wind_data, obs, maxv=10.
   make_movie_psds, atm_psds, fit_data.fit_atm_psds, wind_data.layer_list, obs
 
 
