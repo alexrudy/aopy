@@ -21,7 +21,7 @@
 ;/linear = keyword set to use linear interpolation instead of cubic convolution interpolation (faster but less accurate)
 ;/nomask = Edges of aperture are generally masked out, set this to not mask edges.  Pass actveclocs instead of actinnerlocs if this keyword is set
 
-function estimate_wind_2d,pCurr,pPrev,wind_prior,search_size,n,pactlocs,maxit,LINEAR = linear,NOMASK = nomask
+function estimate_wind_2da,pCurr,pPrev,wind_prior,search_size,n,pactlocs,maxit,LINEAR = linear,NOMASK = nomask
 	if n_elements(maxit) eq 0 then maxit=1
 	if keyword_set(linear) then cubic_interp = 0 else cubic_interp = 1
 	if keyword_set(nomask) then mask_edges = 0 else mask_edges = 1

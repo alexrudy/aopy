@@ -130,17 +130,17 @@ pro process_fmodes, obs, per_len=pflag, more=moreflag
   print, '  '
   
   make_wind_map, wind_data, obs, /old
-  stop
+  ;stop
   make_layer_freq_image, fit_data, wind_data, obs
 
   print, 'Next routines require ImageMagick, etc.'
   print, ' '
-  stop
+  ;stop
 
   ;;;; these require ImageMagick!
   make_wind_map, wind_data, obs, /old, /png
   make_layer_freq_image, fit_data, wind_data, obs, /png
-  stop
+  ;stop
   window, 3
   ; wset, 3 & make_layer_freq_image, fit_data.est_omegas_peaks/(2*!pi)*obs.rate, wind_data.layer_list, obs, maxv=10.
   wset, 3 & make_layer_freq_image, fit_data, wind_data, obs, maxv=10.
@@ -158,7 +158,7 @@ pro process_fmodes, obs, per_len=pflag, more=moreflag
 ;;;; do this myself
   peaks_hz = fit_data.est_omegas_peaks/(2*!pi)*obs.rate
   
-  stop
+  ;stop
   ;; k = obs.n-5
   ;; l = 5
 
