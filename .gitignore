@@ -11,3 +11,4 @@ data/*
 figures/*
 movies/*
 tmp/*
+*.pyc
