@@ -28,7 +28,7 @@ def plot_histogram_binning(XY,nbins=1e2,size=None):
     plt.ylabel("Wind Velocity (m/s)")
     plt.xlabel("Wind Velocity (m/s)")
 
-def plot_time_series(T,XY,clip=1e3,swindow='flat',wsize=101):
+def plot_time_series(T,XY,clip=5e3,swindow='flat',whz=1e2):
     """docstring for plot_time_series"""
     assert T.shape[0] == XY.shape[0], "Shape Mismatch"
     if clip > T.shape[0]:
@@ -36,15 +36,17 @@ def plot_time_series(T,XY,clip=1e3,swindow='flat',wsize=101):
     else:
         clip = slice(None,clip)
     magnitude = np.sqrt(np.sum(np.power(XY,2),axis=1))
+    tstep = np.mean(np.diff(T))
+    wsize = (1.0 / tstep) / whz
     tc = T[clip]
     xc = XY[clip,0]
     yc = XY[clip,1]
     mc = magnitude[clip]
-    plt.plot(tc,xc,'g.',label="x-wind")
+    plt.plot(tc,xc,'gx',label="x-wind")
     plt.plot(tc,smooth(xc,wsize,window=swindow),'g-',linewidth=2.0)
-    plt.plot(tc,yc,'b.',label="y-wind")
+    plt.plot(tc,yc,'bx',label="y-wind")
     plt.plot(tc,smooth(yc,wsize,window=swindow),'b-',linewidth=2.0)
-    plt.plot(tc,mc,'r.',label='wind magnitude',zorder=0.1,alpha=0.5)
+    plt.plot(tc,mc,'rx',label='wind magnitude',zorder=0.1,alpha=0.5)
     plt.plot(tc,smooth(mc,wsize,window=swindow),'r-',linewidth=2.0,zorder=0.1,alpha=0.5)
     plt.legend()
     plt.xlabel("Time (s)")
@@ -127,7 +129,7 @@ class PlotLukeWind(CLIEngine):
         FileNames = []
         for fname in self.opts.name:
             if is_type_factory(int)(fname):
-                FileNames.append(files[fname])
+                FileNames.append(files[int(fname)-1])
             elif isinstance(fname,basestring) and check_exists(fname):
                 FileNames.append(fname)
             else:
