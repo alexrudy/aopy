@@ -27,7 +27,10 @@ pro process_phase, obs
   wind = fltarr(n_methods,3,maxpass)
   
   ;; Make Search Size
-  search_size = 0.00001
+  
+  ss = { xy: 1e-4, twod: 1e-4}
+  
+  maxit = { gn:1, rt:1, xy: 1, twod: 1 }
   
   
   ;; Iterator Variables
@@ -43,7 +46,7 @@ pro process_phase, obs
           ;; Gauss-Newton
           method = 0
           method_name = methods(method)
-          u_x = estimate_wind_GN(pcurr,pprev,n,pap,papinner,wind_prior[method,*],1)
+          u_x = estimate_wind_GN(pcurr,pprev,n,pap,papinner,wind_prior[method,*],maxit.gn)
           wind[method,0:1,t-1] = u_x * obs.d * obs.rate
           wind[method,2,t-1] = t / obs.rate
           wind_prior[method,0:1] = u_x
@@ -52,7 +55,7 @@ pro process_phase, obs
           ;; RT
           method = 1
           method_name = methods(method)
-          u_x = estimate_wind_rt(pcurr,pprev,wind_prior[method,*],1)
+          u_x = estimate_wind_rt(pcurr,pprev,wind_prior[method,*],maxit.rt)
           wind[method,0:1,t-1] = u_x * obs.d * obs.rate
           wind[method,2,t-1] = t / obs.rate
           wind_prior[method,0:1] = u_x
@@ -60,7 +63,7 @@ pro process_phase, obs
           ;; 2D
           method = 2
           method_name = methods(method)
-          u_x = estimate_wind_2da(pcurr,pprev,wind_prior[method,*],search_size,n,papinner,1)
+          u_x = estimate_wind_2da(pcurr,pprev,wind_prior[method,*],ss.twod,n,papinner,maxit.twod)
           wind[method,0:1,t-1] = u_x * obs.d * obs.rate
           wind[method,2,t-1] = t / obs.rate
           wind_prior[method,0:1] = u_x
@@ -69,9 +72,9 @@ pro process_phase, obs
           method = 3
           method_name = methods(method)
           if (t mod 2) eq 0 then begin
-                  u_x = estimate_wind_2d_xa(pcurr,pprev,wind_prior[method,*],search_size,n,papinner,1)
+                  u_x = estimate_wind_2d_xa(pcurr,pprev,wind_prior[method,*],ss.xy,n,papinner,maxit.xy)
           endif else begin
-                  u_x = estimate_wind_2d_ya(pcurr,pprev,wind_prior[method,*],search_size,n,papinner,1)
+                  u_x = estimate_wind_2d_ya(pcurr,pprev,wind_prior[method,*],ss.xy,n,papinner,maxit.xy)
           endelse
           wind[method,0:1,t-1] = u_x * obs.d * obs.rate
           wind[method,2,t-1] = t / obs.rate
@@ -82,7 +85,7 @@ pro process_phase, obs
           ptr_free,pprev
           
           if (t mod alert_step) eq 0 then begin
-                  print, strtrim(ceil(100.0 * (float(t) / float(maxpass))),2), "% done"
+                  print, format='($,A,"% ")',strtrim(ceil(100.0 * (float(t) / float(maxpass))),2)
           endif
 
   endfor
