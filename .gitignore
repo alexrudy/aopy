@@ -12,3 +12,5 @@ figures/*
 movies/*
 tmp/*
 *.pyc
+reports/*.log
+reports/*.aux
