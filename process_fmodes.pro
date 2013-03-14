@@ -125,26 +125,26 @@ pro process_fmodes, obs, per_len=pflag, more=moreflag
   wind_data = find_and_fit_layers(fit_data.est_omegas_peaks/(2*!pi)*obs.rate, obs)
 
   
-  ;; display nicely!
-  print, 'Ok - look at stuff'
-  print, '  '
-  
-  make_wind_map, wind_data, obs, /old
-  ;stop
-  make_layer_freq_image, fit_data, wind_data, obs
+  ; ;; display nicely!
+  ; print, 'Ok - look at stuff'
+  ; print, '  '
+  ; 
+  ; make_wind_map, wind_data, obs, /old
+  ; ;stop
+  ; make_layer_freq_image, fit_data, wind_data, obs
 
-  print, 'Next routines require ImageMagick, etc.'
-  print, ' '
-  ;stop
-
-  ;;;; these require ImageMagick!
-  make_wind_map, wind_data, obs, /old, /png
-  make_layer_freq_image, fit_data, wind_data, obs, /png
-  ;stop
-  window, 3
-  ; wset, 3 & make_layer_freq_image, fit_data.est_omegas_peaks/(2*!pi)*obs.rate, wind_data.layer_list, obs, maxv=10.
-  wset, 3 & make_layer_freq_image, fit_data, wind_data, obs, maxv=10.
-  make_movie_psds, atm_psds, fit_data.fit_atm_psds, wind_data.layer_list, obs
+  ; print, 'Next routines require ImageMagick, etc.'
+;   print, ' '
+;   ;stop
+; 
+;   ;;;; these require ImageMagick!
+;   make_wind_map, wind_data, obs, /old, /png
+;   make_layer_freq_image, fit_data, wind_data, obs, /png
+;   ;stop
+;   window, 3
+;   ; wset, 3 & make_layer_freq_image, fit_data.est_omegas_peaks/(2*!pi)*obs.rate, wind_data.layer_list, obs, maxv=10.
+;   wset, 3 & make_layer_freq_image, fit_data, wind_data, obs, maxv=10.
+;   make_movie_psds, atm_psds, fit_data.fit_atm_psds, wind_data.layer_list, obs
 
 
 
@@ -158,6 +158,19 @@ pro process_fmodes, obs, per_len=pflag, more=moreflag
 ;;;; do this myself
   peaks_hz = fit_data.est_omegas_peaks/(2*!pi)*obs.rate
   
+  mkhdr, h1, wind_data.metric, /extend
+  fxaddpar, h1, 'TSCOPE', obs.telescope, 'Telescope of observation'
+  fxaddpar, h1, 'RAWPATH', obs.raw_path, 'File path and name of raw telemetry archive'
+  fxaddpar, h1, 'PROCPATH', obs.processed_path, 'File path and name of the processes data'
+  fxaddpar, h1, 'DTYPE', 'Wind Map', 'In spatial domain'
+  writefits,obs.processed_path+'_fwmap.fits',wind_data.metric,h1
+  mkhdr, h2, wind_data.vx, /image
+  fxaddpar, h2, 'DTYPE', 'Wind vx scale', 'in m/s'
+  writefits,obs.processed_path+'_fwmap.fits',wind_data.vx,h2,/append
+  mkhdr, h3, wind_data.vy, /image
+  fxaddpar, h3, 'DTYPE', 'Wind vy scale', 'in m/s'
+  writefits,obs.processed_path+'_fwmap.fits',wind_data.vy,h3,/append
+  print,"Done Processing FModes"
   ;stop
   ;; k = obs.n-5
   ;; l = 5
