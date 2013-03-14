@@ -64,7 +64,7 @@ function hMatrix,ap,actVecLocs,sensVecLocs
   return,double(H3)
 end
 ;Run multiple iterations of code:
-Runs = 2
+Runs = 1
 
 
 for q=0,Runs-1 do begin
@@ -79,14 +79,14 @@ km = 1.e4
 i = complex(0.,1.)
 ;============================================================================
 
-D =3.00				;aperture diameter, in meters
-du = D/(31)			;actuator spacing, in meters
+D =10.0				;aperture diameter, in meters
+du = 0.56			;actuator spacing, in meters
 dp = 1				;# of pixels across to break each subap into
 r0 = 0.10			;Fried's parameter, in meters
 lambda0 = 0.1*microns ;wavelength at which Fried's parameter is specified
 real_wind = 25		;true wind in m/s (x direction only)
-controller_speed = 1000;speed of AO controller in Hz
-Tf = 500				;# of timesteps
+controller_speed = 1054;speed of AO controller in Hz
+Tf = 29999				;# of timesteps
 fixRandomSeed = 1 	;always use the same screen each time the code is run
 verbose = 1
 do_plots = 1
@@ -178,7 +178,7 @@ if not use_real_data then begin
 	na = (size(H))[1]
 	ns = (size(H))[2]
 	if (fixRandomSeed) then begin
-		seed0 = 5
+		seed0 = 0
 	endif else begin
 		if (n_elements(seed0) eq 0) then seed0 = 5 else seed0 = seed0+1
 	endelse
@@ -230,7 +230,8 @@ if use_test_image then begin
 endif
 if (not use_real_data and not use_test_image) then begin
 	if (r0 ge du) then sd_noise = !DPI^2/2/sqrt(2)/SNR*sqrt(2.25+(du/r0)^2) else sd_noise = !DPI^2/2/sqrt(2)/SNR*sqrt(3.25*(du/r0)^2)
-	screen = blowingScreen_init(npix,npix*16,r0,du/dp,seed=seedin)
+    m = npix + Tf*real_wind*dp
+	screen = blowingScreen_init(npix,m,r0,du/dp,seed=seedin)
 	for t=0,Tf do begin
   		wait,.001
    		phi_fine = blowingScreen_get(screen,real_wind*t*dp)*apa_pix
@@ -247,7 +248,10 @@ if (not use_real_data and not use_test_image) then begin
 ;			endfor
 ;		endfor
 ;	endfor
-	phi_coarse_t = rebin(phi_fine_t,n,n,Tf+1,/sample)
+    phi_coarse_t = readfits('data/keck_simulated/proc/sim_0_phase.fits',tmphead)
+    apa = phi_coarse_t[*,*,0] ne 0
+    pApa = ptr_new(apa)
+    ; phi_coarse_t = rebin(phi_fine_t,n,n,Tf+1,/sample)
 	if add_noise then begin
 		for t=0,Tf do begin
 			noise = sd_noise*randomn(seed,[n,n])
@@ -392,7 +396,7 @@ for iter =0,1 do begin
 		if verbose then print,['Intensity method average wind estimate - y = '+string(wind_est_avg[1])+'+/-'+string(wind_est_stddev[1])]
 		;print,'Average wind error =',wind_err_avg
 		if verbose then print,['Computation time = '+string(comp_time/Tf*1000)+' millisec per timestep']
-		if iter then begin
+		if not iter then begin
 			if do_plots then begin
 				;window,0,title='wind estimates at each timestep'
 				piston_rms = wf_rms_t[start_frame:Tf]-wf_rms_t_nopiston[start_frame:Tf]
@@ -409,6 +413,8 @@ for iter =0,1 do begin
 				;window,1,title='delta tt vs error'
 				;plot,wind_err[0,start_frame:Tf],wf_rms_t_deltatt[start_frame:Tf],psym=2
 			endif
+            mkhdr, h1, wind_est
+            writefits, 'data/keck_simulated/proc/sim_0_luke_wind.fits', wind_est, h1
 		endif else wind_est_nott = wind_est
 
 		wind_est_gn = fltarr(size(wind_est,/dimensions))
