@@ -134,7 +134,7 @@ pro process_raw_data, obs
 
 
   if strcmp(obs.data_dim, '3D-timefirst') then begin
-     dims = size(data)
+     dims = size(sig)
      len = dims[1]
      thisn = dims[2]
 
@@ -147,6 +147,23 @@ pro process_raw_data, obs
         pingrid = (dm_shape[*,*,0] NE 0.)*1.
      endif
   endif
+  
+  if strcmp(obs.data_dim, '3D-timelast') then begin
+      dims = size(sig)
+      len = dims[3]
+      thisn = dims[2]
+
+      dm_shape = make_array(obs.n, obs.n, len)
+      for t=0, len-1 do $
+         dm_shape[obs.l_dm:obs.h_dm, obs.l_dm:obs.h_dm,t] = sig[*,*,t]
+
+      ;;;; get the mask that defines the valid pupil
+      if strcmp(obs.pupil_remap, 'data') then begin
+         pingrid = (dm_shape[*,*,0] NE 0.)*1.
+      endif
+    endif
+  
+  
   
   ;;; free up space
   delvar, sig
