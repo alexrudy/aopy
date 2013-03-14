@@ -1,0 +1,10 @@
+Maps:
+  Limits:
+    min: -40
+    max: 40
+  Nbins: 50
+  RebinFT: false
+Smooth:
+  Frequency: 100
+Figures:
+  DPI: 300
