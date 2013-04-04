@@ -41,8 +41,8 @@ class ExamineWind(PlotLukeWind):
         Wind = DataFile[0].data[:,:2,:]
         Time = DataFile[0].data[:,2,:]
         from IPython.frontend.terminal.embed import InteractiveShellEmbed
-        shell = InteractiveShellEmbed(banner1="Starting IPython Interpreter with variable:\n"\
-        "'Wind'")
+        shell = InteractiveShellEmbed(banner1="Starting IPython Interpreter with variables:\n"\
+        "'Wind','Time','DataFile'")
         shell()
         
 if __name__ == '__main__':
