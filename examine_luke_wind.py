@@ -36,13 +36,16 @@ class ExamineWind(PlotLukeWind):
             else:
                 print("Skipping File '{}'".format(fname))
                 
-                
+        FModeName = FileNames[0].rstrip("_wind.fits")+"_fwmap.fits"
+        print("Opening Data File '{}'".format(FileNames[0]))
         DataFile = pf.open(FileNames[0])
+        print("Opening Data File '{}'".format(FModeName))
+        FModeMap = pf.open(FModeName)
         Wind = DataFile[0].data[:,:2,:]
         Time = DataFile[0].data[:,2,:]
         from IPython.frontend.terminal.embed import InteractiveShellEmbed
         shell = InteractiveShellEmbed(banner1="Starting IPython Interpreter with variables:\n"\
-        "'Wind','Time','DataFile'")
+        "'Wind','Time','DataFile','FModeMap'")
         shell()
         
 if __name__ == '__main__':
