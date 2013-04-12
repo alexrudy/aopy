@@ -221,7 +221,7 @@ function find_and_fit_peaks_nodc, atm_psds, k=kflag, l=lflag, more=moreflag, dis
            plocs= where(variance_peaks[k,l,*] NE 0., numf)
            if numf LE 0 then begin
               if keyword_set(vflag) then print, k, l, '  WARNING!: no peaks were found at all!!!!'
-              stop
+              ; stop
            endif
            
            ;; now find the peak with the most power that is very close
