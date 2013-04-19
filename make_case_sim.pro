@@ -10,26 +10,40 @@
 pro make_case_sim, obs
     
 ;    
-    forward_function blowingScreen_init,blowingScreen_get
+    blowingscreen
     
     
     params = { $
         r0: 0.10, $
-        windx: 25, $
-        dp: 1 $
+        windx: [25,50], $
+        dp: 1, $
+        layers: 2 $
     }
     
-    wind = params.windx / obs.d / obs.rate
-    m = obs.n + wind*obs.len*params.dp
-    screen = blowingScreen_init(obs.n,m,params.r0,obs.d/params.dp,seed=obs.seed)
-    screen2 = blowingScreen_init(obs.n,2*obs.n,params.r0,obs.d/params.dp,seed=obs.seed)
+
+    screens = LIST()
+    for l=0,params.layers-1 do begin
+        wind = params.windx[l] / obs.d / obs.rate
+        m = obs.n + wind*obs.len*params.dp
+        screen = blowingScreen_init(obs.n,m,params.r0,obs.d/params.dp,seed=obs.seed + l)
+        screens.add,screen
+    endfor
     phi_fine_t = fltarr(obs.n,obs.n,obs.len)
+    phi_fine_l = fltarr(obs.n,obs.n,params.layers)
     phi_fine = fltarr(obs.n,obs.n)
     for t=0,obs.len-1 do begin
-        wait,.001
-        phi_fine = blowingScreen_get(screen,wind*t*params.dp) * obs.pingrid
-        phi_static = blowingScreen_get(screen2,0) * obs.pingrid
-        phi_fine_t[*,*,t] = phi_fine + phi_static
+        wait,.0001
+        for l=0,params.layers-1 do begin
+            phi_fine_l[*,*,l] = rotate(blowingScreen_get(screens[l],wind*t*params.dp) * obs.pingrid,l)
+        endfor
+        if l gt 1 then begin
+            phi_fine[*,*] = total(phi_fine_l,3)
+        endif else begin
+            phi_fine = phi_fine_l
+        endelse
+        phi_nop = depiston(phi_fine,obs.pingrid)  * obs.pingrid
+        phi_nop_nott = detilt(phi_fine,obs.pingrid)  * obs.pingrid
+        phi_fine_t[*,*,t] = phi_nop_nott
     endfor
     
     ; phi_coarse_t = rebin(phi_fine_t,n,n,obs.len+1,/sample)

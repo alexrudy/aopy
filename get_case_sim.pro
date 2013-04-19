@@ -11,66 +11,134 @@
 ;            This function will generate a blowingScreen for the given input observation set.
 ;            
 ;-
-function get_case_sim, identifier, obs
+function get_case_sim, identifier, obs=obs
     ; setup Don's blowingScreen functions
     ; blowingsrceen,
     
-    telescope = obs.telescope + '_simulated'
+    if ~keyword_set(obs) then begin
+        n = 30
+        telescope = 'simulated'
+        read_method = 'fits'
+        data_suffix = '.fits'
+        problems = 0
 
-    read_method = 'fits' ;;; sometimes not - set as appropriate
-    data_suffix = '.fits'        ;;; sometimes not - set as appropriate
-    problems = 0                ;;; sometimes not:  set to 1 if problems
+        data_dim='3D-timelast'
+        pupil_remap = 'data'
 
-    data_dim='3D-timelast'
-    pupil_remap = 'data'
-
-
-    ;;; what files to look at
-  ;  datatype = 'closed-loop-residual'
-    datatype = 'closed-loop-dm-commands'
-  ;  datatype = 'open-loop-residual'
-
-
-    ;;;; AO system
-    rate = obs.rate
-    d = obs.d ;; 56 cm subaps
-
-    tau = obs.tau
-    gain = obs.gain
-    integrator_c = obs.integrator_c
-
-    ;;;; basic system info - grid size and how to put in grid
-    n = obs.n
-    n_dm = obs.n_dm
-    l_dm = obs.l_dm
-    h_dm = obs.h_dm
-
-  ;; inherent units!
-  ;; from the app opp paper, the surface of the mirror movies 0.409518
-  ;; microns per volt for a single actuator
-    scaling_for_nm_phase = obs.scaling_for_nm_phase ;;; actuator commands in volt - > nm of phase
-    dmtrans_mulfac = obs.dmtrans_mulfac
+        
+        ;;; what files to look at
+      ;  datatype = 'closed-loop-residual'
+        datatype = 'closed-loop-dm-commands'
+      ;  datatype = 'open-loop-residual'
 
 
-    ;;; **************************
-    ;;; **************************
-    ;;; **************************
-    ;;; **************************
+        ;;;; AO system
+        rate = 2000.0
+        d = 3.0/30.0 ;; 56 cm subaps
 
-    ;;; now for each identifier, specify the exact details
+        tau = 0.8e-3
+        gain = 0.6
+        integrator_c = 0.998
 
-    archive_location = "sim_"+strc(identifier)
-    filename = "sim_"+strc(identifier)
+        ;;;; basic system info - grid size and how to put in grid
+        n_dm = n
+        l_dm = 0
+        h_dm = n
+
+      ;; inherent units!
+      ;; from the app opp paper, the surface of the mirror movies 0.409518
+      ;; microns per volt for a single actuator
+        scaling_for_nm_phase = 1.0 ;;; actuator commands in volt - > nm of phase
+        dmtrans_mulfac = ones(n,n)
+
+
+        ;;; **************************
+        ;;; **************************
+        ;;; **************************
+        ;;; **************************
+
+        ;;; now for each identifier, specify the exact details
+        if identifier lt 10 then begin
+            archive_location = "test_phase"
+        endif else if identifier lt 20 then begin
+            archive_location = "test_phase_2l"
+        endif else if identifier lt 30 then begin
+            archive_location = "test_phase_2l_2"
+        endif else if identifier eq 40 then begin
+            archive_location = 'test_phase_2l_2v'
+        endif else begin
+            archive_location = "test_phase_" + strc(identifier)
+        endelse
+        filename = "sim_"+strc(identifier)
     
-    seed = identifier
+        seed = identifier
+        path = 'data/' + telescope + '/'
+        raw_path = path + 'raw/'
+        processed_path = path + 'proc/'
+        ;;; Get length of observation form data
+        sig = readfits(raw_path+archive_location+data_suffix, h1) 
+        dims = size(sig)
+        len = dims[3]
+        pingrid = sig[*,*,0] NE 0
+    endif else begin
     
-    ;;; Get length of observation form data
-    sig = readfits(obs.processed_path+'_phase.fits', h1) 
-    dims = size(sig)
-    len = dims[3]
-    pingrid = sig[*,*,0] NE 0
+        telescope = obs.telescope + '_simulated'
+
+        read_method = 'fits' ;;; sometimes not - set as appropriate
+        data_suffix = '.fits'        ;;; sometimes not - set as appropriate
+        problems = 0                ;;; sometimes not:  set to 1 if problems
+
+        data_dim='3D-timelast'
+        pupil_remap = 'data'
 
 
+        ;;; what files to look at
+      ;  datatype = 'closed-loop-residual'
+        datatype = 'closed-loop-dm-commands'
+      ;  datatype = 'open-loop-residual'
+
+
+        ;;;; AO system
+        rate = obs.rate
+        d = obs.d ;; 56 cm subaps
+
+        tau = obs.tau
+        gain = obs.gain
+        integrator_c = obs.integrator_c
+
+        ;;;; basic system info - grid size and how to put in grid
+        n = obs.n
+        n_dm = obs.n_dm
+        l_dm = obs.l_dm
+        h_dm = obs.h_dm
+
+      ;; inherent units!
+      ;; from the app opp paper, the surface of the mirror movies 0.409518
+      ;; microns per volt for a single actuator
+        scaling_for_nm_phase = obs.scaling_for_nm_phase ;;; actuator commands in volt - > nm of phase
+        dmtrans_mulfac = obs.dmtrans_mulfac
+
+
+        ;;; **************************
+        ;;; **************************
+        ;;; **************************
+        ;;; **************************
+
+        ;;; now for each identifier, specify the exact details
+
+        archive_location = "sim_"+strc(identifier)
+        filename = "sim_"+strc(identifier)
+    
+        seed = identifier
+    
+        ;;; Get length of observation form data
+        sig = readfits(obs.processed_path+'_phase.fits', h1) 
+        dims = size(sig)
+        len = dims[3]
+        pingrid = sig[*,*,0] NE 0
+    
+    endelse
+    
     ;;; **************************
     ;;; **************************
     ;;; **************************
