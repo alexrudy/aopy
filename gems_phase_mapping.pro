@@ -49,7 +49,7 @@ function gems_phase_mapping, data, dm_number
         endfor         
      endfor
      l = 0
-     h = 239
+     h = 238
   endif
 
 
