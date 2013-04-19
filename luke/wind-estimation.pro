@@ -89,7 +89,7 @@ controller_speed = 1054;speed of AO controller in Hz
 Tf = 29999				;# of timesteps
 fixRandomSeed = 1 	;always use the same screen each time the code is run
 verbose = 1
-do_plots = 1
+do_plots = 0
 add_noise = 0
 SNR = 2				;Signal to noise at WFS
 use_test_image = 0	;use test image instead of Kolmogorov screen
@@ -248,7 +248,7 @@ if (not use_real_data and not use_test_image) then begin
 ;			endfor
 ;		endfor
 ;	endfor
-    phi_coarse_t = readfits('data/keck_simulated/proc/sim_0_phase.fits',tmphead)
+    phi_coarse_t = readfits('data/keck_simulated/proc/sim_1_phase.fits',tmphead)
     apa = phi_coarse_t[*,*,0] ne 0
     pApa = ptr_new(apa)
     ; phi_coarse_t = rebin(phi_fine_t,n,n,Tf+1,/sample)
@@ -405,7 +405,7 @@ for iter =0,1 do begin
 				;oplot,(tt_rms)*max(wind_est[0,start_frame:Tf])/max(tt_rms),linestyle=2
 				iplot,(wf_rms_t_deltatt[start_frame:Tf])*0.5*max(wind_est[0,start_frame:Tf])/max(wf_rms_t_deltatt[start_frame:Tf]),linestyle=2,overplot=1
 				;oplot,(piston_rms)*max(wind_est[0,start_frame:Tf])/max(piston_rms),linestyle=3
-				iplot,wind_est_nott[0,start_frame:Tf],linestyle=1,overplot=1
+                iplot,wind_est_nott[0,start_frame:Tf],linestyle=1,overplot=1
 				;oplot,wind_est_nott[0,start_frame:Tf],linestyle=5
 				iplot,wind_est[1,start_frame:Tf],TITLE = 'Gauss-Newton Method',XTITLE = 'Timestep',YTITLE ='Wind Velocity - Y (m/s)'
 				;oplot,wind_est_nott[1,start_frame:Tf],linestyle=5
@@ -414,7 +414,7 @@ for iter =0,1 do begin
 				;plot,wind_err[0,start_frame:Tf],wf_rms_t_deltatt[start_frame:Tf],psym=2
 			endif
             mkhdr, h1, wind_est
-            writefits, 'data/keck_simulated/proc/sim_0_luke_wind.fits', wind_est, h1
+            writefits, 'data/keck_simulated/proc/sim_1_luke_wind.fits', wind_est, h1
 		endif else wind_est_nott = wind_est
 
 		wind_est_gn = fltarr(size(wind_est,/dimensions))
