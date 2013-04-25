@@ -171,7 +171,6 @@ pro process_fmodes, obs, per_len=pflag, more=moreflag
   fxaddpar, h3, 'DTYPE', 'Wind vy scale', 'in m/s'
   writefits,obs.processed_path+'_fwmap.fits',wind_data.vy,h3,/append
   print,"Done Processing FModes"
-  stop
   ;; k = obs.n-5
   ;; l = 5
 
