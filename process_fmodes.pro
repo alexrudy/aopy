@@ -121,7 +121,7 @@ pro process_fmodes, obs, per_len=pflag, more=moreflag
 
   ;;; now move on to finding the peaks!
 
-  fit_data = find_and_fit_peaks_nodc(atm_psds)
+  fit_data = find_and_fit_peaks(atm_psds)
   wind_data = find_and_fit_layers(fit_data.est_omegas_peaks/(2*!pi)*obs.rate, obs)
 
   
