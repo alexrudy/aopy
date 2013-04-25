@@ -204,7 +204,7 @@ class _WindPredictionMethod(object):
         
     def patch_coords(self,x,y):
         """Get the coordinates from an index."""
-        if np.sum(np.isnan([x,y])):
+        if np.any(np.isnan([x,y])):
             x, y = [0,0]
             self.log.warning("Coordinates are NaN! Setting to [0,0]")
             return x,y
@@ -349,6 +349,27 @@ class PlotLukeWind(CLIEngine):
         self.log.debug("Wrote '{}'".format(filename))
         return filename
         
+    def _sub_map(self,M,ax):
+        """docstring for _sub_map"""
+        H, xedges, yedges, extent = M.normalized_data(mode='smoothed',time=1.0/self.config["Smooth.Frequency"])
+        if M.istimeseries():
+            ax.imshow(H,extent=extent,interpolation='nearest',origin='lower',cmap=self.config.get("Maps.cmap",None))
+        else:
+            ax.imshow(H,extent=extent,interpolation='nearest',origin='lower',cmap=self.config.get("Maps.cmap",None),vmin=0,vmax=1)
+        C = ax.contour(H,10,origin='lower',extent=extent)
+        [ c.remove() for c  in C.collections[:5] ]
+        x,y = M.com()
+        # PA, = ax.plot(x,y,'o-',label="Center: "+M.name,color=M.color,mfc=M.color,markersize=14,mew=3)
+        x,y = M.max()
+        # PB, = ax.plot(x,y,'^-',label="Max: "+M.name,color=M.color,mfc=M.color,mew=3,markersize=14)
+        [ ax.add_artist(a) for a in make_circles(self.circles,color=self.config.get("Maps.Grid.imcolor","k")) ]
+        ax.add_artist(matplotlib.patches.Circle((0,0),self.config.get("Maps.Limits.rmin"),fc='none',ec='k',alpha=0.5,zorder=0.1))
+        ax.set_xlim(self.limits)
+        ax.set_ylim(self.limits)
+        ax.set_xlabel("Velocity (m/s)")
+        ax.set_ylabel("Velocity (m/s)")
+        ax.set_title("{method_desc}".format(**M.fd))
+        
     def _make_map(self,M,filename):
         """docstring for _make_map"""
         H, xedges, yedges, extent = M.normalized_data(mode='smoothed',time=1.0/self.config["Smooth.Frequency"])
@@ -390,7 +411,7 @@ class PlotLukeWind(CLIEngine):
         self.log.info("Examining:")
         for filename in FileNames:
             self.log.info(" - '{:s}' ".format(filename))
-        
+        self.log.info("Plotting {!r} {!r}".format(self.config["Plots.Enable"],isinstance(self.config["Plots.Enable"],list)))
         self._setup_methods()
         
         for FileName in FileNames:
@@ -413,6 +434,8 @@ class PlotLukeWind(CLIEngine):
             self.log.info("Examining '{set}' for {tel}".format(**FigureDict))
             self.cfig = plt.figure(dpi=self.config["Figures.DPI"])
             self.cfig.add_subplot(1,1,1)
+            self.mmfig = plt.figure(dpi=self.config["Figures.DPI"])
+            [ self.mmfig.add_subplot(2,2,i+1) for i in range(4) ]
             for method in self.config.get("Methods.Enable",[]):
                 M = self.methods[method]
                 M.fd.update(FigureDict)
@@ -437,8 +460,14 @@ class PlotLukeWind(CLIEngine):
                 # Image map of method
                 if "map" in self.config.get("Plots.Enable",[]):
                     Figures.add(self._make_map(M,M.fn.format(type='histogram',**M.fd)))
+                if "mmap" in self.config.get("Plots.Enable",[]) and M.name in self.config["Methods.MMap"]:
+                    self._sub_map(M,self.mmfig.axes[self.config["Methods.MMap"].index(M.name)])
             if "cmap" in self.config.get("Plots.Enable",[]):
                 Figures.add(self._save_cmap(_WindPredictionMethod.fn.format(type='contours',method='all',**FigureDict),FigureDict))
+            if "mmap" in self.config.get("Plots.Enable",[]):
+                self.mmfig.suptitle("Wind Map for {tel_tex} during {set_tex}".format(**FigureDict))
+                self.mmfig.savefig(_WindPredictionMethod.fn.format(type='mmap',method='all',**FigureDict))
+                Figures.add(_WindPredictionMethod.fn.format(type='mmap',method='all',**FigureDict))
             if self.opts.open:
                 subprocess.Popen(["open"] + list(Figures))
                 

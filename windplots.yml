@@ -5,7 +5,7 @@ Maps:
     rmin: 5
   Nbins: 50
   RebinFT: false
-  cmap: binary
+  # cmap: binary
   Grid:
     color: k
     imcolor: k
@@ -15,10 +15,11 @@ Figures:
   DPI: 300
 Plots:
   Enable:
-    - map
-    - timeseries
-    - cmap
-    - bintest
+    # - map
+    # - timeseries
+    # - cmap
+    - mmap
+    # - bintest
 Methods:
   Base: ['GN','RT','2D','XY','FT','2La','2Lb']
   Enable:
@@ -28,6 +29,7 @@ Methods:
     - 'FT'
     - '2La'
     - '2Lb'
+  MMap: ['FT','GN','2La','2Lb']
 logging:
   root:
     level: DEBUG
