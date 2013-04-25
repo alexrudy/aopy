@@ -6,7 +6,7 @@ function find_and_fit_layers, peaks_hz, obs, lax=laxflag
 
   ;;; parameters that we might change
 
-  lowest_hz = 2. ;;;; can't measure a peak below 2 Hz.
+  lowest_hz = 4. ;;;; can't measure a peak below 2 Hz.
   dist_hz = 1.   ;;; must be within 1 hz of layer's value
 
   frac = 0.4 
