@@ -394,7 +394,7 @@ class PlotLukeWind(CLIEngine):
         
     def do(self):
         """Take action!"""
-        files = glob.glob("data/**/proc/*_phase.fits")
+        files = glob.glob("data/{inst}/proc/*_phase.fits".format(inst=self.config.get("instrument","**")))
         if len(self.opts.name) == 0:
             self.opts.name = select_files(files)
         if len(self.opts.name) == 1 and is_type_factory(int)(self.opts.name[0]) and int(self.opts.name[0]) == 0:
