@@ -38,11 +38,11 @@ function find_and_fit_peaks, atm_psds, k=kflag, l=lflag, more=moreflag, display=
   valid = make_array(n,n) + 1.
   valid[0,0] = 0.
 
-  searchrad_dc = 0.02
+  searchrad_dc = 0.03
   alpha_for_dc = 0.995
 
-  searchrad_layer = 0.01
-  searchrad_lower = 0.012
+  searchrad_layer = 0.02
+  searchrad_lower = 0.022
   alpha_for_layer = 0.999
   min_layer_rms_frac = 0.2 ;; must have 20% the RMS of the DC!
 
