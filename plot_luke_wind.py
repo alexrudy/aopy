@@ -22,6 +22,7 @@ import subprocess
 
 from pyshell.util import query_string, is_type_factory, check_exists
 from pyshell.base import CLIEngine
+import pyshell
 
 def make_hist(X,Y,Z=None,nbins=1e3,size=None):
     """docstring for make_hist"""
@@ -232,7 +233,7 @@ class _WindPredictionMethod(object):
 class PlotLukeWind(CLIEngine):
     """docstring for PlotLukeWind"""
     defaultcfg = "windplots.yml"
-    supercfg = CLIEngine.PYSHELL_LOGGING_STREAM
+    supercfg = pyshell.PYSHELL_LOGGING_STREAM
     log = logging.getLogger(__name__)
     
     def init(self):
