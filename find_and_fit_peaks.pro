@@ -72,7 +72,7 @@ function find_and_fit_peaks, atm_psds, k=kflag, l=lflag, more=moreflag, display=
            
            if problem1 then begin
                  print, 'After DC initial fit, power is negative!     Stopping: ', k, l
-              stop
+              ; stop
            endif
 
            if problem2 then begin
@@ -85,7 +85,7 @@ function find_and_fit_peaks, atm_psds, k=kflag, l=lflag, more=moreflag, display=
               myshape = 1./(1 - 2*max_alpha*cos(omega) + max_alpha^2)
               coeff = [max_alpha, total(myshape*this_psd)/total(myshape^2)]
               res = myshape*coeff[1]
-              stop
+              ; stop
            endif
 
            alpha_dc[k,l] = coeff[0]
@@ -142,7 +142,7 @@ function find_and_fit_peaks, atm_psds, k=kflag, l=lflag, more=moreflag, display=
                  weights = (abs(omega - est_omega) LE searchrad_layer) AND (abs(omega) GT searchrad_lower)
                  if total(weights) EQ 0. then begin
                     print, 'WARNING: peak has been found too close to DC'
-                    stop
+                    ; stop
                  endif
                  coeff = [alpha_for_layer, est_omega, 1.]
                  fita=[1,0,1]
