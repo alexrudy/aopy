@@ -16,7 +16,8 @@ import os, os.path
 import pidly
 
 from aopy.atmosphere import wind
-from wcao.gaussnewton import estimate_wind_gn, GaussNewtonEstimator
+from wcao.estimators.gaussnewton import estimate_wind_gn, GaussNewtonEstimator
+from wcao.estimators.pidly.estimate_wind_gn import GaussNewtonPIDLY
 
 from astropy.utils.console import ProgressBar
 from astropy.io import fits
@@ -29,13 +30,13 @@ log = getSimpleLogger(__name__)
 idllog = getSimpleLogger("IDL")
 
 shape = (30,30)
-du = 10/30
-r0 = 0.30
+du = 1
+r0 = 1
 ntime = 200
 wfrac = 1
 
 log.status("Setting up screen")
-Screen = wind.ManyLayerScreen(shape,r0,seed=10,du=du,vel=[[0,0],[0,2]],tmax=int(wfrac * ntime)+1).setup()
+Screen = wind.ManyLayerScreen(shape,r0,seed=10,du=du,vel=[[2,0],[0,2]],tmax=int(wfrac * ntime)+1).setup()
 log.info("Maximum step before wrap is {:d}".format(int(wfrac * ntime)+1))
 screen = np.zeros((ntime,)+shape)
 log.status("Writing screen to array")
@@ -52,51 +53,25 @@ Plan_results = np.zeros((3,ntime,2))
 wind = None
 idl_wind = None
 
-idllog.status("Launching IDL...")
-IDL = pidly.IDL()
-IDL('!PATH=!PATH+":"+expand_path("+~/Development/Astronomy/IDL/don_pro")')
 luke_path = os.path.normpath(os.path.join(os.path.dirname(__file__),"..","IDL"))
-IDL('!PATH=!PATH+":"+expand_path("+{:s}")'.format(luke_path))
-
-idllog.status("Setting Up Environment...")
 fits_path = os.path.normpath(os.path.join(os.path.dirname(__file__),"..","test_screen.fits"))
-IDL(".r edgemask")
-IDL("sig = readfits('{}',tmphead)".format(fits_path))
-
-IDL.n = shape[0]
-IDL("apa = fltarr{} + 1.0".format(shape))
-IDL("papa = ptr_new(apa)")
-IDL("a = edgemask(apa,apainner)")
-IDL("papai = ptr_new(apainner)")
-IDL("wind = [0,0]")
-IDL("ewind = fltarr(2)")
-IDL(".r estimate_wind_gn")
-IDL(".r depiston")
 
 log.status("Initializing Planned GN")
 plan_normal = GaussNewtonEstimator().setup(np.ones(shape))
 plan_fft = GaussNewtonEstimator(fft=True).setup(np.ones(shape))
 plan_idl = GaussNewtonEstimator(idl=True).setup(np.ones(shape))
+plan_pidly = GaussNewtonPIDLY(astron_path="~/Development/Astronomy/IDL/don_pro",filename=fits_path).setup(np.ones(shape))
 log.status("Estimating wind")
 with ProgressBar(ntime) as pbar:
     for i in range(1,ntime):
-        IDL("previous = sig[*,*,{:d}]".format(i-1))
-        IDL("pprev = ptr_new(previous)")
-        IDL("current = sig[*,*,{:d}]".format(i))
-        IDL("pcurr = ptr_new(current)")
-        IDL("ewind = estimate_wind_gn(pcurr,pprev,n,papa,papai,wind,1)")
-        # IDL("wind[0:1] = ewind[0:1]")
-        IDL("ptr_free,pprev")
-        IDL("ptr_free,pcurr")
-        IDL_wind_vec = IDL.ewind
-        IDLM_results[i,:] = IDL_wind_vec[:,0][::-1]
-        wind = estimate_wind_gn(screen[i,...],screen[i-1,...],max_it=10,wind=wind)
-        idl_wind = estimate_wind_gn(screen[i,...],screen[i-1,...],max_it=10,wind=idl_wind,IDLMode=True,fft=True)
+        wind = estimate_wind_gn(screen[i,...],screen[i-1,...],max_it=1,wind=wind)
+        idl_wind = estimate_wind_gn(screen[i,...],screen[i-1,...],max_it=1,wind=idl_wind,IDLMode=True,fft=True)
         IDL_results[i,:] = idl_wind[::-1]
         results[i,:] = wind[::-1]
-        IDL.wind = IDL_wind_vec[:,0]
         for p,plan in enumerate([plan_normal,plan_fft,plan_idl]):
             Plan_results[p,i,...] = plan.estimate(screen[i,...],screen[i-1,...])[0,::-1]
+        IDLM_wind = plan_pidly.estimate(i)
+        IDLM_results[i,:] = IDLM_wind[0,::-1]
         pbar.update(i)
 
 msg = ["Wind Average:",

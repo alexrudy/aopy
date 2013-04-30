@@ -19,10 +19,17 @@ from .core import BaseEstimator
 from pyshell.core import Struct
 
 class GaussNewtonEstimator(BaseEstimator):
-    """A basic Gauss-Newton Estimator"""
+    """A basic Gauss-Newton Estimator.
+    
+    :param bool fft: Use fast-fourier-transform convolutions (may be less accurate).
+    :param bool idl: Normalize convolution results to look like IDL's. See :ref:`convolution`.
+    :param int order: The order for the spline interpolation used.
+    :param str shift_mode: The shift mode to use when the wind-shifter moves off of the array.
+    
+    """
     def __init__(self, fft=False, idl=False, order=3, iterations=1, shift_mode='nearest'):
         super(GaussNewtonEstimator, self).__init__()
-        self.fft = fft
+        self._init_fft = fft
         self.idl = idl
         self.iterations = iterations
         self._wind = np.array([[0,0]]).astype(np.float)
@@ -35,12 +42,12 @@ class GaussNewtonEstimator(BaseEstimator):
     
     @property
     def fft(self):
-        """Use fft?"""
+        """Use fftconvolve? See :func:`scipy.signal.fftconvolve` and :func:`scipy.signal.convolve`"""
         return self._fft
         
     @fft.setter
     def fft(self,value):
-        """docstring for fft"""
+        """Set's the FFT value and _convolve function appropriately."""
         import scipy.signal
         if value is True:
             self._fft = value
@@ -51,7 +58,7 @@ class GaussNewtonEstimator(BaseEstimator):
     
     @property
     def wind(self):
-        """docstring for wind"""
+        """This is the latest wind estimate."""
         if self.nlayers == 1:
             return self._wind[0,:]
         else:
@@ -59,11 +66,17 @@ class GaussNewtonEstimator(BaseEstimator):
     
     @property
     def nlayers(self):
-        """Return the number of layers"""
+        """Return the number of layers this estimator is finding."""
         return self._nlayers
     
     def setup(self,aperture,inner=None):
-        """docstring for setup"""
+        """Perform initialization procedures for this plan which may be resource intensive. This includes deep imports into scipy and numpy.
+        
+        :param ndarray aperture: The aperture repsonse function.
+        :param ndarray inner: (Optional) The inner (non-edge) mask for this aperture. If it isn't provided, it will be calculated from the provided `aperture`. 
+        :returns self: To make ``GNE = GaussNewtonEstimator().setup(aperture)`` possible.
+        
+        """
         self.aperture = Aperture(aperture) 
         if inner is not None:
             self.aperture.edgemask = np.array(inner)
@@ -78,6 +91,9 @@ class GaussNewtonEstimator(BaseEstimator):
         
         import numpy.linalg
         self._inv = numpy.linalg.inv
+        
+        # Setup the convolution method.
+        self.fft = self._init_fft
         
         return self
     
@@ -94,7 +110,12 @@ class GaussNewtonEstimator(BaseEstimator):
             
     
     def estimate(self,current,previous,wind=None):
-        """docstring for estimate"""
+        """Perform the estimation of the wind direction.
+        
+        :param ndarray current: The phase at the current timestep.
+        :param ndarray previous: The phase at the previous timestep.
+        
+        """
         # Normalize inputs and place them in the local namespace.
         wind = self._wind if wind is None else np.atleast_2d(wind)
         current = np.array(current).astype(np.float)
@@ -170,6 +191,8 @@ def estimate_wind_gn(current,previous,aloc=None,
     :param wind: Wind prior, if none, assumed to be [0,0]
     :param max_it: Maximum number of Gauss-Newton iterations to conduct.
     :param linear: Wether to assume things are linear.
+    
+    This is an almost direct port of ``estimate_wind_gn.pro`` from Luke Johnson
     """
     import scipy.signal
     import scipy.ndimage.interpolation
@@ -208,7 +231,7 @@ def estimate_wind_gn(current,previous,aloc=None,
             input = previous,
             shift = wind[::-1],
             mode = 'nearest',
-            order = 1,
+            order = 1 if linear else 3,
         ) * aloc_inner, aloc_inner)
         numerator = np.array([[np.sum(GradI[0,...]*DeltaI)],[np.sum(GradI[1,...]*DeltaI)]])
 
