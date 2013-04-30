@@ -41,4 +41,6 @@ distribute-*.tar.gz
 
 tests/pkg
 
+*.fits
+
 
