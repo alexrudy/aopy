@@ -62,11 +62,8 @@ class BlowingScreen(Screen):
     @property
     def screens(self):
         """Iterate through a screen over integer screen points."""
-        _t = 0
-        while _t <= self._tmax:
+        for _t in range(self._tmax):
             yield self.get_screen(_t)
-            _t += 1
-            
 
 class ManyLayerScreen(BlowingScreen):
     """docstring for ManyLayerScreen"""
