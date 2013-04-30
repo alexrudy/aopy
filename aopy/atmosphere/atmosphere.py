@@ -64,10 +64,8 @@ def generate_screen_with_noise(f,noise=None,shf=None,du=1.0):
     
     """
     import numpy.fft
-    n,m = f.shape
-    nn = n*m
     rn = noise if noise is not None else np.ones(f.shape)
-    frn = numpy.fft.fftshift(numpy.fft.fft2(rn)) * np.sqrt(nn)
+    frn = numpy.fft.fftshift(numpy.fft.fft2(rn)) * np.sqrt(np.prod(f.shape))
     s = np.real(numpy.fft.ifft2(numpy.fft.ifftshift(frn*f)))
     
     # if shf is not None:
@@ -108,7 +106,7 @@ def generate_screen(f,seed=None,shf=None,du=None):
     
     """
     import numpy.random
-    rn = numpy.random.RandomState(seed).rand(*f.shape)
+    rn = numpy.random.RandomState(seed).randn(*f.shape)
     return generate_screen_with_noise(f,rn,shf,du)
 
 class Screen(object):
