@@ -1,0 +1,24 @@
+Instrument:
+  shape:
+    - 10.0
+    - 10.0
+  du: 1.0
+Screen:
+  r0: 1
+  tmax: 100
+Wind:
+  velocity:
+    -
+      - 2.0
+      - 1.0
+  filename: "screen.fits"
+Simulation:
+  tmax: 500
+  tstep: 1
+IDL:
+  astron:
+    path: "~/Development/Astronomy/IDL/don_pro"
+Maps:
+  Limits:
+    min: -3
+    max: 3
