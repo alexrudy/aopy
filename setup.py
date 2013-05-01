@@ -22,4 +22,9 @@ setup(
     install_requires = ['distribute','numpy>=1.7','scipy>=0.11'],
     author = "Alexander Rudy",
     author_email = "alex.rudy@gmail.com",
+    entry_points = {
+        'console_scripts' : [
+            'WCAO = wcao.analysis.core:WCAOPipeline.script'
+        ]
+    }
     )
