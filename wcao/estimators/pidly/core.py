@@ -47,4 +47,4 @@ class BasePIDLYEstimator(BaseEstimator):
     def _load(self,*items):
         """Make IDL load items."""
         for item in items:
-            self.IDL(".r {:s}".format(item))
+            self.IDL.ex(".r {:s}".format(item),print_output=False)
