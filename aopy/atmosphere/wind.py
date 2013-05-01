@@ -33,6 +33,7 @@ class BlowingScreen(Screen):
         self._tmax = tmax
         self._outshape = np.copy(self.shape)
         self._shape = tuple(np.array(self.shape) + np.abs(self._vel) * self._tmax)
+        self._all = None
     
         
     @property
@@ -64,6 +65,17 @@ class BlowingScreen(Screen):
         """Iterate through a screen over integer screen points."""
         for _t in range(self._tmax):
             yield self.get_screen(_t)
+            
+    @property
+    def all(self):
+        """Return a numpy array of all screens."""
+        if self._all is not None:
+            return self._all
+        else:
+            self._all = np.zeros((self._tmax,)+self._outshape)
+            for t, ph in enumerate(self.screens):
+                self._all[t,...] = ph
+            return self._all
 
 class ManyLayerScreen(BlowingScreen):
     """docstring for ManyLayerScreen"""
