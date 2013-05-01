@@ -32,8 +32,8 @@ idllog = getSimpleLogger("IDL")
 shape = (30,30)
 du = 1
 r0 = 1
-ntime = 200
-wfrac = 1
+ntime = 2000
+wfrac = 0.2
 
 log.status("Setting up screen")
 Screen = wind.ManyLayerScreen(shape,r0,seed=10,du=du,vel=[[2,0],[0,2]],tmax=int(wfrac * ntime)+1).setup()
@@ -107,7 +107,8 @@ ax3.set_title("$|w|$ wind")
 ax3.plot(time,np.sqrt(np.sum(np.power(results,2)[1:],axis=1)),'g.')
 ax3.plot(time,np.sqrt(np.sum(np.power(IDL_results,2)[1:],axis=1)),'b.')
 ax3.plot(time,np.sqrt(np.sum(np.power(IDLM_results,2)[1:],axis=1)),'c.')
-
+for p in range(Plan_results.shape[0]):
+    ax3.plot(time,np.sqrt(np.sum(np.power(Plan_results[p,...],2)[1:],axis=1)),'.')
 for axes in fig.axes:
     axes.set_xlim(0,ntime)
 
