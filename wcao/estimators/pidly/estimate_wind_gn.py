@@ -38,6 +38,7 @@ class GaussNewtonPIDLY(BasePIDLYEstimator):
         self.filename = filename
         self.iterations = iterations
         self.nstep = nstep
+        self.nlayers = 1
         
     def setup(self,aperture):
         """docstring for setup"""
@@ -61,7 +62,7 @@ class GaussNewtonPIDLY(BasePIDLYEstimator):
     def load_phase(self):
         """docstring for load_phase"""
         if self.array_mode is "fits":
-            self.IDL("sig = readfits('{:s}',tmphead)".format(os.path.relpath(self.filename)))
+            self.IDL.ex("sig = readfits('{:s}',tmphead)".format(os.path.relpath(self.filename)),print_output=False)
         
     def estimate(self,tstep):
         """docstring for estimate"""
