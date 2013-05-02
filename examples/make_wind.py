@@ -11,13 +11,11 @@
 from __future__ import (absolute_import, unicode_literals, division,
                         print_function)
 
-from pyshell.loggers import getSimpleLogger
 import numpy as np
 
 import astropy.io.fits as pf
 from aopy.atmosphere import wind
 
-log = getSimpleLogger(level=10)
 
 shape = (10,10)
 du = 10/30
@@ -26,7 +24,7 @@ ntime = 200
 
 Screen = wind.ManyLayerScreen(shape,r0,du=du,vel=[0,1]).setup()
 
-log.debug("Screen Velocity {!s}".format(Screen.velocity))
+print("Screen Velocity {!s}".format(Screen.velocity))
 
 screen = np.zeros((ntime,)+shape)
 for i in range(ntime):

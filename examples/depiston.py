@@ -19,9 +19,13 @@ import pidly
 import os.path
 from aopy.util.math import depiston
 
-from pyshell import loggers
-
-log = loggers.getSimpleLogger(__name__,loggers.INFO)
+try:
+    from pyshell import loggers
+    log = loggers.getSimpleLogger(__name__,loggers.INFO)
+except ImportError:
+    import logging
+    log = logging.getLogger(__name__)
+    logging.basicConfig()
 
 log.info("Setting up phase!")
 
@@ -38,11 +42,11 @@ log.info("Change: {}".format(np.mean(dp_phase - phase)))
 
 log.info("Launching IDL...")
 IDL = pidly.IDL()
-path = os.path.normpath(os.path.join(os.path.dirname(__file__),"..","IDL"))
-IDL('!PATH=!PATH+":"+expand_path("+{:s}")'.format(path))
+path = os.path.abspath(os.path.join(os.path.dirname(__file__),"..","IDL"))
+IDL('!PATH=expand_path("<IDL_default>")+":"+expand_path("+{:s}")'.format(path),print_output=False)
 IDL.phase = phase
-IDL("apa = fltarr(10,10) + 1.0")
-IDL("dp_phase = depiston(phase,apa)")
+IDL("apa = fltarr(10,10) + 1.0",print_output=False)
+IDL("dp_phase = depiston(phase,apa)",print_output=False)
 dp_phase_IDL = IDL.dp_phase
 log.debug("De-Pistoned IDL Phase: {}".format(dp_phase_IDL))
 

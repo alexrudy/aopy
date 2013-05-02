@@ -37,7 +37,7 @@ class test_screen_functions(object):
         }
         self.idl_output = False
         self.IDL = pidly.IDL()
-        self.IDL('!PATH=!PATH+":"+expand_path("+{:s}")'.format(IDL_PATH),print_output=self.idl_output)
+        self.IDL('!PATH=expand_path("<IDL_default>")+":"+expand_path("+{:s}")'.format(IDL_PATH),print_output=self.idl_output)
         
         
     def teardown(self):
