@@ -19,7 +19,8 @@ setup(
     packages = find_packages(exclude=['']),
     package_data = {'aopy': ['aopy/data/*'],
     'wcao' : ['wcao/estimators/pidly/idl/*.pro']},
-    install_requires = ['distribute','numpy>=1.7','scipy>=0.11'],
+    install_requires = ['distribute','numpy>=1.7','scipy>=0.11','pyshell'],
+    test_requires = ['pIDLy','nosetests']
     author = "Alexander Rudy",
     author_email = "alex.rudy@gmail.com",
     entry_points = {

@@ -6,7 +6,11 @@
 #  
 #  Created by Jaberwocky on 2013-04-26.
 #  Copyright 2013 Jaberwocky. All rights reserved.
-# 
+#
+"""
+This command compares depiston.pro to aopy.util.math.depiston
+"""
+
 from __future__ import (absolute_import, unicode_literals, division, print_function)
 
 import numpy as np
@@ -34,9 +38,8 @@ log.info("Change: {}".format(np.mean(dp_phase - phase)))
 
 log.info("Launching IDL...")
 IDL = pidly.IDL()
-IDL('!PATH=!PATH+":"+expand_path("+~/Development/IDL/don_pro")')
-luke_path = os.path.normpath(os.path.join(os.path.dirname(__file__),"..","IDL"))
-IDL('!PATH=!PATH+":"+expand_path("+{:s}")'.format(luke_path))
+path = os.path.normpath(os.path.join(os.path.dirname(__file__),"..","IDL"))
+IDL('!PATH=!PATH+":"+expand_path("+{:s}")'.format(path))
 IDL.phase = phase
 IDL("apa = fltarr(10,10) + 1.0")
 IDL("dp_phase = depiston(phase,apa)")

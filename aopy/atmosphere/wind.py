@@ -178,7 +178,7 @@ class ManyLayerScreen(BlowingScreen):
         """
         norm = np.sum(self._strength)
         for i, strength in enumerate(self._strength):
-            self._screens[i,...] = _generate_screen(self._filter,self.seed,self._shf,self.du) * np.sqrt(strength/norm)
+            self._screens[i,...] = _generate_screen(self._filter,self.seed,self._shf,self.du) * (strength/norm)
         
     def get_screen(self,t):
         """Get a screen at time `t`.
