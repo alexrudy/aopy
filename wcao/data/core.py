@@ -129,7 +129,7 @@ class WCAOData(object):
         return self._figurename.format(
             instrument = self.instrument,
             name = self.name,
-            ext = self.config.get("WCAOData.Data.npy.ext","npy"),
+            ext = self.config.get("WCAOData.Figure.savefig.ext","pdf"),
             datatype = self._datatype,
             figtype = "{figtype:s}",
         )
