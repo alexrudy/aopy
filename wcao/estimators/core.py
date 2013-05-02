@@ -30,6 +30,13 @@ class BaseEstimator(Base):
         
     
     @abc.abstractmethod
-    def estimate(self,**kwargs):
-        """Do the estimation"""
+    def setup(self,data):
+        """Setup from data"""
+        pass
+    
+    @abc.abstractmethod
+    def estimate(self,t):
+        """Do the estimation.
+        
+        :param int t: The timestep"""
         pass
