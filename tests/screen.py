@@ -12,11 +12,18 @@ import aopy.atmosphere.screen as screengen
 import numpy as np
 import pidly
 import time
-import pyshell
-import pyshell.util
 
-pyshell.util.ipydb()
-log = pyshell.getSimpleLogger("__main__")
+try:
+    import pyshell
+    import pyshell.util
+
+    pyshell.util.ipydb()
+    log = pyshell.getSimpleLogger("__main__")
+except ImportError:
+    import logging
+    log = logging.getLogger(__name__)
+    logging.basicConfig()
+
 
 def test_array(a,b,name=""):
     """docstring for test_array"""
@@ -47,8 +54,8 @@ idl_output = True
 times = {}
 log.status("Launching IDL...")
 IDL = pidly.IDL()
-IDL('!PATH=!PATH+":"+expand_path("+{:s}")'.format(DON_PATH))
-IDL('which,"screegen"')
+IDL('!PATH=expand_path("<IDL_default>")+":"+expand_path("+{:s}")'.format(DON_PATH))
+# IDL('which,"screegen"')
 log.status("\nScreengen\n===========================")
 log.info("Generating Filter")
 times["IDL_f"] = -time.clock()
