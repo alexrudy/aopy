@@ -6,6 +6,32 @@
 #  Created by Jaberwocky on 2013-04-16.
 #  Copyright 2013 Jaberwocky. All rights reserved.
 # 
+"""
+:mod:`atmosphere.wind <aopy.atmosphere.wind>` – Blowing Komolgorov Screens
+==========================================================================
+
+This module contains screens which can appear to "blow" through an aperture. Screens
+can be composed of multiple blowing layers, or a single layer.
+
+:class:`BlowingScreen` – Single Layer Wind
+------------------------------------------
+
+.. autoclass::
+    BlowingScreen
+    :members:
+    :inherited-members:
+
+
+:class:`ManyLayerScreen` – Many Layer Wind
+------------------------------------------
+
+.. autoclass::
+    ManyLayerScreen
+    :members:
+    :inherited-members:
+
+"""
+
 from __future__ import (absolute_import, unicode_literals, division,
                         print_function)
 
@@ -15,40 +41,58 @@ import warnings, logging
 # Numpy
 import numpy as np
 
-from .atmosphere import Screen, generate_screen
+from .screen import Screen, _generate_screen
 
 class BlowingScreen(Screen):
-    """Create a blowing screen.
+    """A blowing Kolmolgorov Phase Screen Class. This class builds a Komologorv Filter and then generates a phase screen for that filter. The phase screen is then read out in parts (interpolated, where necessary) so that it appears to "blow" in a frozen-flow style across as screen of the desired shape. Once a single phase screen has been generated, it is cached in the object. For a new phase screen, set a different :attr:`seed` value.
     
-    :param shape:
-    :param r0:
-    :param vel:
-    :param tmax:
+    :param tuple shape: The shape of the screen (x,y), as a tuple.
+    :param float r0: :math:`r_0` fried parameter for the screen.
+    :param float L0: :math:`L_0` outer scale for the screen.
+    :param int seed: Random number generator seed for :mod:`numpy.random`
+    :param list vel: The velocity, ``[v_x,v_y]``
+    :param int tmax: The number of timesteps to generate phase for. Timesteps 
+        beyond this value will see the screen wrapped around and started from the beginning.
+    :param float du: Pixels per subaperture
+    :param int nsh: Number of subharmonics. (default``=0`` for no subharmonics)
+    
+    To use this class, you must instantiate it, and then call :meth:`setup`. Since :meth:`setup` returns the instance, you can do::
+        
+        screen = BlowingScreen((10,10),r0=2,vel=[1.0,0.0]).setup()
+    
     """ 
     def __init__(self, shape, r0, seed=None, vel=None, tmax=100, **kwargs):
         super(BlowingScreen, self).__init__(shape, r0, seed, **kwargs)
         if vel is None:
             vel = [1.0,0.0]
         self._vel = np.array(vel)
+        self._vel.flags.writeable = False
         self._tmax = tmax
         self._outshape = np.copy(self.shape)
         self._shape = tuple(np.array(self.shape) + np.abs(self._vel) * self._tmax)
         self._all = None
     
-        
+    
     @property
     def velocity(self):
-        """docstring for velocity"""
+        """The wind velocity vector for this screen. A 1-dimensional array with ``[v_x,v_y]``. **Read-Only**"""
         return self._vel
     
     def setup(self):
-        """Makes the screen over which the system will interpolate."""
-        self.generate_filter()
-        self.generate_screen()
+        """Generates the filter and the screen over which the system will interpolate.
+        
+        :returns: A reference to this instance (``self``)
+        """
+        self._generate_filter()
+        self._generate_screen()
         return self
         
     def get_screen(self,t):
-        """Get a screen at time t."""
+        """Get a screen at time `t`.
+        
+        :param int t: The timestep at which to retrieve the screen.
+        :returns: The screen for this timestep.
+        """
         import scipy.ndimage.interpolation
         shift = t * self._vel
         shifted = scipy.ndimage.interpolation.shift(
@@ -62,23 +106,49 @@ class BlowingScreen(Screen):
         
     @property
     def screens(self):
-        """Iterate through a screen over integer screen points."""
+        """An iterator through this screen over time. 
+        
+        Use like::
+            
+            for screen in blowing.screens:
+                print(screen[0,0])
+            
+        
+        """
         for _t in range(self._tmax):
             yield self.get_screen(_t)
             
     @property
     def all(self):
-        """Return a numpy array of all screens."""
+        """An array of all possible screens. This array is lazily evaluated. **Read-Only**"""
         if self._all is not None:
             return self._all
         else:
             self._all = np.zeros((self._tmax,)+self._outshape)
             for t, ph in enumerate(self.screens):
                 self._all[t,...] = ph
+            self._all.flags.writeable
             return self._all
 
 class ManyLayerScreen(BlowingScreen):
-    """docstring for ManyLayerScreen"""
+    """A blowing Kolmolgorov Phase Screen Class with multiple layer support. This class builds a Komologorv Filter and then generates a phase screen for each layer with that filter. The phase screens are then read out in parts (interpolated, where necessary) so that they appears to "blow" in a frozen-flow style across as screen of the desired shape. Once a set of phase screens has been generated, they are cached in the object. For a new phase screen, set a different :attr:`seed` value.
+    
+    :param tuple shape: The shape of the screen (x,y), as a tuple.
+    :param float r0: :math:`r_0` fried parameter for the screen.
+    :param float L0: :math:`L_0` outer scale for the screen.
+    :param int seed: Random number generator seed for :mod:`numpy.random`
+    :param array vel: The velocity array, at least 2-dimensional, ``[[v_x1,v_y1],[v_x2,v_y2]]``
+    :param array strength: The relative strengths of each layer. (by default, all layers have the same strength.)
+    :param int tmax: The number of timesteps to generate phase for. Timesteps 
+        beyond this value will see the screen wrapped around and started from the beginning.
+    :param float du: Pixels per subaperture
+    :param int nsh: Number of subharmonics. (default``=0`` for no subharmonics)
+    
+    To use this class, you must instantiate it, and then call :meth:`setup`. Since :meth:`setup` returns the instance, you can do::
+        
+        screen = ManyLayerScreen((10,10),r0=2,vel=[1.0,0.0]).setup()
+    
+    """ 
     def __init__(self, shape, r0, seed=None, vel=None, strength=None, **kwargs):
         if vel is None:
             vel = np.array([[1.0,0.0]])
@@ -99,16 +169,23 @@ class ManyLayerScreen(BlowingScreen):
         
         self._screens = np.zeros((self._vel.shape[0],)+self._shape)
         
-    def setup(self):
-        """Get the screens up and running."""
-        self.generate_filter()
+    def _generate_screen(self):
+        """Use :meth:`setup` to control this method.
+        
+        Generate the actual screen, using the filters produced by :meth:`_generate_filter`
+        
+        :param seed: The random number generator seed.
+        """
         norm = np.sum(self._strength)
         for i, strength in enumerate(self._strength):
-            self._screens[i,...] = generate_screen(self._filter,self.seed,self._shf,self.du) * np.sqrt(strength/norm)
-        return self
+            self._screens[i,...] = _generate_screen(self._filter,self.seed,self._shf,self.du) * np.sqrt(strength/norm)
         
     def get_screen(self,t):
-        """docstring for get_screen"""
+        """Get a screen at time `t`.
+        
+        :param int t: The timestep at which to retrieve the screen.
+        :returns: The screen for this timestep.
+        """
         import scipy.ndimage.interpolation
         shifts = t * self._vel
         shifted = np.zeros_like(self._screens)

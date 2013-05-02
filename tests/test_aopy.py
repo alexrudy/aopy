@@ -6,7 +6,7 @@
 #  Copyright 2012 Alexander Rudy. All rights reserved.
 # 
 
-import aopy.aopy
+import aopy
 
 class test_aopy(object):
     """Tests for aopy"""
