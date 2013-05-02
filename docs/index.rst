@@ -14,6 +14,8 @@ Contents:
    atmosphere.rst
    atmosphere.screen.rst
    atmosphere.wind.rst
+   util.math
+
 
 
 

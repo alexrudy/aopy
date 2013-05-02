@@ -1,0 +1,2 @@
+.. automodule::
+    aopy.util.math
