@@ -1,0 +1,3 @@
+.. automodule::
+    aopy.atmosphere
+    
