@@ -127,7 +127,7 @@ class BlowingScreen(Screen):
             self._all = np.zeros((self._tmax,)+self._outshape)
             for t, ph in enumerate(self.screens):
                 self._all[t,...] = ph
-            self._all.flags.writeable
+            self._all.flags.writeable = False
             return self._all
 
 class ManyLayerScreen(BlowingScreen):
@@ -197,6 +197,6 @@ class ManyLayerScreen(BlowingScreen):
                 mode = 'wrap', #So we go in circles!
             )
         n,m = self._outshape
-        shifted = np.sum(shifted,axis=0)
-        return shifted[:n,:m]
+        shifted = np.sum(shifted[:,:n,:m],axis=0)
+        return shifted
         
