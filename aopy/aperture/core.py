@@ -32,8 +32,8 @@ __all__ = ['Aperture']
 class Aperture(object):
     """A basic aperture object, for handling response, mask, and edge-mask functions.
     
-    :param tuple response: The shape of the full mask, if the full mask is responsive. ``np.ones((m,n))``
-    :param ndarray response: The response function across the aperture. (Its ok to use a boolean array, if the response is not well defined.)
+    :param tuple response_shape: The shape of the full mask, if the full mask is responsive. ``np.ones((m,n))``
+    :param numpy.ndarray response: The response function across the aperture. (Its ok to use a boolean array, if the response is not well defined.)
     
     """
     def __init__(self, response):
@@ -104,7 +104,7 @@ class Aperture(object):
         """Show this aperture on the given axes.
         
         :param ax: A matplotlib axes instance on which to show the image.
-        :keywords kwargs: Any extra keywords """
+        :keyword kwargs: Any extra keywords which will be passed to :meth:`~matplotlib.axes.Axes.imshow`."""
         kwargs.setdefault('interpolation','nearest')
         return ax.imshow(self.pupil,**kwargs)
         
