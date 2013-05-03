@@ -99,7 +99,7 @@ def edgemask(aperture):
 def smooth(x,window_len=11,window='hanning'):
     """Smooth an array.
     
-    :param ndarray x: The array to smooth.
+    :param numpy.ndarray x: The array to smooth.
     :param int window_len: The window length.
     :param str window: The window name (from :mod:`np.window`)
     :returns: The smoothed numpy array.

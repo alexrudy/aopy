@@ -34,7 +34,7 @@ templates_path = ['_templates']
 source_suffix = '.rst'
 
 # The encoding of source files.
-#source_encoding = 'utf-8-sig'
+source_encoding = 'utf-8-sig'
 
 # The master toctree document.
 master_doc = 'index'
@@ -243,4 +243,7 @@ texinfo_documents = [
 
 
 # Example configuration for intersphinx: refer to the Python standard library.
-intersphinx_mapping = {'http://docs.python.org/': None}
+intersphinx_mapping = {'python': ('http://docs.python.org/2.7', None),
+'matplotlib': ('http://matplotlib.org/',None),
+'numpy' : ('http://docs.scipy.org/doc/numpy-1.7.0/reference/','http://docs.scipy.org/doc/numpy-1.7.0/objects.inv'),
+'scipy' : ('http://docs.scipy.org/doc/scipy-0.12.0/reference/',None)}

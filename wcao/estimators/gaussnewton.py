@@ -72,8 +72,8 @@ class GaussNewtonEstimator(BaseEstimator):
     def setup(self,aperture,inner=None):
         """Perform initialization procedures for this plan which may be resource intensive. This includes deep imports into scipy and numpy.
         
-        :param ndarray aperture: The aperture repsonse function.
-        :param ndarray inner: (Optional) The inner (non-edge) mask for this aperture. If it isn't provided, it will be calculated from the provided `aperture`. 
+        :param numpy.ndarray aperture: The aperture repsonse function.
+        :param numpy.ndarray inner: (Optional) The inner (non-edge) mask for this aperture. If it isn't provided, it will be calculated from the provided `aperture`. 
         :returns self: To make ``GNE = GaussNewtonEstimator().setup(aperture)`` possible.
         
         """
@@ -112,8 +112,8 @@ class GaussNewtonEstimator(BaseEstimator):
     def estimate(self,current,previous,wind=None):
         """Perform the estimation of the wind direction.
         
-        :param ndarray current: The phase at the current timestep.
-        :param ndarray previous: The phase at the previous timestep.
+        :param numpy.ndarray current: The phase at the current timestep.
+        :param numpy.ndarray previous: The phase at the previous timestep.
         
         """
         # Normalize inputs and place them in the local namespace.

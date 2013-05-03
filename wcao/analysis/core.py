@@ -28,6 +28,7 @@ class WCAOPipeline(Pipeline):
         super(WCAOPipeline, self).init()
         self.collect()
         
+        
     
     def make_screen(self):
         """Setup Screen"""
