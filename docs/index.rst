@@ -11,9 +11,11 @@ Contents:
 .. toctree::
    :maxdepth: 2
    
-   atmosphere.rst
-   atmosphere.screen.rst
-   atmosphere.wind.rst
+   atmosphere
+   atmosphere.screen
+   atmosphere.wind
+   aperture
+   aperture.core
    util.math
 
 
