@@ -235,7 +235,8 @@ class Screen(object):
     @seed.setter
     def seed(self,value):
         """Random Number Generation Seed"""
-        self._generate_screen(value)
+        self._seed = value
+        self._generate_screen()
         
     @property
     def screen(self):
@@ -269,16 +270,13 @@ class Screen(object):
         (with subharmonics, if requested) that is used to generate the screen."""
         self._filter, self._shf = _generate_filter(self.shape,self.r0,self.du,self.L0,self.nsh)
         
-    def _generate_screen(self,seed=None):
+    def _generate_screen(self):
         """Use :meth:`setup` to control this method.
         
         Generate the actual screen, using the filters produced by :meth:`_generate_filter`
         
-        :param seed: The random number generator seed.
         """
-        if seed is not None:
-            self.seed = seed
-        self._screen = _generate_screen(self.filter,self.seed,self._shf,self.du)
+        self._screen = _generate_screen(self._filter,self.seed,self._shf,self.du)
         
         
         
