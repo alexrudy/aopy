@@ -12,6 +12,9 @@
 
 These are various mathematical algorithms used in :mod:`aopy`. They are implemented here to ensure that their implementation is consistent across :mod:`aopy`.
 
+
+.. _util.math.aperture:
+
 Phase and Aperture Functions
 ----------------------------
 
@@ -24,6 +27,8 @@ Phase and Aperture Functions
 .. autofunction::
     edgemask
     
+.. _util.math.numerical:
+
 Numerical Tasks
 ---------------
     

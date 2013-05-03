@@ -6,6 +6,20 @@
 #  Created by Jaberwocky on 2013-04-29.
 #  Copyright 2013 Jaberwocky. All rights reserved.
 # 
+"""
+:mod:`aperture.core <aopy.aperture.core>` – Aperture Classes
+============================================================
+
+This module is useful for representing apertures. It uses algorithms from :ref:`util.math.aperture` in :mod:`util.math <aopy.util.math>`.
+
+:class:`Aperture` – Making Apertures
+------------------------------------
+
+.. autoclass::
+    Aperture
+    :members:
+
+"""
 from __future__ import (absolute_import, unicode_literals, division,
                         print_function)
 
@@ -16,33 +30,37 @@ import warnings
 __all__ = ['Aperture']
 
 class Aperture(object):
-    """A basic aperture"""
+    """A basic aperture object, for handling response, mask, and edge-mask functions.
+    
+    :param tuple response: The shape of the full mask, if the full mask is responsive. ``np.ones((m,n))``
+    :param ndarray response: The response function across the aperture. (Its ok to use a boolean array, if the response is not well defined.)
+    
+    """
     def __init__(self, response):
         super(Aperture, self).__init__()
-        if isinstance(response,tuple):
-            self._response = np.ones(response)
-        else:
-            self._response = np.array(response)
-        if self._response.ndim != 2:
-            raise ValueError, "{0!r} response dimesnions should be 2, not {:d}".format(
-                self, self._response.ndim
-            )
         self._edgemask = False
         self._edgemask_generated = True
+        self.response = response
+        if self.response.ndim != 2:
+            raise ValueError, "{0!r} response dimesnions should be 2, not {:d}".format(
+                self, self.response.ndim
+            )
         
     @property
     def pupil(self):
-        """Return the full pupil plane"""
+        """A boolean mask of the pupil plane. **Read-Only**"""
         return np.array(self._response != 0.0).astype(np.int)
         
     @property
     def response(self):
-        """Get the response array"""
+        """The original response function."""
         return self._response
         
     @response.setter
     def response(self,response):
-        """docstring for response"""
+        """Respons function setter."""
+        if isinstance(response,tuple):
+            response = np.ones(response)
         if not isinstance(self._edgemask,np.ndarray):
             pass 
         elif self._edgemask_generated:
@@ -50,6 +68,7 @@ class Aperture(object):
         elif self._edgemask.shape != response.shape:
             raise ValueError("Response {0!s} and Edgemask {0!s} must have the same shape.")
         self._response = response
+        self._response.flags.writeable = False
         
     @property
     def edgemask(self):
@@ -78,9 +97,14 @@ class Aperture(object):
     
     @property
     def shape(self):
-        """Return the shape of this aperture"""
+        """Shape of this aperture. **Read-Only**"""
         return self._response.shape
         
-    def display_image(self,ax):
-        """Show this aperture on the given axes"""
-        ax.imshow(self.pupil,interpolation='nearest')
+    def display_image(self,ax,**kwargs):
+        """Show this aperture on the given axes.
+        
+        :param ax: A matplotlib axes instance on which to show the image.
+        :keywords kwargs: Any extra keywords """
+        kwargs.setdefault('interpolation','nearest')
+        return ax.imshow(self.pupil,**kwargs)
+        
