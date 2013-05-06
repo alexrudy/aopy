@@ -180,12 +180,6 @@ pro process_raw_data, obs
   endfor
   
 
-  ;;; this is our data cube in actuator space. 
-  ;;; let's save it
-  mkhdr, h1, dm_shape
-  prd_add_header_info, obs, h1
-  fxaddpar, h1, 'DTYPE', 'Spatial signals', 'In spatial domain'
-  writefits, obs.processed_path+'_phase.fits', dm_shape, h1
 
 
 
@@ -194,6 +188,26 @@ pro process_raw_data, obs
   for t=0, len-1 do begin
      fourier_modes[*,*,t] = fft(dm_shape[*,*,t])
   endfor
+  
+  cutoff = 1.5
+  d = DIST( obs.n, obs.n )
+  f = fltarr(obs.n , obs.n ) + 1.0
+  f[where(d le cutoff)] = 0.0
+  
+  for t=0, len-1 do begin
+      fourier_modes[*,*,t] = fourier_modes[*,*,t] * f
+      dm_shape[*,*,t] = fft(fourier_modes[*,*,t],/INVERSE)
+  endfor
+  
+  ;;; this is our data cube in actuator space. 
+  ;;; let's save it
+  mkhdr, h1, dm_shape
+  prd_add_header_info, obs, h1
+  fxaddpar, h1, 'DTYPE', 'Spatial signals', 'In spatial domain'
+  writefits, obs.processed_path+'_phase.fits', dm_shape, h1
+  
+  
+  
   freq_dom_scaling = sqrt(obs.n^2/total(pingrid))
   fourier_modes = fourier_modes*freq_dom_scaling
   
