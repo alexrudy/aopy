@@ -373,7 +373,12 @@ class PlotLukeWind(CLIEngine):
     def _make_map(self,M,filename):
         """docstring for _make_map"""
         H, xedges, yedges, extent = M.normalized_data(mode='smoothed',time=1.0/self.config["Smooth.Frequency"])
-        M.figures["map"].axes[0].imshow(H,extent=extent,interpolation='nearest',origin='lower',cmap=self.config.get("Maps.cmap",None))
+        kw = {}
+        if not M.istimeseries():
+            kw['vmin'] = 0
+            kw['vmax'] = 1
+        M.figures["map"].axes[0].imshow(H,extent=extent,
+             interpolation='nearest',origin='lower',cmap=self.config.get("Maps.cmap",None),**kw)
         C = M.figures["map"].axes[0].contour(H,10,origin='lower',extent=extent)
         [ c.remove() for c  in C.collections[:5] ]
         x,y = M.com()

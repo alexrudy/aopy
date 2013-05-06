@@ -8,14 +8,14 @@ Maps:
   # cmap: binary
   Grid:
     color: k
-    imcolor: k
+    imcolor: w
 Smooth:
   Frequency: 100
 Figures:
   DPI: 300
 Plots:
   Enable:
-    # - map
+    - map
     # - timeseries
     # - cmap
     - mmap
@@ -24,8 +24,8 @@ Methods:
   Base: ['GN','RT','2D','XY','FT','2La','2Lb']
   Enable:
     - 'GN'
-    - '2D'
-    - 'XY'
+    # - '2D'
+    # - 'XY'
     - 'FT'
     - '2La'
     - '2Lb'
