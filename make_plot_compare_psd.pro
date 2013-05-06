@@ -11,7 +11,7 @@ pro make_plot_compare_psd, hz, modal_psds, fit_data, obs, k, l, $
 
   per_len = n_elements(hz)
 
-  insidelocs = where(abs(hz) LE 50.)
+  insidelocs = where(abs(hz) LE 50. and modal_psds[k,l,*] NE 0.)
 
   if keyword_set(fullyflag) then $
      yrange=[10.^floor(alog10(min(modal_psds[k,l,where(modal_psds[k,l,*] NE 0.)]))), $
@@ -19,7 +19,6 @@ pro make_plot_compare_psd, hz, modal_psds, fit_data, obs, k, l, $
                 yrange=[10.^floor(alog10(min(modal_psds[k,l,insidelocs]))), $
                         10.^ceil(alog10(max(modal_psds[k,l,insidelocs])))]
   
-
   if keyword_set(fullxflag) then $
      xrange=[-1,1]*max(abs(hz)) else $
         xrange = [-1,1]*50.
