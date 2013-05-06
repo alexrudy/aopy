@@ -190,20 +190,443 @@ function get_case_gems, identifier
      end
 
 
+
+;;;; ***********************************************************************
+;;;; ***********************************************************************
+;;;; ***********************************************************************
+;;;; ***********************************************************************
+;;;; ***********************************************************************
+;;;; ***********************************************************************
+;;;; ***********************************************************************
+;;;; ***********************************************************************
+;;;; ***********************************************************************
+
+     ;;;;;;; this is the new data from Andres, which has the
+     ;;;;;;; pseudo-open loop slopes
+
+     ;; % extract_data('11109092452');     ;;;; 1.1. Data used in MNRAS paper
+     ;;; this is the same as cases 10-19 above!
+
+     115: begin
+        datatype = 'pseudo-open-loop-slopes'
+        pupil_remap = 'gems-fratricide-wfs'
+        archive_location = 'sPOL11109092452'
+        filename = '11109092452_pol_wfs0'
+        rate = 0.  ;; will be read in from the data!
+        wfs_number = 0
+     end
+     116: begin
+        datatype = 'pseudo-open-loop-slopes'
+        pupil_remap = 'gems-fratricide-wfs'
+        archive_location = 'sPOL11109092452'
+        filename = '11109092452_pol_wfs1'
+        rate = 0.   ;; will be read in from the data!
+        wfs_number = 1
+     end
+     117: begin
+        datatype = 'pseudo-open-loop-slopes'
+        pupil_remap = 'gems-fratricide-wfs'
+        archive_location = 'sPOL11109092452'
+        filename = '11109092452_pol_wfs2'
+        rate = 0.   ;; will be read in from the data!
+        wfs_number = 2
+     end
+     118: begin
+        datatype = 'pseudo-open-loop-slopes'
+        pupil_remap = 'gems-fratricide-wfs'
+        archive_location = 'sPOL11109092452'
+        filename = '11109092452_pol_wfs3'
+        rate = 0.   ;; will be read in from the data!
+        wfs_number = 3
+     end
+     119: begin
+        datatype = 'pseudo-open-loop-slopes'
+        pupil_remap = 'gems-fratricide-wfs'
+        archive_location = 'sPOL11109092452'
+        filename = '11109092452_pol_wfs4'
+        rate = 0.   ;; will be read in from the data!
+        wfs_number = 4
+     end
+
+
+     ;; % extract_data('11106030531');     ;;;; 1.1. Data used in MNRAS paper
+     ;;; this is the same as cases 20-29 above!
+
+     125: begin
+        datatype = 'pseudo-open-loop-slopes'
+        pupil_remap = 'gems-fratricide-wfs'
+        archive_location = 'sPOL11106030531'
+        filename = '11106030531_pol_wfs0'
+        rate = 0.  ;; will be read in from the data!
+        wfs_number = 0
+     end
+     126: begin
+        datatype = 'pseudo-open-loop-slopes'
+        pupil_remap = 'gems-fratricide-wfs'
+        archive_location = 'sPOL11106030531'
+        filename = '11106030531_pol_wfs1'
+        rate = 0.   ;; will be read in from the data!
+        wfs_number = 1
+     end
+     127: begin
+        datatype = 'pseudo-open-loop-slopes'
+        pupil_remap = 'gems-fratricide-wfs'
+        archive_location = 'sPOL11106030531'
+        filename = '11106030531_pol_wfs2'
+        rate = 0.   ;; will be read in from the data!
+        wfs_number = 2
+     end
+     128: begin
+        datatype = 'pseudo-open-loop-slopes'
+        pupil_remap = 'gems-fratricide-wfs'
+        archive_location = 'sPOL11106030531'
+        filename = '11106030531_pol_wfs3'
+        rate = 0.   ;; will be read in from the data!
+        wfs_number = 3
+     end
+     129: begin
+        datatype = 'pseudo-open-loop-slopes'
+        pupil_remap = 'gems-fratricide-wfs'
+        archive_location = 'sPOL11106030531'
+        filename = '11106030531_pol_wfs4'
+        rate = 0.   ;; will be read in from the data!
+        wfs_number = 4
+     end
+
+
+
+     ;;;; new cases
+
+
+
+
+
+
+;; % extract_data('11360204434');     ;;;; 1.3. Additional onsky data, interesting cases: Ground mostly:
+
+
+     135: begin
+        datatype = 'pseudo-open-loop-slopes'
+        pupil_remap = 'gems-fratricide-wfs'
+        archive_location = 'sPOL11360204434'
+        filename = '11360204434_pol_wfs0'
+        rate = 0.  ;; will be read in from the data!
+        wfs_number = 0
+     end
+     136: begin
+        datatype = 'pseudo-open-loop-slopes'
+        pupil_remap = 'gems-fratricide-wfs'
+        archive_location = 'sPOL11360204434'
+        filename = '11360204434_pol_wfs1'
+        rate = 0.   ;; will be read in from the data!
+        wfs_number = 1
+     end
+     137: begin
+        datatype = 'pseudo-open-loop-slopes'
+        pupil_remap = 'gems-fratricide-wfs'
+        archive_location = 'sPOL11360204434'
+        filename = '11360204434_pol_wfs2'
+        rate = 0.   ;; will be read in from the data!
+        wfs_number = 2
+     end
+     138: begin
+        datatype = 'pseudo-open-loop-slopes'
+        pupil_remap = 'gems-fratricide-wfs'
+        archive_location = 'sPOL11360204434'
+        filename = '11360204434_pol_wfs3'
+        rate = 0.   ;; will be read in from the data!
+        wfs_number = 3
+     end
+     139: begin
+        datatype = 'pseudo-open-loop-slopes'
+        pupil_remap = 'gems-fratricide-wfs'
+        archive_location = 'sPOL11360204434'
+        filename = '11360204434_pol_wfs4'
+        rate = 0.   ;; will be read in from the data!
+        wfs_number = 4
+     end
+
+
+
+;; % extract_data('13149213252');     ;;;; 1.3. Additional onsky data, interesting cases: Strong high latitude (>10km)
+
+     145: begin
+        datatype = 'pseudo-open-loop-slopes'
+        pupil_remap = 'gems-fratricide-wfs'
+        archive_location = 'sPOL13149213252'
+        filename = '13149213252_pol_wfs0'
+        rate = 0.  ;; will be read in from the data!
+        wfs_number = 0
+     end
+     146: begin
+        datatype = 'pseudo-open-loop-slopes'
+        pupil_remap = 'gems-fratricide-wfs'
+        archive_location = 'sPOL13149213252'
+        filename = '13149213252_pol_wfs1'
+        rate = 0.   ;; will be read in from the data!
+        wfs_number = 1
+     end
+     147: begin
+        datatype = 'pseudo-open-loop-slopes'
+        pupil_remap = 'gems-fratricide-wfs'
+        archive_location = 'sPOL13149213252'
+        filename = '13149213252_pol_wfs2'
+        rate = 0.   ;; will be read in from the data!
+        wfs_number = 2
+     end
+     148: begin
+        datatype = 'pseudo-open-loop-slopes'
+        pupil_remap = 'gems-fratricide-wfs'
+        archive_location = 'sPOL13149213252'
+        filename = '13149213252_pol_wfs3'
+        rate = 0.   ;; will be read in from the data!
+        wfs_number = 3
+     end
+     149: begin
+        datatype = 'pseudo-open-loop-slopes'
+        pupil_remap = 'gems-fratricide-wfs'
+        archive_location = 'sPOL13149213252'
+        filename = '13149213252_pol_wfs4'
+        rate = 0.   ;; will be read in from the data!
+        wfs_number = 4
+     end
+
+
+
+
+
+;; % extract_data('12353004336');     ;;;; 1.3. Additional onsky data, interesting cases: Strong mid-altitude (~4km)
+
+
+     155: begin
+        datatype = 'pseudo-open-loop-slopes'
+        pupil_remap = 'gems-fratricide-wfs'
+        archive_location = 'sPOL12353004336'
+        filename = '12353004336_pol_wfs0'
+        rate = 0.  ;; will be read in from the data!
+        wfs_number = 0
+     end
+     156: begin
+        datatype = 'pseudo-open-loop-slopes'
+        pupil_remap = 'gems-fratricide-wfs'
+        archive_location = 'sPOL12353004336'
+        filename = '12353004336_pol_wfs1'
+        rate = 0.   ;; will be read in from the data!
+        wfs_number = 1
+     end
+     157: begin
+        datatype = 'pseudo-open-loop-slopes'
+        pupil_remap = 'gems-fratricide-wfs'
+        archive_location = 'sPOL12353004336'
+        filename = '12353004336_pol_wfs2'
+        rate = 0.   ;; will be read in from the data!
+        wfs_number = 2
+     end
+     158: begin
+        datatype = 'pseudo-open-loop-slopes'
+        pupil_remap = 'gems-fratricide-wfs'
+        archive_location = 'sPOL12353004336'
+        filename = '12353004336_pol_wfs3'
+        rate = 0.   ;; will be read in from the data!
+        wfs_number = 3
+     end
+     159: begin
+        datatype = 'pseudo-open-loop-slopes'
+        pupil_remap = 'gems-fratricide-wfs'
+        archive_location = 'sPOL12353004336'
+        filename = '12353004336_pol_wfs4'
+        rate = 0.   ;; will be read in from the data!
+        wfs_number = 4
+     end
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+;; % extract_data('11049181640');     ;;;; 1.2. Artifitial generation
+;; of turbulence using DM 0
+
+     205: begin
+        datatype = 'pseudo-open-loop-slopes'
+        pupil_remap = 'gems-fratricide-wfs'
+        archive_location = 'sPOL11049181640'
+        filename = '11049181640_pol_wfs0'
+        rate = 0.  ;; will be read in from the data!
+        wfs_number = 0
+     end
+     206: begin
+        datatype = 'pseudo-open-loop-slopes'
+        pupil_remap = 'gems-fratricide-wfs'
+        archive_location = 'sPOL11049181640'
+        filename = '11049181640_pol_wfs1'
+        rate = 0.   ;; will be read in from the data!
+        wfs_number = 1
+     end
+     207: begin
+        datatype = 'pseudo-open-loop-slopes'
+        pupil_remap = 'gems-fratricide-wfs'
+        archive_location = 'sPOL11049181640'
+        filename = '11049181640_pol_wfs2'
+        rate = 0.   ;; will be read in from the data!
+        wfs_number = 2
+     end
+     208: begin
+        datatype = 'pseudo-open-loop-slopes'
+        pupil_remap = 'gems-fratricide-wfs'
+        archive_location = 'sPOL11049181640'
+        filename = '11049181640_pol_wfs3'
+        rate = 0.   ;; will be read in from the data!
+        wfs_number = 3
+     end
+     209: begin
+        datatype = 'pseudo-open-loop-slopes'
+        pupil_remap = 'gems-fratricide-wfs'
+        archive_location = 'sPOL11049181640'
+        filename = '11049181640_pol_wfs4'
+        rate = 0.   ;; will be read in from the data!
+        wfs_number = 4
+     end
+
+
+;; % extract_data('11049162614');     ;;;; 1.2. Artifitial generation
+;; of turbulence using DM 4.5
+
+
+     215: begin
+        datatype = 'pseudo-open-loop-slopes'
+        pupil_remap = 'gems-fratricide-wfs'
+        archive_location = 'sPOL11049162614'
+        filename = '11049162614_pol_wfs0'
+        rate = 0.  ;; will be read in from the data!
+        wfs_number = 0
+     end
+     216: begin
+        datatype = 'pseudo-open-loop-slopes'
+        pupil_remap = 'gems-fratricide-wfs'
+        archive_location = 'sPOL11049162614'
+        filename = '11049162614_pol_wfs1'
+        rate = 0.   ;; will be read in from the data!
+        wfs_number = 1
+     end
+     217: begin
+        datatype = 'pseudo-open-loop-slopes'
+        pupil_remap = 'gems-fratricide-wfs'
+        archive_location = 'sPOL11049162614'
+        filename = '11049162614_pol_wfs2'
+        rate = 0.   ;; will be read in from the data!
+        wfs_number = 2
+     end
+     218: begin
+        datatype = 'pseudo-open-loop-slopes'
+        pupil_remap = 'gems-fratricide-wfs'
+        archive_location = 'sPOL11049162614'
+        filename = '11049162614_pol_wfs3'
+        rate = 0.   ;; will be read in from the data!
+        wfs_number = 3
+     end
+     219: begin
+        datatype = 'pseudo-open-loop-slopes'
+        pupil_remap = 'gems-fratricide-wfs'
+        archive_location = 'sPOL11049162614'
+        filename = '11049162614_pol_wfs4'
+        rate = 0.   ;; will be read in from the data!
+        wfs_number = 4
+     end
+
+
+
+
+
+
+;; % extract_data('11049163746');     ;;;; 1.2. Artifitial generation
+;; of turbulence using DM 9
+
+
+     225: begin
+        datatype = 'pseudo-open-loop-slopes'
+        pupil_remap = 'gems-fratricide-wfs'
+        archive_location = 'sPOL11049163746'
+        filename = '11049163746_pol_wfs0'
+        rate = 0.  ;; will be read in from the data!
+        wfs_number = 0
+     end
+     226: begin
+        datatype = 'pseudo-open-loop-slopes'
+        pupil_remap = 'gems-fratricide-wfs'
+        archive_location = 'sPOL11049163746'
+        filename = '11049163746_pol_wfs1'
+        rate = 0.   ;; will be read in from the data!
+        wfs_number = 1
+     end
+     227: begin
+        datatype = 'pseudo-open-loop-slopes'
+        pupil_remap = 'gems-fratricide-wfs'
+        archive_location = 'sPOL11049163746'
+        filename = '11049163746_pol_wfs2'
+        rate = 0.   ;; will be read in from the data!
+        wfs_number = 2
+     end
+     228: begin
+        datatype = 'pseudo-open-loop-slopes'
+        pupil_remap = 'gems-fratricide-wfs'
+        archive_location = 'sPOL11049163746'
+        filename = '11049163746_pol_wfs3'
+        rate = 0.   ;; will be read in from the data!
+        wfs_number = 3
+     end
+     229: begin
+        datatype = 'pseudo-open-loop-slopes'
+        pupil_remap = 'gems-fratricide-wfs'
+        archive_location = 'sPOL11049163746'
+        filename = '11049163746_pol_wfs4'
+        rate = 0.   ;; will be read in from the data!
+        wfs_number = 4
+     end
+
+
+
+
+
+
+
+
+
   endcase
 
   if strcmp(datatype, 'closed-loop-dm-commands') then begin
-     data_suffix = '_phase.fits' ;;; sometimes not - set as appropriate
+     data_suffix = '_phase.fits' 
      scaling_for_nm_phase = 1e3  ;;; are in microns to begin with
   endif
 
   if strcmp(datatype, 'closed-loop-slopes') then begin
-     data_suffix = '_slopes.fits' ;;; sometimes not - set as appropriate
+     data_suffix = '_slopes.fits' 
 
      ;;;; this is totally made up - get from arcsec to nm
-     scaling_for_nm_phase = 1e-2
+     scaling_for_nm_phase = 1e2
+  endif
+
+  if strcmp(datatype, 'pseudo-open-loop-slopes') then begin
+     data_suffix = '_slopes.fits' 
+
+     ;;;; this is totally made up - get from arcsec to nm
+     scaling_for_nm_phase = 1e3
   endif
   ;;;; AO system
+
+
+
+
 
 
   ;;;; basic system info - grid size and how to put in grid
@@ -298,6 +721,15 @@ function get_case_gems, identifier
                tau:tau, $
                dm_number:dm_number, $
                wfs_number:wfs_number}
+
+
+  ;;; fix the frame rat!
+  
+  if strcmp(this_case.pupil_remap, 'gems-fratricide-wfs') then begin
+     foo = readfits(strmid(this_case.raw_path, 0, strlen(this_case.raw_path)-strlen('slopes.fits')) + $
+                    'rate.fits')
+     this_case.rate = foo[0]
+  endif
 
 
   return, this_case

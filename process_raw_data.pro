@@ -33,7 +33,7 @@ pro prd_add_header_info, obs, h1
 end
 
 
-pro process_raw_data, obs
+pro process_raw_data, obs, stop=stopflag, enforce_frat=eflag
 
 ;;;; pass in a structure that has all the relevant information about 
 ;;;; where the data are saevd on disk, the telescope, etc.
@@ -79,6 +79,7 @@ pro process_raw_data, obs
   endif
 
 
+  if strcmp(obs.pupil_remap, 'gems-custom-wfs') then eflag = 1
 
   if strcmp(obs.data_dim, '2D') then begin
      ;;;; data are 2D - actuators across, time long)
@@ -88,8 +89,19 @@ pro process_raw_data, obs
      wid = dims[1]
      len = dims[2]
      
+     if strcmp(obs.pupil_remap, 'gems-fratricide-wfs') then begin
+        fratricide_Mask = readfits(strmid(obs.raw_path, 0, strlen(obs.raw_path)-strlen('slopes.fits')) + $
+                                   'mask_wfs'+strcompress(/rem, string(round(obs.wfs_number)))+'.fits')
+     endif
+
+     if keyword_set(eflag) then begin
+        fratricide_Mask = readfits('data/gems/raw/mask_wfs'+strcompress(/rem, string(round(obs.wfs_number)))+'.fits')
+     endif
+
      ;;;; convert the 1D vector to the 2D pupil image correctly
      dm_shape = make_array(obs.n, obs.n, len)
+
+     ;;; for disp2d and locations, we process one time step at a time
      for t=0, len-1 do begin
         this_sig = sig[*,t]
 
@@ -105,11 +117,23 @@ pro process_raw_data, obs
            dm_shape[*,*,t] = this_dm
         endif
      endfor
+     
+     ;;; for GEMS data we process the entire time series at once!
      if strcmp(obs.pupil_remap, 'gems-custom-dm') then begin
         dm_shape[obs.l_dm:obs.h_dm, obs.l_dm:obs.h_dm,*] = gems_phase_mapping(sig, obs.dm_number)
      endif
-     if strcmp(obs.pupil_remap, 'gems-custom-wfs') then begin
-        dm_shape[obs.l_dm:obs.h_dm, obs.l_dm:obs.h_dm,*] = gems_slope_mapping(sig, obs.wfs_number)
+     if keyword_set(eflag) then begin
+        if strcmp(obs.pupil_remap, 'gems-custom-wfs') then begin
+           dm_shape[obs.l_dm:obs.h_dm, obs.l_dm:obs.h_dm,*] = gems_slope_mapping(sig, obs.wfs_number, mask=fratricide_Mask)
+        endif       
+     endif else begin
+        if strcmp(obs.pupil_remap, 'gems-custom-wfs') then begin
+           dm_shape[obs.l_dm:obs.h_dm, obs.l_dm:obs.h_dm,*] = gems_slope_mapping(sig, obs.wfs_number)
+        endif       
+     endelse
+     if strcmp(obs.pupil_remap, 'gems-fratricide-wfs') then begin
+        dm_shape[obs.l_dm:obs.h_dm, obs.l_dm:obs.h_dm,*] = $
+           gems_slope_mapping(sig, obs.wfs_number, mask=fratricide_Mask)
      endif
 
 
@@ -126,15 +150,27 @@ pro process_raw_data, obs
      if strcmp(obs.pupil_remap, 'gems-custom-dm') then begin
         pingrid[obs.l_dm:obs.h_dm, obs.l_dm:obs.h_dm] = gems_phase_mapping(sig[*,0]*0 + 1., obs.dm_number)
      endif
-     if strcmp(obs.pupil_remap, 'gems-custom-wfs') then begin
-        pingrid[obs.l_dm:obs.h_dm, obs.l_dm:obs.h_dm] = gems_slope_mapping(sig[*,0]*0 + 1., obs.wfs_number)
+     if keyword_set(eflag) then begin
+        if strcmp(obs.pupil_remap, 'gems-custom-wfs') then begin
+           pingrid[obs.l_dm:obs.h_dm, obs.l_dm:obs.h_dm] = $
+              gems_slope_mapping(sig[*,0]*0 + 1., obs.wfs_number, mask=fratricide_Mask, /getmask)
+        endif
+     endif else begin
+        if strcmp(obs.pupil_remap, 'gems-custom-wfs') then begin
+           pingrid[obs.l_dm:obs.h_dm, obs.l_dm:obs.h_dm] = gems_slope_mapping(sig[*,0]*0 + 1., obs.wfs_number, /getmask)
+        endif
+     endelse
+
+     if strcmp(obs.pupil_remap, 'gems-fratricide-wfs') then begin
+        pingrid[obs.l_dm:obs.h_dm, obs.l_dm:obs.h_dm] = $
+           gems_slope_mapping(sig[*,0]*0 + 1., obs.wfs_number, mask=fratricide_Mask, /getmask)
      endif
 
   endif
 
 
   if strcmp(obs.data_dim, '3D-timefirst') then begin
-     dims = size(sig)
+     dims = size(data)
      len = dims[1]
      thisn = dims[2]
 
@@ -148,27 +184,11 @@ pro process_raw_data, obs
      endif
   endif
   
-  if strcmp(obs.data_dim, '3D-timelast') then begin
-      dims = size(sig)
-      len = dims[3]
-      thisn = dims[2]
-
-      dm_shape = make_array(obs.n, obs.n, len)
-      for t=0, len-1 do $
-         dm_shape[obs.l_dm:obs.h_dm, obs.l_dm:obs.h_dm,t] = sig[*,*,t]
-
-      ;;;; get the mask that defines the valid pupil
-      if strcmp(obs.pupil_remap, 'data') then begin
-         pingrid = (dm_shape[*,*,0] NE 0.)*1.
-      endif
-    endif
-  
-  
-  
   ;;; free up space
   delvar, sig
 
 
+  if keyword_set(stopflag) then stop
   ;;; now we scale to get units of nm of phase
   dm_shape = dm_shape*obs.scaling_for_nm_phase
 
@@ -179,35 +199,21 @@ pro process_raw_data, obs
      dm_shape[*,*,t] = this_dm
   endfor
   
+  if keyword_set(stopflag) then stop
 
-
-
-
-  ;;; now let's make the Fourier modes!
-  fourier_modes = make_array(/comp, obs.n, obs.n, len)
-  for t=0, len-1 do begin
-     fourier_modes[*,*,t] = fft(dm_shape[*,*,t])
-  endfor
-  
-  cutoff = 1.5
-  d = DIST( obs.n, obs.n )
-  f = fltarr(obs.n , obs.n ) + 1.0
-  f[where(d le cutoff)] = 0.0
-  
-  for t=0, len-1 do begin
-      fourier_modes[*,*,t] = fourier_modes[*,*,t] * f
-      dm_shape[*,*,t] = fft(fourier_modes[*,*,t],/INVERSE)
-  endfor
-  
   ;;; this is our data cube in actuator space. 
   ;;; let's save it
   mkhdr, h1, dm_shape
   prd_add_header_info, obs, h1
   fxaddpar, h1, 'DTYPE', 'Spatial signals', 'In spatial domain'
   writefits, obs.processed_path+'_phase.fits', dm_shape, h1
-  
-  
-  
+
+
+
+  ;;; now let's make the Fourier modes!
+  fourier_modes = make_array(/comp, obs.n, obs.n, len)
+  for t=0, len-1 do $
+     fourier_modes[*,*,t] = fft(dm_shape[*,*,t])
   freq_dom_scaling = sqrt(obs.n^2/total(pingrid))
   fourier_modes = fourier_modes*freq_dom_scaling
   
