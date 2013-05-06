@@ -18,7 +18,8 @@
 ;;;; This loads in the Fmodes (fx by fy by time)
 ;;; and processes them into a 3D fourier cube.
 
-pro process_fmodes, obs, per_len=pflag, more=moreflag
+pro process_fmodes, obs, per_len=pflag, more=moreflag, lax=laxflag, verbose=vflag, display=dflag, $
+                    save_graphics_files=sflag, retearly=reteflag, relaxalpha = relaxflag, relaxrms = relaxrms
 
   if obs.rate GT 800 then per_len = 2048. else per_len = 1024.
   if keyword_set(pflag) then per_len = pflag 
@@ -80,20 +81,21 @@ pro process_fmodes, obs, per_len=pflag, more=moreflag
 
   tf_to_convert_to_phase = omega*0 + 1.
 
-  if strcmp(obs.datatype, 'closed-loop-residual') then begin
+  if strcmp(obs.datatype, 'closed-loop-residual') then $
      tf_to_convert_to_phase = abs(1 + delay_term*cofz)^2
-  endif
-  if strcmp(obs.datatype, 'closed-loop-slopes') then begin
+
+  if strcmp(obs.datatype, 'closed-loop-slopes') then $
      tf_to_convert_to_phase = abs(1 + delay_term*cofz)^2
-  endif
-  if strcmp(obs.datatype, 'closed-loop-dm-commands') then begin
-     ;; should this be 
+
+  ;; should this be 
                                 ;tf_to_convert_to_phase = abs((1 + delay_term*cofz)/(dm_cont*delay_cont*cofz))^2
+  if strcmp(obs.datatype, 'closed-loop-dm-commands') then $
      tf_to_convert_to_phase = abs((1 + delay_term*cofz)/(cofz))^2
-  endif
-  if strcmp(obs.datatype, 'open-loop-residual') then begin
-     tf_to_convert_to_phase = omega*0 + 1.
-  endif
+
+  ;;; if open loop, don't do anything!
+;  if strcmp(obs.datatype, 'open-loop-residual') then $
+;     tf_to_convert_to_phase = omega*0 + 1.
+
 
   for k=0, n-1 do $
      for l=0, n-1 do $
@@ -103,6 +105,12 @@ pro process_fmodes, obs, per_len=pflag, more=moreflag
   ;;; WFS noise, with no impact of the control system or the
   ;;; deformable mirror!
 
+  if 0 then begin
+     k = 3
+     l = 3
+     make_plot_psd, hz, modal_psds, k, l
+     stop
+  endif
 
   ;; what do we do now?
 
@@ -110,6 +118,13 @@ pro process_fmodes, obs, per_len=pflag, more=moreflag
   ;;; with a straightforward fitting procedure.
 
   split_psds_into_atm_and_noise, modal_psds, atm_psds, noise_psds
+
+  if 0 then begin
+     k = 3
+     l = 3
+     make_plot_psd, hz, atm_psds, k, l
+     stop
+  endif
 
   power_atm = total(atm_psds, 3)
   power_noise = total(noise_psds, 3)
@@ -121,30 +136,64 @@ pro process_fmodes, obs, per_len=pflag, more=moreflag
 
   ;;; now move on to finding the peaks!
 
-  fit_data = find_and_fit_peaks(atm_psds)
-  wind_data = find_and_fit_layers(fit_data.est_omegas_peaks/(2*!pi)*obs.rate, obs)
+  if obs.rate LT 250. then relaxalpha = 1
+  if keyword_set(relaxflag) then relaxalpha = 1
+  if keyword_set(relaxrmsflag) then relaxrms = 1
+  fit_data = find_and_fit_peaks_nodc(atm_psds, verbose=vflag, display=dflag, $
+                                     relaxalpha=relaxalpha, $
+                                     relaxrms=relaxrms)
+
+  if 0 then begin
+     k = 3
+     l = 3
+     make_plot_compare_psd, hz, atm_psds, fit_data, obs, k, l
+     stop
+  endif
+
+
+  wind_data = find_and_fit_layers(fit_data.est_omegas_peaks/(2*!pi)*obs.rate, obs, lax=laxflag)
 
   
-  ; ;; display nicely!
-  ; print, 'Ok - look at stuff'
-  ; print, '  '
-  ; 
-  ; make_wind_map, wind_data, obs, /old
-  ; ;stop
-  ; make_layer_freq_image, fit_data, wind_data, obs
+  ;; display nicely!
+  print, 'Ok - look at stuff'
+  print, '  '
+  
+  make_wind_map, wind_data, obs, /old, lax=laxflag
+  if keyword_set(sflag) then $
+     make_wind_map, wind_data, obs, /old, lax=laxflag, png=sflag
 
-  ; print, 'Next routines require ImageMagick, etc.'
-;   print, ' '
-;   ;stop
-; 
-;   ;;;; these require ImageMagick!
-;   make_wind_map, wind_data, obs, /old, /png
-  ; make_layer_freq_image, fit_data, wind_data, obs, /png
-;   ;stop
-;   window, 3
-;   ; wset, 3 & make_layer_freq_image, fit_data.est_omegas_peaks/(2*!pi)*obs.rate, wind_data.layer_list, obs, maxv=10.
-;   wset, 3 & make_layer_freq_image, fit_data, wind_data, obs, maxv=10.
-;   make_movie_psds, atm_psds, fit_data.fit_atm_psds, wind_data.layer_list, obs
+  if keyword_set(reteflag) then return
+
+  stop
+  make_layer_freq_image, fit_data, wind_data, obs
+  if keyword_set(sflag) then $
+     make_layer_freq_image, fit_data, wind_data, obs, png=sflag
+
+  if 0 then begin
+     k = 0
+     l = 8
+     make_plot_compare_psd, hz, atm_psds, fit_data, obs, k, l, /fully
+     
+     foo = find_and_fit_peaks_nodc(atm_psds, k=k, l=l)
+
+     stop
+  endif
+
+
+
+  print, 'Next routines require ImageMagick, etc.'
+  print, ' '
+  stop
+
+  ;;;; these require ImageMagick!
+  make_wind_map, wind_data, obs, /old, /png
+  make_layer_freq_image, fit_data, wind_data, obs, /png
+
+  stop
+
+  wset, 3 & make_layer_freq_image, fit_data.est_omegas_peaks/(2*!pi)*obs.rate, wind_data.layer_list, obs, maxv=10.
+
+  make_movie_psds, atm_psds, fit_data.fit_atm_psds, wind_data.layer_list, obs
 
 
 
@@ -158,27 +207,13 @@ pro process_fmodes, obs, per_len=pflag, more=moreflag
 ;;;; do this myself
   peaks_hz = fit_data.est_omegas_peaks/(2*!pi)*obs.rate
   
-  mkhdr, h1, wind_data.metric, /extend
-  fxaddpar, h1, 'TSCOPE', obs.telescope, 'Telescope of observation'
-  fxaddpar, h1, 'RAWPATH', obs.raw_path, 'File path and name of raw telemetry archive'
-  fxaddpar, h1, 'PROCPATH', obs.processed_path, 'File path and name of the processes data'
-  fxaddpar, h1, 'DTYPE', 'Wind Map', 'In spatial domain'
-  writefits,obs.processed_path+'_fwmap.fits',wind_data.metric,h1
-  mkhdr, h2, wind_data.vx, /image
-  fxaddpar, h2, 'DTYPE', 'Wind vx scale', 'in m/s'
-  writefits,obs.processed_path+'_fwmap.fits',wind_data.vx,h2,/append
-  mkhdr, h3, wind_data.vy, /image
-  fxaddpar, h3, 'DTYPE', 'Wind vy scale', 'in m/s'
-  writefits,obs.processed_path+'_fwmap.fits',wind_data.vy,h3,/append
-  print,"Done Processing FModes"
+
   ;; k = obs.n-5
   ;; l = 5
 
-  k = 2
-  l = 10
-  ; make_plot_psd, hz, atm_psds, k, l & make_plot_psd, hz, fit_data.fit_atm_psds, k, l, over=250
-  make_plot_compare_psd, hz, atm_psds, fit_data, obs, k, l, /pdf
-  stop
+  ;; make_plot_psd, hz, atm_psds, k, l & make_plot_psd, hz, fit_data.fit_atm_psds, k, l, over=250
 
+  make_plot_compare_psd, hz, atm_psds, fit_data, obs, k, l
+  make_plot_psd, hz, atm_psds, k, l
 
 end

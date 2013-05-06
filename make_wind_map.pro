@@ -1,5 +1,8 @@
 @imagemagick_helpers
-pro make_wind_map, wind_data, obs, oldcolor=oflag, png=pngflag
+pro make_wind_map, wind_data, obs, oldcolor=oflag, png=pngflag, lax=laxflag
+
+  ;;; lax means we've used a lower limit for detections. Change
+  ;;; the color scale!
 
   metric = wind_data.metric
   vx = wind_data.vx
@@ -16,13 +19,27 @@ pro make_wind_map, wind_data, obs, oldcolor=oflag, png=pngflag
   maxvel_10 = round(maxvel/10)*10.
   maxvelr_10 = round(maxvel*sqrt(2.)/10)*10.
 
+
+
   if keyword_set(pngflag) then begin
+
+     if keyword_set(laxflag) then begin
+        mymax = laxflag*2.
+        title_suffix = ' LAX! white = '+strcompress(/rem, string(format='(F5.2)', 1e2*laxflag*2)+'%')
+     endif else begin
+        mymax = 1.
+        title_suffix = ''
+     endelse
+
 
      maxv = 1.
      minv = 0.
 
 
      sig = metric
+
+     sig = sig/mymax
+     
      dims = size(sig)
 
      ;; pad the sig to give space to annote
@@ -71,7 +88,8 @@ pro make_wind_map, wind_data, obs, oldcolor=oflag, png=pngflag
      ;;; add in the annotations
 
      ;;; the color bar
-     imh_text, fname, /center, panelrad + ufac*border*.375, -(panelrad + ufac*border*0.25), '100 %'
+     imh_text, fname, /center, panelrad + ufac*border*.375, -(panelrad + ufac*border*0.25), $
+               strcompress(/rem, string(round(1e2*mymax))) +' %'
      imh_text, fname, /center, panelrad + ufac*border*.375, (panelrad + ufac*border*0.25), '0 %'
      imh_rect, fname, ufac*cbxl, ufac*cbyl, ufac*(cbxh+1), ufac*(cbyh+1), color='black'
 
@@ -105,10 +123,10 @@ pro make_wind_map, wind_data, obs, oldcolor=oflag, png=pngflag
            nlay = dims0[2]
            for l=0, nlay-1 do begin
            ;;;; the dot
-           imh_dot, fname, ufac*(dims[1]/2 + layer_list[0,l]/delv),  ufac*(dims[2]/2 - layer_list[1,l]/delv), 2
+              imh_dot, fname, ufac*(dims[1]/2 + layer_list[0,l]/delv),  ufac*(dims[2]/2 - layer_list[1,l]/delv), 2
            ;;;; the label
-           imh_text, fname, ufac*(dims[1]/2 + layer_list[0,l]/delv) + 1,  ufac*(dims[2]/2 - layer_list[1,l]/delv), $
-                     strcompress(string(round(100*layer_list[2,l])))+'%', color='black', /bold
+              imh_text, fname, ufac*(dims[1]/2 + layer_list[0,l]/delv) + 1,  ufac*(dims[2]/2 - layer_list[1,l]/delv), $
+                        strcompress(string(round(100*layer_list[2,l])))+'%', color='black', /bold
            endfor
         endelse
      endif
@@ -128,13 +146,22 @@ pro make_wind_map, wind_data, obs, oldcolor=oflag, png=pngflag
 
   endif else begin
 
+     if keyword_set(laxflag) then begin
+        mymax = laxflag*2.
+        title_suffix = ' LAX! top = '+strcompress(/rem, string(format='(F6.0)', 1e2*laxflag*2)+'%')
+     endif else begin
+        mymax = 1.
+        title_suffix = ''
+     endelse
 
-     exptv, /data, metric, min=0, max=1
+
+
+     exptv, /data, metric, min=0, max=mymax
      offset = -6
      ynudge = -10/delv*.1
 
 
-     title = obs.telescope + ': ' + obs.filename
+     title = obs.telescope + ': ' + obs.filename + title_suffix
      xyouts, charsize=1.75, align=0.5, (n-1)/2, n + 3, title
 
      m = 0

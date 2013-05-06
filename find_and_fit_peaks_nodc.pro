@@ -12,7 +12,7 @@
 @fitter_alpha_complex
 @fitter_all_together
 function find_and_fit_peaks_nodc, atm_psds, k=kflag, l=lflag, more=moreflag, display=dflag, verbose=vflag, $
-                                  stop=stopflag
+                                  stop=stopflag, relaxalpha = relflag, relaxrms = relaxrms
 
 
   dims = size(atm_psds)
@@ -44,6 +44,7 @@ function find_and_fit_peaks_nodc, atm_psds, k=kflag, l=lflag, more=moreflag, dis
 
   valid = make_array(n,n) + 1.
   valid[0,0] = 0.
+  valid[n/2, n/2] = 0.
 
   tolerance_for_dc = 0.005
 
@@ -56,8 +57,11 @@ function find_and_fit_peaks_nodc, atm_psds, k=kflag, l=lflag, more=moreflag, dis
   searchrad_lower = 0.012
   alpha_for_layer = 0.999
   min_layer_rms_frac = 0.2 ;; must have 20% the RMS of the DC!
+  if keyword_set(relaxrms) then min_layer_rms_frac = 0.1
 
-  min_alpha = 0.95
+  if keyword_set(relflag) then $
+     min_alpha = 0.85 else $
+        min_alpha = 0.95
   max_alpha = 0.9998
 
   peak_template = gen_periodogram(make_array(/comp, per_len, per_len) + 1, per_len)
@@ -136,6 +140,34 @@ function find_and_fit_peaks_nodc, atm_psds, k=kflag, l=lflag, more=moreflag, dis
                     mask = mask*(abs(omega - est_omega) GT mask_rad)
 
                  endelse
+
+
+
+                 if n_elements(kflag) EQ 1 then begin
+                    if n_elements(lflag) EQ 1  then begin
+                       if (k EQ kflag) and (l eq lflag) then begin
+                          print, ' '
+                          print, 'Stopping at your request....'
+                          print, ' '
+
+                          mystring = 'Layers '
+                          mystring = mystring  + 'Best-fit: curvefit, '
+                          mystring = strcompress(mystring + 'alpha = ' + string(alphas_peaks[k,l,t]) + $
+                                                 ', omega = ' + string(est_omegas_peaks[k,l,t]) + $
+                                                 ', variance = ' + string(variance_dc[k,l]))
+
+                          plot, shift(omega, per_len/2), shift(this_psd, per_len/2),  xrange=[-1,1]*1., $
+                                title=mystring
+                          oplot, shift(omega, per_len/2), shift(res, per_len/2), color=250
+                          oplot, shift(omega, per_len/2), shift(this_psd - res, per_len/2), color=100
+
+
+                          stop
+                       endif
+                    endif
+                 endif
+
+
                  if keyword_set(dflag) then begin
                     mystring = 'Layers '
                     mystring = mystring  + 'Best-fit: curvefit, '
@@ -190,17 +222,6 @@ function find_and_fit_peaks_nodc, atm_psds, k=kflag, l=lflag, more=moreflag, dis
 
            ;;;; now stop if we've been told to
 
-           if keyword_set(kflag) then begin
-              if keyword_set(kflag) then begin
-                 if (k EQ kflag) and (l eq lflag) then begin
-                    print, ' '
-                    print, 'Stopping at your request....'
-                    print, ' '
-
-                    stop
-                 endif
-              endif
-           endif
 
 ;           print, 'OK - try out this new method!'
 ;           stop
@@ -220,8 +241,8 @@ function find_and_fit_peaks_nodc, atm_psds, k=kflag, l=lflag, more=moreflag, dis
            
            plocs= where(variance_peaks[k,l,*] NE 0., numf)
            if numf LE 0 then begin
-              if keyword_set(vflag) then print, k, l, '  WARNING!: no peaks were found at all!!!!'
-              ; stop
+              print, k, l, '  WARNING!: no peaks were found at all!!!!'
+;              stop
            endif
            
            ;; now find the peak with the most power that is very close
@@ -269,6 +290,23 @@ function find_and_fit_peaks_nodc, atm_psds, k=kflag, l=lflag, more=moreflag, dis
 
            endelse
            fit_psd = dc_fit_psd
+
+
+           beverbal = 0
+           if n_elements(kflag) EQ 1 then begin
+              if n_elements(lflag) EQ 1  then begin
+                 if (k EQ kflag) and (l eq lflag) then begin
+                    print, ' '
+                    print, 'Stopping at your request....'
+                    print, ' '
+                    print, est_omegas_peaks[k,l,*]
+                    beverbal = 1
+
+                    stop
+                 endif
+              endif
+           endif
+
 
            ;; note - if NO dc was found, all peaks are kept
            vlocs = where(rms_peaks[k,l,*] GT rms_dc[k,l]*min_layer_rms_frac, numv)
@@ -337,10 +375,16 @@ function find_and_fit_peaks_nodc, atm_psds, k=kflag, l=lflag, more=moreflag, dis
                  problem2 = (alphas_peaks[k,l,vlocs[vv]]  LT min_alpha) OR (alphas_peaks[k,l,vlocs[vv]]  GT max_alpha)
                  if problem1 OR problem2 then begin
                     if problem1 then $
-                       if keyword_set(vflag) then print, k, l, '  After joint fit, this peak is not strong enough. Removing: ', vlocs[vv]
+                       if keyword_set(vflag) or (beverbal EQ 1) then $
+                          print, k, l, '  After joint fit, this peak is not strong enough. Removing: ', vlocs[vv], $
+                                 rms_peaks[k,l,vlocs[vv]], ' < ', rms_dc[k,l]*min_layer_rms_frac
                     if problem2 then $
-                       if keyword_set(vflag) then print, k, l, '  After joint fit, alpha is out of range.          Removing: ', vlocs[vv], $
-                                                         est_omegas_peaks[k,l,vlocs[vv]] , alphas_peaks[k,l,vlocs[vv]]
+                       if keyword_set(vflag) or (beverbal EQ 1)  then $
+                          print, k, l, '  After joint fit, alpha is out of range.          Removing: ', vlocs[vv], $
+                                 alphas_peaks[k,l,vlocs[vv]], ' < min_alpha ('+strcompress(/rem, string(min_alpha))+$
+                                 ') OR > max_alpha ('+strcompress(/rem, string(max_alpha))+$
+                                 ')'
+                    
                     alphas_peaks[k,l,vlocs[vv]] = 0
                     est_omegas_peaks[k,l,vlocs[vv]] = 0
                     variance_peaks[k,l,vlocs[vv]] = 0
@@ -353,6 +397,20 @@ function find_and_fit_peaks_nodc, atm_psds, k=kflag, l=lflag, more=moreflag, dis
               fit_atm_peaks_psds[k,l,*] = fit_psd - dc_fit_psd
               fit_atm_psds[k,l,*] = fit_psd
            endelse
+
+
+           if n_elements(kflag) EQ 1 then begin
+              if n_elements(lflag) EQ 1  then begin
+                 if (k EQ kflag) and (l eq lflag) then begin
+                    print, ' '
+                    print, 'Stopping at your request....'
+                    print, ' '
+                    print, est_omegas_peaks[k,l,*]
+
+                    stop
+                 endif
+              endif
+           endif
 
 
 
