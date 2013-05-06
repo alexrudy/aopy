@@ -139,7 +139,7 @@ pro process_fmodes, obs, per_len=pflag, more=moreflag
 ; 
 ;   ;;;; these require ImageMagick!
 ;   make_wind_map, wind_data, obs, /old, /png
-;   make_layer_freq_image, fit_data, wind_data, obs, /png
+  ; make_layer_freq_image, fit_data, wind_data, obs, /png
 ;   ;stop
 ;   window, 3
 ;   ; wset, 3 & make_layer_freq_image, fit_data.est_omegas_peaks/(2*!pi)*obs.rate, wind_data.layer_list, obs, maxv=10.
@@ -174,8 +174,11 @@ pro process_fmodes, obs, per_len=pflag, more=moreflag
   ;; k = obs.n-5
   ;; l = 5
 
-  ;; make_plot_psd, hz, atm_psds, k, l & make_plot_psd, hz, fit_data.fit_atm_psds, k, l, over=250
-
+  k = 2
+  l = 10
+  ; make_plot_psd, hz, atm_psds, k, l & make_plot_psd, hz, fit_data.fit_atm_psds, k, l, over=250
+  make_plot_compare_psd, hz, atm_psds, fit_data, obs, k, l, /pdf
+  stop
 
 
 end
