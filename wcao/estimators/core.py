@@ -13,7 +13,9 @@ import abc
 
 import pyshell.loggers
 
-class Base(object):
+from aopy.util.basic import ConsoleContext
+
+class Base(ConsoleContext):
     """A common base for WCAO objects"""
     def __init__(self):
         super(Base, self).__init__()

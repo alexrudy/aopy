@@ -28,12 +28,9 @@ log = getSimpleLogger(__name__)
 
 log.status("Loading Data")
 Data = WCAOCase("Keck","20070730_2",(WCAOCase.__module__,'telemetry.yml'))
-Data.telemetry.console = True
-Data.telemetry.load_raw()
 Plan = GaussNewtonEstimator().setup(Data)
-
-for n in ProgressBar(Plan.nt):
-    Plan.estimate()
+log.status("Estimating Phase")
+Plan.estimate()
 Plan.finish()
 
 import matplotlib.pyplot as plt

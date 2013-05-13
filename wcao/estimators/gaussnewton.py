@@ -75,7 +75,7 @@ class GaussNewtonEstimator(BaseEstimator):
         """Number of timesteps"""
         return self._nt_n
     
-    def setup(self,case,wind=None):
+    def setup(self,case,wind=None,nt=False,ns=0):
         """Perform initialization procedures for this plan which may be resource intensive. This includes deep imports into scipy and numpy.
         
         :param WCAOCase case: The WCAO Case object.
@@ -83,15 +83,19 @@ class GaussNewtonEstimator(BaseEstimator):
         :returns self: To make ``GNE = GaussNewtonEstimator().setup(aperture)`` possible.
         
         """
-        self.case = case 
+        self.case = case
+        self._phase = self.case.telemetry.phase
+        
         
         if wind is not None:
             self._wind = np.atleast2d(wind)
         
-        self._nt = self.case.telemetry.nt
+        self._nt = nt or self.case.telemetry.nt
+        if ns >= self._nt:
+            raise ValueError("Must start from at least one timestep behind the endpoint.")
+        self._ns = ns
         self._winds = np.zeros((self._nt,self.nlayers,2))
         
-        self._phase = self.case.telemetry.phase
         
         self.aperture = self.case.telemetry.aperture
         # Intialize method arrays (to prevent them from reallocating)
@@ -109,7 +113,6 @@ class GaussNewtonEstimator(BaseEstimator):
         self.fft = self._init_fft
         
         self._n = 1
-        self._nt_n = self._nt - self._n
         
         return self
         
@@ -145,11 +148,7 @@ class GaussNewtonEstimator(BaseEstimator):
     def estimate(self):
         """Perform the estimation of the wind direction.
         """
-        # Normalize inputs and place them in the local namespace.
-        wind = self._wind
-        current = self._phase[self._n].astype(np.float)
-        previous = self._phase[self._n-1].astype(np.float)
-        
+        current = self._phase[self._ns].astype(np.float)
         ap_every = self.aperture.pupil
         ap_inner = self.aperture.edgemask
         
@@ -163,50 +162,57 @@ class GaussNewtonEstimator(BaseEstimator):
         GradI = self._GradI
         DeltaI = self._DeltaI
         
-        denominator = np.zeros((2,2))
+        wind = self._wind
         
-        # Create the Gradient Matrix (X,Y)
-        gcurr = depiston(current,ap_every)
-        kernel = np.array([[ -0.5, 0.0, 0.5 ]])
-        GradI[0,:,:] = convolve(gcurr,kernel,mode='same') * ap_every * -1.0
-        GradI[1,:,:] = convolve(gcurr,kernel.T,mode='same') * ap_every * -1.0
         
-        if self.idl:
-            # Aparently scipy.convolve returns values along the edges where IDL convol doesn't.
-            #TODO: Examine when and where this is true!
-            GradI[0,...,0] = 0.0
-            GradI[0,...,-1] = 0.0
-            GradI[1,0,...] = 0.0
-            GradI[1,-1,...] = 0.0
-        else:
-            GradI[0,...] *= ap_inner
-            GradI[1,...] *= ap_inner
+        for n in self.looper(range(self._ns+1,self._nt)):
+            # Normalize inputs and place them in the local namespace.
+            previous = current
+            current = self._phase[n].astype(np.float)
+            
+            denominator = np.zeros((2,2))
+            
+            # Create the Gradient Matrix (X,Y)
+            gcurr = depiston(current,ap_every)
+            kernel = np.array([[ -0.5, 0.0, 0.5 ]])
+            GradI[0,:,:] = convolve(gcurr,kernel,mode='same') * ap_every * -1.0
+            GradI[1,:,:] = convolve(gcurr,kernel.T,mode='same') * ap_every * -1.0
+            
+            if self.idl:
+                # Aparently scipy.convolve returns values along the edges where IDL convol doesn't.
+                #TODO: Examine when and where this is true!
+                GradI[0,...,0] = 0.0
+                GradI[0,...,-1] = 0.0
+                GradI[1,0,...] = 0.0
+                GradI[1,-1,...] = 0.0
+            else:
+                GradI[0,...] *= ap_inner
+                GradI[1,...] *= ap_inner
+                
+            denominator[0,0] = np.sum(GradI[0,...]*GradI[0,...])
+            denominator[0,1] = np.sum(GradI[0,...]*GradI[1,...])
+            denominator[1,0] = np.sum(GradI[1,...]*GradI[0,...])
+            denominator[1,1] = np.sum(GradI[1,...]*GradI[1,...])
+            
+            # Setup a reference wavefront
+            ref = depiston(current * ap_inner, ap_inner)
+            
+            for k in range(self.iterations):
+                DeltaI = ref - depiston(shift(
+                    input = previous,
+                    shift = wind[0,::-1],
+                    mode = mode,
+                    order = order,
+                ) * ap_inner, ap_inner)
+                numerator = np.array([[np.sum(GradI[0,...]*DeltaI)],[np.sum(GradI[1,...]*DeltaI)]])
+                
+                d_wind = np.dot(-inv(denominator),numerator)
+                
+                wind[0] += d_wind[:,0]
+                
+            # Final Step
+            self._winds[n] = wind
         
-        denominator[0,0] = np.sum(GradI[0,...]*GradI[0,...])
-        denominator[0,1] = np.sum(GradI[0,...]*GradI[1,...])
-        denominator[1,0] = np.sum(GradI[1,...]*GradI[0,...])
-        denominator[1,1] = np.sum(GradI[1,...]*GradI[1,...])
-        
-        # Setup a reference wavefront
-        ref = depiston(current * ap_inner, ap_inner)
-        
-        for k in range(self.iterations):
-            DeltaI = ref - depiston(shift(
-                input = previous,
-                shift = wind[0,::-1],
-                mode = mode,
-                order = order,
-            ) * ap_inner, ap_inner)
-            numerator = np.array([[np.sum(GradI[0,...]*DeltaI)],[np.sum(GradI[1,...]*DeltaI)]])
-        
-            d_wind = np.dot(-inv(denominator),numerator)
-        
-            wind[0] += d_wind[:,0]
-        
-        self._wind = np.copy(wind)
-        self._winds[self._n] = wind
-        self._n += 1.0
-        return wind
         
     
 
