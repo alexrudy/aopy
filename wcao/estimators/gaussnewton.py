@@ -126,8 +126,8 @@ class GaussNewtonEstimator(BaseEstimator):
         self._phase = None
         
         # Drop Results
-        from wcao.analysis.data import WCAOTimeseries
-        self.case.addresult(self._winds,WCAOTimeseries,"GN")
+        from wcao.data.estimator import WCAOTimeseries
+        self.case.addresult(self._winds * self.case.subapd * self.case.rate ,WCAOTimeseries,"GN")
         self._winds = None
         
         # Drop Case
