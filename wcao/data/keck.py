@@ -16,6 +16,10 @@ from __future__ import (absolute_import, unicode_literals, division,
 
 import numpy as np
 
+from pkg_resources import resource_stream
+keck_aper = (np.loadtxt(resource_stream(__name__,'act_map.txt')) != 0)
+keck_sub  = (np.loadtxt(resource_stream(__name__,'sub_ap_map.txt')) != 0)
+
 def disp2d(data):
     """Map a data set into the Keck Pupil mapping.
     
@@ -24,9 +28,7 @@ def disp2d(data):
     
     ported from ``disp2d.pro`` by Marcos
     """
-    from pkg_resources import resource_stream
-    keck_aper = (np.loadtxt(resource_stream(__name__,'act_map.txt')) != 0)
-    keck_sub  = (np.loadtxt(resource_stream(__name__,'sub_ap_map.txt')) != 0)
+    
     
     if data.size == 304:
         output = np.zeros((20,20))
