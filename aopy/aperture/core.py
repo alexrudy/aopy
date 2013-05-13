@@ -18,10 +18,17 @@ This module is useful for representing apertures. It uses algorithms from :ref:`
 .. autoclass::
     Aperture
     :members:
+    
+.. autoclass::
+    DMAperture
+    :members:
+    :inherited-members:
 
 """
 from __future__ import (absolute_import, unicode_literals, division,
                         print_function)
+
+from ..util.basic import istype
 
 import numpy as np
 
@@ -42,7 +49,7 @@ class Aperture(object):
         self._edgemask_generated = True
         self.response = response
         if self.response.ndim != 2:
-            raise ValueError, "{0!r} response dimesnions should be 2, not {:d}".format(
+            raise ValueError, "{0!r} response dimesnions should be 2, not {0.response.ndim:d}".format(
                 self, self.response.ndim
             )
         
@@ -107,4 +114,33 @@ class Aperture(object):
         :keyword kwargs: Any extra keywords which will be passed to :meth:`~matplotlib.axes.Axes.imshow`."""
         kwargs.setdefault('interpolation','nearest')
         return ax.imshow(self.pupil,**kwargs)
+        
+class DMAperture(Aperture):
+    """This is an aperture designed to hold DM actuator positions.
+    
+    :param int n: Deformable mirror dimensions
+    :param int l: The bottom of the DM window
+    :param int h: The top of the DM window
+    
+    """
+    def __init__(self, n, l=None, h=None):
+        
+        if isinstance(n,np.ndarray):
+            response = n
+        elif istype(n,int):
+            l = l or 0
+            h = h or n
+            response = np.zeros((n,n),dtype=np.float)
+            response[l:h,l:h] = 1.0
+        else:
+            raise ValueError("n={0!r} is not a valid response specifier. Must be an <int> or <ndarray>.".format(n))
+        
+        super(DMAperture, self).__init__(response)
+        self._dmlh = (l,h)
+        
+    @property
+    def dmlh(self):
+        """The window parameters for this DM. **Read Only**"""
+        return self._dmlh
+        
         
