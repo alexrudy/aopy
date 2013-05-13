@@ -42,5 +42,6 @@ distribute-*.tar.gz
 tests/pkg
 
 *.fits
+*.mp4
 
 
