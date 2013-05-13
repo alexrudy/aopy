@@ -234,7 +234,6 @@ class PlotLukeWind(CLIEngine):
     """docstring for PlotLukeWind"""
     defaultcfg = "windplots.yml"
     supercfg = pyshell.PYSHELL_LOGGING_STREAM
-    log = logging.getLogger(__name__)
     
     def init(self):
         """docstring for init"""

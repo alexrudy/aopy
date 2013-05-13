@@ -21,7 +21,7 @@ pro process_phase, obs
   apmask = edgemask(ap,apinner)
   pap = ptr_new(ap)
   papinner = ptr_new(apinner)
-  
+  ; stop
   ;; Make wind priors
   wind_prior = fltarr(n_methods,2)
   u_x = fltarr(2)

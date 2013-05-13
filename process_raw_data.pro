@@ -33,7 +33,7 @@ pro prd_add_header_info, obs, h1
 end
 
 
-pro process_raw_data, obs, stop=stopflag, enforce_frat=eflag
+pro process_raw_data, obs, stop=stopflag, enforce_frat=eflag, ngs=ngs, cut=cut
 
 ;;;; pass in a structure that has all the relevant information about 
 ;;;; where the data are saevd on disk, the telescope, etc.
@@ -93,7 +93,10 @@ pro process_raw_data, obs, stop=stopflag, enforce_frat=eflag
         fratricide_Mask = readfits(strmid(obs.raw_path, 0, strlen(obs.raw_path)-strlen('slopes.fits')) + $
                                    'mask_wfs'+strcompress(/rem, string(round(obs.wfs_number)))+'.fits')
      endif
-
+     
+     if ~keyword_set(ngs) then ngs=0
+     if ~keyword_set(cut) then cut=0
+     
      if keyword_set(eflag) then begin
         fratricide_Mask = readfits('data/gems/raw/mask_wfs'+strcompress(/rem, string(round(obs.wfs_number)))+'.fits')
      endif
@@ -120,7 +123,7 @@ pro process_raw_data, obs, stop=stopflag, enforce_frat=eflag
      
      ;;; for GEMS data we process the entire time series at once!
      if strcmp(obs.pupil_remap, 'gems-custom-dm') then begin
-        dm_shape[obs.l_dm:obs.h_dm, obs.l_dm:obs.h_dm,*] = gems_phase_mapping(sig, obs.dm_number)
+        dm_shape[obs.l_dm:obs.h_dm, obs.l_dm:obs.h_dm,*] = gems_phase_mapping(sig, obs.dm_number, ngs=ngs)
      endif
      if keyword_set(eflag) then begin
         if strcmp(obs.pupil_remap, 'gems-custom-wfs') then begin
@@ -148,7 +151,7 @@ pro process_raw_data, obs, stop=stopflag, enforce_frat=eflag
      endif
 
      if strcmp(obs.pupil_remap, 'gems-custom-dm') then begin
-        pingrid[obs.l_dm:obs.h_dm, obs.l_dm:obs.h_dm] = gems_phase_mapping(sig[*,0]*0 + 1., obs.dm_number)
+        pingrid[obs.l_dm:obs.h_dm, obs.l_dm:obs.h_dm] = gems_phase_mapping(sig[*,0]*0 + 1., obs.dm_number,ngs=ngs)
      endif
      if keyword_set(eflag) then begin
         if strcmp(obs.pupil_remap, 'gems-custom-wfs') then begin
@@ -201,21 +204,27 @@ pro process_raw_data, obs, stop=stopflag, enforce_frat=eflag
   
   if keyword_set(stopflag) then stop
 
+
+
+
+
+  ;;; now let's make the Fourier modes!
+  fourier_modes = make_array(/comp, obs.n, obs.n, len)
+  for t=0, len-1 do begin
+      fmodes = fft(dm_shape[*,*,t])
+      fmodes = hpf(temporary(fmodes),cut,/butterworth_filter)
+      fourier_modes[*,*,t] = fmodes
+      dm_shape[*,*,t] = fft(fmodes,/inverse)
+  endfor
+  freq_dom_scaling = sqrt(obs.n^2/total(pingrid))
+  fourier_modes = fourier_modes*freq_dom_scaling
+  
   ;;; this is our data cube in actuator space. 
   ;;; let's save it
   mkhdr, h1, dm_shape
   prd_add_header_info, obs, h1
   fxaddpar, h1, 'DTYPE', 'Spatial signals', 'In spatial domain'
   writefits, obs.processed_path+'_phase.fits', dm_shape, h1
-
-
-
-  ;;; now let's make the Fourier modes!
-  fourier_modes = make_array(/comp, obs.n, obs.n, len)
-  for t=0, len-1 do $
-     fourier_modes[*,*,t] = fft(dm_shape[*,*,t])
-  freq_dom_scaling = sqrt(obs.n^2/total(pingrid))
-  fourier_modes = fourier_modes*freq_dom_scaling
   
   ;; this is our Fmode with time cube
   ;; let's save it
