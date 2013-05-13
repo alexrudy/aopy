@@ -118,10 +118,10 @@ def _generate_screen_with_noise(f,noise=None,shf=None,shnoise=None,du=1.0):
         shnoise = (_shn[:4] + 1j*_shn[4:])/np.sqrt(2.0)
     
     """
-    import numpy.fft
+    import scipy.fftpack
     rn = noise if noise is not None else np.ones(f.shape)
-    frn = numpy.fft.fftshift(numpy.fft.fft2(rn)) * np.sqrt(np.prod(f.shape))
-    s = numpy.fft.ifft2(numpy.fft.ifftshift(frn*f))
+    frn = scipy.fftpack.fftshift(numpy.fft.fft2(rn)) * np.sqrt(np.prod(f.shape))
+    s = scipy.fftpack.ifft2(numpy.fft.ifftshift(frn*f))
     if shf is not None:
         shn = shnoise if shnoise is not None else np.zeros((8,),dtype=np.complex)
         n,m = f.shape

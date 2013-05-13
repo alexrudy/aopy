@@ -1,0 +1,13 @@
+# Telemetry data from the LabFees project
+Keck:
+  system:
+    rate: 1054
+    d: 0.56 # 56 cm Subapertures
+    n: 26
+  data:
+    root: '~/Development/Astronomy/WindPrediction/WindPrediction/telem_analysis_13'
+    cases:
+      '20070730_2':
+        raw_data: 'data/keck/raw/data_30jul07/dataset2.dat'
+        raw_format: 'trs'
+        raw_remap: 'disp2d'

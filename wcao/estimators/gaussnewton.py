@@ -56,6 +56,7 @@ class GaussNewtonEstimator(BaseEstimator):
             self._fft = value
             self._convolve = scipy.signal.convolve
     
+    
     @property
     def wind(self):
         """This is the latest wind estimate."""
@@ -68,19 +69,31 @@ class GaussNewtonEstimator(BaseEstimator):
     def nlayers(self):
         """Return the number of layers this estimator is finding."""
         return self._nlayers
+        
+    @property
+    def nt(self):
+        """Number of timesteps"""
+        return self._nt_n
     
-    def setup(self,aperture,inner=None):
+    def setup(self,case,wind=None):
         """Perform initialization procedures for this plan which may be resource intensive. This includes deep imports into scipy and numpy.
         
-        :param numpy.ndarray aperture: The aperture repsonse function.
-        :param numpy.ndarray inner: (Optional) The inner (non-edge) mask for this aperture. If it isn't provided, it will be calculated from the provided `aperture`. 
+        :param WCAOCase case: The WCAO Case object.
+        :param ndarray wind: The guess wind velocity.
         :returns self: To make ``GNE = GaussNewtonEstimator().setup(aperture)`` possible.
         
         """
-        self.aperture = Aperture(aperture) 
-        if inner is not None:
-            self.aperture.edgemask = np.array(inner)
+        self.case = case 
         
+        if wind is not None:
+            self._wind = np.atleast2d(wind)
+        
+        self._nt = self.case.telemetry.nt
+        self._winds = np.zeros((self._nt,self.nlayers,2))
+        
+        self._phase = self.case.telemetry.phase
+        
+        self.aperture = self.case.telemetry.aperture
         # Intialize method arrays (to prevent them from reallocating)
         self._GradI = np.zeros((2,)+self.aperture.shape)
         self._DeltaI = np.zeros(self.aperture.shape)
@@ -95,31 +108,47 @@ class GaussNewtonEstimator(BaseEstimator):
         # Setup the convolution method.
         self.fft = self._init_fft
         
+        self._n = 1
+        self._nt_n = self._nt - self._n
+        
         return self
-    
-    def validate(self,current,previous,wind=None):
+        
+    def finish(self):
+        """Finish the evaluation of this plan, cleaning up."""
+        self._wind = np.array([[0,0]]).astype(np.float)
+        
+        # Drop arrays
+        self._GradI = None
+        self._DeltaI = None
+        self._phase = None
+        
+        # Drop Results
+        from wcao.analysis.data import WCAOTimeseries
+        self.case.addresult(self._winds,WCAOTimeseries,"GN")
+        self._winds = None
+        
+        # Drop Case
+        self.case = None
+        
+        # Reset Varaibles
+        self._n = 1
+        
+        
+    def validate(self):
         """Takes the same arguments as :meth:`estimate`, but ensures that they are valid first."""
-        if current.shape != previous.shape:
-            raise ValueError("Current {0!s} and Previous {0!s} phase must have the same shape.".format(
-                current.shape, previous.shape
-            ))
-        if self.aperture.shape != current.shape:
-            raise ValueError("Current {0!s} phase and Aperture {0!s} must have the same shape.".format(
-                current.shape, self.aperture.shape
+        if self.aperture.shape != self.phase.shape[1:]:
+            raise ValueError("Phase {0!s} and Aperture {0!s} must have the same shape.".format(
+                self.phase.shape[1:], self.aperture.shape
             ))
             
     
-    def estimate(self,current,previous,wind=None):
+    def estimate(self):
         """Perform the estimation of the wind direction.
-        
-        :param numpy.ndarray current: The phase at the current timestep.
-        :param numpy.ndarray previous: The phase at the previous timestep.
-        
         """
         # Normalize inputs and place them in the local namespace.
-        wind = self._wind if wind is None else np.atleast_2d(wind)
-        current = np.array(current).astype(np.float)
-        previous = np.array(previous).astype(np.float)
+        wind = self._wind
+        current = self._phase[self._n].astype(np.float)
+        previous = self._phase[self._n-1].astype(np.float)
         
         ap_every = self.aperture.pupil
         ap_inner = self.aperture.edgemask
@@ -153,6 +182,11 @@ class GaussNewtonEstimator(BaseEstimator):
             GradI[0,...] *= ap_inner
             GradI[1,...] *= ap_inner
         
+        denominator[0,0] = np.sum(GradI[0,...]*GradI[0,...])
+        denominator[0,1] = np.sum(GradI[0,...]*GradI[1,...])
+        denominator[1,0] = np.sum(GradI[1,...]*GradI[0,...])
+        denominator[1,1] = np.sum(GradI[1,...]*GradI[1,...])
+        
         # Setup a reference wavefront
         ref = depiston(current * ap_inner, ap_inner)
         
@@ -164,17 +198,14 @@ class GaussNewtonEstimator(BaseEstimator):
                 order = order,
             ) * ap_inner, ap_inner)
             numerator = np.array([[np.sum(GradI[0,...]*DeltaI)],[np.sum(GradI[1,...]*DeltaI)]])
-
-            denominator[0,0] = np.sum(GradI[0,...]*GradI[0,...])
-            denominator[0,1] = np.sum(GradI[0,...]*GradI[1,...])
-            denominator[1,0] = np.sum(GradI[1,...]*GradI[0,...])
-            denominator[1,1] = np.sum(GradI[1,...]*GradI[1,...])
         
             d_wind = np.dot(-inv(denominator),numerator)
         
             wind[0] += d_wind[:,0]
         
         self._wind = np.copy(wind)
+        self._winds[self._n] = wind
+        self._n += 1.0
         return wind
         
     

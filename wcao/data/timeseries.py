@@ -7,9 +7,9 @@
 #  Copyright 2013 Alexander Rudy. All rights reserved.
 # 
 
+from .estimator import WCAOEstimate
 
-
-class WCAOTimeseries(WCAOData):
+class WCAOTimeseries(WCAOEstimate):
     """A representation of WCAO timeseries data"""
     def __init__(self,*args,**kwargs):
         self._timestep = kwargs.pop('timestep',1.0)

@@ -21,7 +21,7 @@ from astropy.io import fits
 import pyshell
 from pyshell.config import DottedConfiguration
 
-class WCAOData(object):
+class WCAOEstimate(object):
     """A reperesentation of any WCAO data"""
     
     LONGNAMES = {
@@ -44,23 +44,22 @@ class WCAOData(object):
     
     __metaclass__ = abc.ABCMeta
     
-    def __init__(self, datatype="", obsname="", instname="", data=None, config={}):
-        super(WCAOData, self).__init__()
+    def __init__(self, case, data=None, datatype=""):
+        super(WCAOEstimate, self).__init__()
         if datatype not in self.ARRAYTYPE or datatype not in self.LONGNAMES:
             raise ValueError("Unknown data type {:s}. Options: {!r}".format(name,self.DATATYPE.keys()))
-        self.name = obsname
-        self.instrument = instname
+        self.case = case
         self._datatype = datatype
         self._arraytype = self.ARRAYTYPE[self._datatype]
         self._data = data
-        self._config = DottedConfiguration.make(config)
+        self._config = self.case.config
         self._figurename = os.path.join(
-            self.config.get("WCAOData.Figure.directory","figures"),
-            self.config.get("WCAOData.Figure.template","{datatype:s}_{figtype:s}_{instrument:s}_{name:s}.{ext:s}"),
+            self.config.get("data.figure.directory","figures"),
+            self.config.get("data.figure.template","{datatype:s}_{figtype:s}_{instrument:s}_{name:s}.{ext:s}"),
             )
         self._dataname = os.path.join(
-            self.config.get("WCAOData.Data.directory",""),
-            self.config.get("WCAOData.Data.template","{datatype:s}_{arraytype:s}_{instrument:s}_{name:s}.{ext:s}")
+            self.config.get("WCAOEstimate.Data.directory",""),
+            self.config.get("WCAOEstimate.Data.template","{datatype:s}_{arraytype:s}_{instrument:s}_{name:s}.{ext:s}")
         )
         self._init_data(data)
         self.log = pyshell.getLogger(__name__)
@@ -84,9 +83,9 @@ class WCAOData(object):
     def fitsname(self):
         """The fits-file name for this object"""
         return self._fitsname.format(
-            instrument = self.instrument,
-            name = self.name,
-            ext = self.config.get("WCAOData.Data.fits.ext","fits"),
+            instrument = self.case.instrument,
+            name = self.case.casename,
+            ext = self.config.get("WCAOEstimate.Data.fits.ext","fits"),
             datatype = self._datatype,
             arraytype = self._arraytype,
         )
@@ -95,9 +94,9 @@ class WCAOData(object):
     def npyname(self):
         """Numpy file name for this object"""
         return self._fitsname.format(
-            instrument = self.instrument,
-            name = self.name,
-            ext = self.config.get("WCAOData.Data.npy.ext","npy"),
+            instrument = self.case.instrument,
+            name = self.case.casename,
+            ext = self.config.get("WCAOEstimate.Data.npy.ext","npy"),
             datatype = self._datatype,
             arraytype = self._arraytype,
         )
@@ -106,9 +105,9 @@ class WCAOData(object):
     def figname(self):
         """Figure name"""
         return self._figurename.format(
-            instrument = self.instrument,
-            name = self.name,
-            ext = self.config.get("WCAOData.Data.npy.ext","npy"),
+            instrument = self.case.instrument,
+            name = self.case.casename,
+            ext = self.config.get("WCAOEstimate.Data.npy.ext","npy"),
             datatype = self._datatype,
             figtype = "{figtype:s}",
         )
@@ -119,7 +118,7 @@ class WCAOData(object):
         raise NotImplementedError("{!r} has no concept of data!".format(self))
         
 
-class WCAOTimeseries(WCAOData):
+class WCAOTimeseries(WCAOEstimate):
     """A representation of WCAO timeseries data"""
     def __init__(self,*args,**kwargs):
         self._timestep = kwargs.pop('timestep',1.0)
@@ -161,13 +160,18 @@ class WCAOTimeseries(WCAOData):
         """The time array"""
         return np.arange(self.ntime) * self._timestep
         
-    def load_fits(self,filename=None):
+    def load(self,filename=None):
         """Load the data from a file."""
         if filename is None:
-            filename = self.fitsname
-        with fits.open(filename) as fitsfile:
-            self._init_data(fitsfile[0].data)
-            fitsfile.close()
+            filename = self.npyname
+        self._init_data(np.load(filename))
+            
+    def save(self,filename=None):
+        """Save the data to a fits file."""
+        if filename is None:
+            filename = self.npyname
+        np.save(filename,self._data)
+            
             
     def smoothed(self,window,mode='flat'):
         """docstring for smoothed"""
@@ -206,7 +210,7 @@ class WCAOTimeseries(WCAOData):
         size = kwargs.pop("size",False)
         if size:
             kwargs["range"] = [[-size,size],[-size,size]]
-        title = kwargs.pop("label","{:s} {:s} {:s}".format(self.longname,self.name,self.instrument))
+        title = kwargs.pop("label",r"{:s} \verb+{:s}+ {:s}".format(self.longname,self.case.casename,self.case.instrument))
         ax.set_title(title)
         rv = []
         for layer in range(self.nlayers):
