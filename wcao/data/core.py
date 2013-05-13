@@ -156,7 +156,8 @@ class WCAOTelemetry(ConsoleContext):
     def save_phase(self):
         """Save phase data to files"""
         HDU = fits.PrimaryHDU(self._phase)
-        HDU.writeto(self.phase_path)
+        HDU.header["CONFIG"] = self.config.hash
+        HDU.writeto(self.phase_path,clobber=True)
     
     def load_fmode(self):
         """Load fourier-mode data from files"""
@@ -171,5 +172,6 @@ class WCAOTelemetry(ConsoleContext):
         """Save fourier mode data to files."""
         fmodeout = np.array([np.real(self._fmode),np.imag(self._fmode)])
         HDU = fits.PrimaryHDU(fmodeout)
-        HDU.writeto(self.fmode_path)
+        HDU.header["CONFIG"] = self.config.hash
+        HDU.writeto(self.fmode_path,clobber=True)
         
