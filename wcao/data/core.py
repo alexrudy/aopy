@@ -136,7 +136,7 @@ class WCAOTelemetry(ConsoleContext):
         self._nt = rawdata.shape[0]
         self._phase = np.zeros((self._nt,)+self.aperture.shape,dtype=np.float)
         self._fmode = np.zeros((self._nt,)+self.aperture.shape,dtype=np.complex)
-        for t in self.range(self._nt):
+        for t in self.looper(range(self._nt)):
             self._phase[t,...] = disp2d(rawdata[t,:])
             self._fmode[t,...] = scipy.fftpack.fft2(self._phase[t,...])
         
