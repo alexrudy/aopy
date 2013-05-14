@@ -41,6 +41,18 @@ from __future__ import (absolute_import, unicode_literals, division,
                         
 import numpy as np
 
+def circle(R,radius=None,orig=None):
+    """docstring for circle"""
+    radius = radius or R
+    origin = orig or (radius,radius)
+    x,y = np.mgrid[0:radius*2.0,0:radius*2.0]
+    x -= origin[0]
+    y -= origin[1]
+    d = np.sqrt(x**2.0 + y**2.0)
+    output = np.zeros((radius*2.0,radius*2.0),dtype=np.float)
+    output[d <= R] = 1.0
+    return output
+    
 
 def depiston(phase,aperture=None,get_piston=False):
     """Remove the piston term from a phase array.
