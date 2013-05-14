@@ -68,8 +68,8 @@ class BlowingScreen(Screen):
         self._vel = np.array(vel)
         self._vel.flags.writeable = False
         self._tmax = tmax
-        self._outshape = np.copy(self.shape)
-        self._shape = tuple(np.array(self.shape) + np.abs(self._vel) * self._tmax)
+        self._outshape = tuple(np.copy(self.shape).astype(np.int))
+        self._shape = tuple((np.array(self.shape) + np.abs(self._vel) * self._tmax).astype(np.int))
         self._all = None
     
     
@@ -104,6 +104,10 @@ class BlowingScreen(Screen):
         n,m = self._outshape
         return shifted[:n,:m]
         
+    def __len__(self):
+        """Length"""
+        return self._tmax
+        
     @property
     def screens(self):
         """An iterator through this screen over time. 
@@ -125,8 +129,8 @@ class BlowingScreen(Screen):
             return self._all
         else:
             self._all = np.zeros((self._tmax,)+self._outshape)
-            for t, ph in enumerate(self.screens):
-                self._all[t,...] = ph
+            for t in self.looper(range(self._tmax)):
+                self._all[t,...] = self.get_screen(t)
             self._all.flags.writeable = False
             return self._all
 
@@ -165,7 +169,7 @@ class ManyLayerScreen(BlowingScreen):
         super(ManyLayerScreen, self).__init__(shape, r0, seed, vel=None, **kwargs)
         
         self._vel = vel
-        self._shape = tuple(np.array(self.shape) + np.abs(np.max(self._vel,axis=1)) * self._tmax)
+        self._shape = tuple((np.array(self.shape) + np.abs(np.max(self._vel,axis=1)) * self._tmax).astype(np.int))
         
         self._screens = np.zeros((self._vel.shape[0],)+self._shape)
         

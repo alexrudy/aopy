@@ -43,6 +43,7 @@ this module against the original ``screengen.pro``, as is done in ``examples/scr
 from __future__ import (absolute_import, unicode_literals, division,
                         print_function)
 
+from aopy.util.basic import ConsoleContext
 import numpy as np
 
 def _generate_filter(shape,r0,du,L0=None,nsh=0):
@@ -120,8 +121,8 @@ def _generate_screen_with_noise(f,noise=None,shf=None,shnoise=None,du=1.0):
     """
     import scipy.fftpack
     rn = noise if noise is not None else np.ones(f.shape)
-    frn = scipy.fftpack.fftshift(numpy.fft.fft2(rn)) * np.sqrt(np.prod(f.shape))
-    s = scipy.fftpack.ifft2(numpy.fft.ifftshift(frn*f))
+    frn = scipy.fftpack.fftshift(scipy.fftpack.fft2(rn)) * np.sqrt(np.prod(f.shape))
+    s = scipy.fftpack.ifft2(scipy.fftpack.ifftshift(frn*f))
     if shf is not None:
         shn = shnoise if shnoise is not None else np.zeros((8,),dtype=np.complex)
         n,m = f.shape
@@ -166,7 +167,7 @@ def _generate_screen(f,seed=None,shf=None,du=None):
     shn = (_shn[:4] + 1j*_shn[4:])/np.sqrt(2.0)
     return _generate_screen_with_noise(f,rn,shf,shn,du)
 
-class Screen(object):
+class Screen(ConsoleContext):
     """A static Kolmolgorov Phase Screen Class. This class builds a Komologorv Filter and then generates a phase screen for that filter.
     Once a single phase screen has been generated, it is cached in the object. For a new phase screen, set a different :attr:`seed` value.
     
