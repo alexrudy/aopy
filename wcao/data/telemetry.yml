@@ -11,3 +11,11 @@ Keck:
         raw_data: 'data/keck/raw/data_30jul07/dataset2.dat'
         raw_format: 'trs'
         raw_remap: 'disp2d'
+      'simulated':
+        r0: 0.30
+        wind:
+          - [ 0.04, 0.01 ]
+        ntime: 1000
+        raw_format: 'simulated'
+        raw_remap: '3d_screen'
+        raw_data: 'data/keck/raw/data_30jul07/dataset2.dat'

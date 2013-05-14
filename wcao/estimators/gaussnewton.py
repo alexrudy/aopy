@@ -73,9 +73,9 @@ class GaussNewtonEstimator(BaseEstimator):
     @property
     def nt(self):
         """Number of timesteps"""
-        return self._nt_n
+        return self._nt - self._ns - 1
     
-    def setup(self,case,wind=None,nt=False,ns=0):
+    def setup(self,case,wind=None,nt=False,ns=False):
         """Perform initialization procedures for this plan which may be resource intensive. This includes deep imports into scipy and numpy.
         
         :param WCAOCase case: The WCAO Case object.
@@ -93,7 +93,7 @@ class GaussNewtonEstimator(BaseEstimator):
         self._nt = nt or self.case.telemetry.nt
         if ns >= self._nt:
             raise ValueError("Must start from at least one timestep behind the endpoint.")
-        self._ns = ns
+        self._ns = ns or 0
         self._winds = np.zeros((self._nt,self.nlayers,2))
         
         
@@ -155,6 +155,13 @@ class GaussNewtonEstimator(BaseEstimator):
         convolve = self._convolve
         inv = self._inv
         
+        idl = self.idl
+        iterations = self.iterations
+        
+        nparray = np.array
+        npsum = np.sum
+        npdot = np.dot
+        
         mode = self.shift.mode
         order = self.shift.order
         shift = self.shift.func
@@ -164,21 +171,22 @@ class GaussNewtonEstimator(BaseEstimator):
         
         wind = self._wind
         
+        # Variables that are established before the iterations begin
+        kernel = np.array([[ -0.5, 0.0, 0.5 ]])
+        denominator = np.zeros((2,2))
+        
         
         for n in self.looper(range(self._ns+1,self._nt)):
             # Normalize inputs and place them in the local namespace.
             previous = current
             current = self._phase[n].astype(np.float)
             
-            denominator = np.zeros((2,2))
-            
             # Create the Gradient Matrix (X,Y)
             gcurr = depiston(current,ap_every)
-            kernel = np.array([[ -0.5, 0.0, 0.5 ]])
             GradI[0,:,:] = convolve(gcurr,kernel,mode='same') * ap_every * -1.0
             GradI[1,:,:] = convolve(gcurr,kernel.T,mode='same') * ap_every * -1.0
             
-            if self.idl:
+            if idl:
                 # Aparently scipy.convolve returns values along the edges where IDL convol doesn't.
                 #TODO: Examine when and where this is true!
                 GradI[0,...,0] = 0.0
@@ -189,24 +197,24 @@ class GaussNewtonEstimator(BaseEstimator):
                 GradI[0,...] *= ap_inner
                 GradI[1,...] *= ap_inner
                 
-            denominator[0,0] = np.sum(GradI[0,...]*GradI[0,...])
-            denominator[0,1] = np.sum(GradI[0,...]*GradI[1,...])
-            denominator[1,0] = np.sum(GradI[1,...]*GradI[0,...])
-            denominator[1,1] = np.sum(GradI[1,...]*GradI[1,...])
+            denominator[0,0] = npsum(GradI[0,...]*GradI[0,...])
+            denominator[0,1] = npsum(GradI[0,...]*GradI[1,...])
+            denominator[1,0] = npsum(GradI[1,...]*GradI[0,...])
+            denominator[1,1] = npsum(GradI[1,...]*GradI[1,...])
             
             # Setup a reference wavefront
             ref = depiston(current * ap_inner, ap_inner)
             
-            for k in range(self.iterations):
+            for k in range(iterations):
                 DeltaI = ref - depiston(shift(
                     input = previous,
                     shift = wind[0,::-1],
                     mode = mode,
                     order = order,
                 ) * ap_inner, ap_inner)
-                numerator = np.array([[np.sum(GradI[0,...]*DeltaI)],[np.sum(GradI[1,...]*DeltaI)]])
+                numerator = nparray([[npsum(GradI[0,...]*DeltaI)],[npsum(GradI[1,...]*DeltaI)]])
                 
-                d_wind = np.dot(-inv(denominator),numerator)
+                d_wind = npdot(-inv(denominator),numerator)
                 
                 wind[0] += d_wind[:,0]
                 

@@ -37,8 +37,11 @@ class BaseEstimator(Base):
         pass
     
     @abc.abstractmethod
-    def estimate(self,t):
-        """Do the estimation.
+    def estimate(self):
+        """Do the estimation."""
+        pass
         
-        :param int t: The timestep"""
+    @abc.abstractmethod
+    def finish(self):
+        """Finish of the estimation"""
         pass

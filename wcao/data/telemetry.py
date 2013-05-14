@@ -22,6 +22,7 @@ from pyshell.config import StructuredConfiguration, DottedConfiguration
 
 from aopy.aperture import Aperture
 from aopy.util.basic import ConsoleContext
+from aopy.util.math import circle
 
 class WCAOTelemetry(ConsoleContext):
     """The sub-representation of a set of telemetry for a specific WCAOCase."""
@@ -36,6 +37,8 @@ class WCAOTelemetry(ConsoleContext):
         self._fmode = None
         self.fmode_path = self.filepath("proc","fmode","fits")
         self.raw_path = os.path.expanduser(os.path.join(self.config["data.root"],self.config["data.cases.{0.casename:s}.raw_data".format(self.case)]))
+        self.data_config = self.config["data.cases.{0.casename:s}".format(self.case)]
+        
         
     @property
     def phase(self):
@@ -76,6 +79,14 @@ class WCAOTelemetry(ConsoleContext):
         """Make a filepath"""
         return os.path.expanduser(os.path.join(self.config["data.root"],"data",self.case.instrument,kind,self.filename(prepend,ext)))
         
+    def _load_simulated(self):
+        """Generate simulated data"""
+        from aopy.atmosphere.wind import ManyLayerScreen
+        self.aperture = Aperture(circle(self.config["system.n"]//2.0,self.config["system.n"]//2.0))
+        Screen = ManyLayerScreen(self.aperture.shape,
+            self.data_config["r0"],du=self.config["system.d"],
+            vel=self.data_config["wind"],tmax=self.data_config["ntime"]).setup()
+        return Screen
         
     def _load_trs(self):
         """docstring for _load_trs"""
@@ -83,6 +94,16 @@ class WCAOTelemetry(ConsoleContext):
             from scipy.io import readsav
             scope = readsav(self.raw_path)
         return scope['trsdata']['residualwavefront'][0]
+        
+    def _remap_3d_screen(self,rawdata):
+        """Basically, a null-remap"""
+        import scipy.fftpack
+        self._nt = len(rawdata)
+        self._phase = np.zeros((self._nt,)+self.aperture.shape)
+        self._fmode = np.zeros((self._nt,)+self.aperture.shape,dtype=np.complex)
+        for t in self.looper(range(self._nt)):
+            self._phase[t,...] = rawdata.get_screen(t)
+            self._fmode[t,...] = scipy.fftpack.fft2(self._phase[t,...])
         
     def _remap_disp2d(self,rawdata):
         """Use the Keck disp2d re-mapper"""
