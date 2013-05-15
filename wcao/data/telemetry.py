@@ -83,9 +83,12 @@ class WCAOTelemetry(ConsoleContext):
         """Generate simulated data"""
         from aopy.atmosphere.wind import ManyLayerScreen
         self.aperture = Aperture(circle(self.config["system.n"]//2.0,self.config["system.n"]//2.0))
+        wind = np.array(self.data_config["wind"],dtype=np.float)
+        wind /= self.config["system.d"]
+        wind /= self.config["system.rate"]
         Screen = ManyLayerScreen(self.aperture.shape,
             self.data_config["r0"],du=self.config["system.d"],
-            vel=self.data_config["wind"],tmax=self.data_config["ntime"]).setup()
+            vel=wind,tmax=self.data_config["raw_time"]).setup()
         return Screen
         
     def _load_trs(self):
@@ -98,7 +101,7 @@ class WCAOTelemetry(ConsoleContext):
     def _remap_3d_screen(self,rawdata):
         """Basically, a null-remap"""
         import scipy.fftpack
-        self._nt = len(rawdata)
+        self._nt = self.data_config["ntime"]
         self._phase = np.zeros((self._nt,)+self.aperture.shape)
         self._fmode = np.zeros((self._nt,)+self.aperture.shape,dtype=np.complex)
         for t in self.looper(range(self._nt)):

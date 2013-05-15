@@ -114,7 +114,7 @@ class WCAOTimeseries(WCAOEstimate):
         for i in range(3):
             label = labels[i]
             self.timeseries(axes[i],coord=i,smooth=smooth,label="Wind {:s}".format(label),marker='None',ls='-',alpha=0.2,**kwargs)
-            self.timeseries(axes[i],coord=i,label="Wind {:s}".format(label),marker='.',alpha=0.2,**kwargs)
+            self.timeseries(axes[i],coord=i,smooth=None,label="Wind {:s}".format(label),marker='.',alpha=0.2,**kwargs)
             axes[i].set_title("Wind {:s}".format(label))
             axes[i].set_ylabel("Speed (m/s)")
         return fig
