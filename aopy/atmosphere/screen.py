@@ -172,10 +172,10 @@ class Screen(ConsoleContext):
     Once a single phase screen has been generated, it is cached in the object. For a new phase screen, set a different :attr:`seed` value.
     
     :param tuple shape: The shape of the screen (x,y), as a tuple.
-    :param float r0: :math:`r_0` fried parameter for the screen.
+    :param float r0: :math:`r_0` fried parameter for the screen, in meters (or relative to ``du`` appropriately).
     :param float L0: :math:`L_0` outer scale for the screen.
     :param int seed: Random number generator seed for :mod:`numpy.random`
-    :param float du: Pixels per subaperture
+    :param float du: Pixel size in meters.
     :param int nsh: Number of subharmonics. (default``=0`` for no subharmonics)
     
     To use this class, you must instantiate it, and then call :meth:`setup`. Since :meth:`setup` returns the instance, you can do::
@@ -278,6 +278,11 @@ class Screen(ConsoleContext):
         
         """
         self._screen = _generate_screen(self._filter,self.seed,self._shf,self.du)
+        
+    def __call__(self):
+        """Generates and returns a new independent screen."""
+        self._generate_screen()
+        return self.screen
         
         
         

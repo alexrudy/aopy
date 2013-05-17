@@ -31,7 +31,7 @@ class test_screen_functions(object):
             'n': 10,
             'm': 10,
             'r0': 4,
-            'du': 1,
+            'du': 0.25,
             'seed':5,
             'nsh':2,
         }
