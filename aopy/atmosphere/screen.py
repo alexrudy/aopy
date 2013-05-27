@@ -179,6 +179,7 @@ class Screen(ConsoleContext):
     :param int seed: Random number generator seed for :mod:`numpy.random`
     :param float du: Pixel size, in meters
     :param int nsh: Number of subharmonics. (default``=0`` for no subharmonics)
+    :param bool delay: Delay initialization until :meth:`setup` is called.
     
     To use this class, you must instantiate it, and then call :meth:`setup`. Since :meth:`setup` returns the instance, you can do::
         
@@ -186,7 +187,7 @@ class Screen(ConsoleContext):
     
     .. note:: This initialization process is done to delay generating the screen, especially in large or multi-layer screen cases.
     """
-    def __init__(self, shape, r0, seed=None, du=1.0, L0=None, nsh=0):
+    def __init__(self, shape, r0, seed=None, du=1.0, L0=None, nsh=0, delay=False):
         super(Screen, self).__init__()
         
         if not isinstance(shape,tuple) and len(shape) == 2:
@@ -204,6 +205,9 @@ class Screen(ConsoleContext):
         self._shf = None
         self._filter = None
         self._screen = None
+        
+        if not delay:
+            self.setup()
         
     @property
     def shape(self):

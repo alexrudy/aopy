@@ -61,8 +61,8 @@ class BlowingScreen(Screen):
         screen = BlowingScreen((10,10),r0=2,vel=[1.0,0.0]).setup()
     
     """ 
-    def __init__(self, shape, r0, seed=None, vel=None, tmax=100, **kwargs):
-        super(BlowingScreen, self).__init__(shape, r0, seed, **kwargs)
+    def __init__(self, shape, r0, seed=None, vel=None, tmax=100, delay=False, **kwargs):
+        super(BlowingScreen, self).__init__(shape, r0, seed, delay=True, **kwargs)
         if vel is None:
             vel = [1.0,0.0]
         self._vel = np.array(vel)
@@ -71,6 +71,9 @@ class BlowingScreen(Screen):
         self._outshape = tuple(np.copy(self.shape).astype(np.int))
         self._shape = tuple((np.array(self.shape) + np.abs(self._vel) * np.ceil(self._tmax / self._du)).astype(np.int))
         self._all = None
+        
+        if not delay:
+            self.setup()
     
     
     @property
@@ -153,7 +156,7 @@ class ManyLayerScreen(BlowingScreen):
         screen = ManyLayerScreen((10,10),r0=2,vel=[1.0,0.0]).setup()
     
     """ 
-    def __init__(self, shape, r0, seed=None, vel=None, strength=None, **kwargs):
+    def __init__(self, shape, r0, seed=None, vel=None, strength=None, delay=False, **kwargs):
         if vel is None:
             vel = np.array([[1.0,0.0]])
         vel = np.atleast_2d(vel)
@@ -166,12 +169,15 @@ class ManyLayerScreen(BlowingScreen):
         
         self._strength = strength
         
-        super(ManyLayerScreen, self).__init__(shape, r0, seed, vel=None, **kwargs)
+        super(ManyLayerScreen, self).__init__(shape, r0, seed, vel=None, delay=True, **kwargs)
         
         self._vel = vel
         self._shape = tuple(np.array(self.shape) + np.abs(np.max(self._vel,axis=0)) * np.ceil(self._tmax / self._du).astype(np.int))
         
         self._screens = np.zeros((self._vel.shape[0],)+self._shape)
+        
+        if not delay:
+            self.setup()
         
     def _generate_screen(self):
         """Use :meth:`setup` to control this method.
