@@ -47,13 +47,13 @@ class BlowingScreen(Screen):
     """A blowing Kolmolgorov Phase Screen Class. This class builds a Komologorv Filter and then generates a phase screen for that filter. The phase screen is then read out in parts (interpolated, where necessary) so that it appears to "blow" in a frozen-flow style across as screen of the desired shape. Once a single phase screen has been generated, it is cached in the object. For a new phase screen, set a different :attr:`seed` value.
     
     :param tuple shape: The shape of the screen (x,y), as a tuple.
-    :param float r0: :math:`r_0` fried parameter for the screen.
-    :param float L0: :math:`L_0` outer scale for the screen.
+    :param float r0: :math:`r_0` fried parameter for the screen, in meters
+    :param float L0: :math:`L_0` outer scale for the screen, in meters
     :param int seed: Random number generator seed for :mod:`numpy.random`
-    :param list vel: The velocity, ``[v_x,v_y]``
-    :param int tmax: The number of timesteps to generate phase for. Timesteps 
+    :param list vel: The velocity, ``[v_x,v_y]``, in meters/second
+    :param float tmax: The amount of time to generate phase for, in seconds. Timesteps 
         beyond this value will see the screen wrapped around and started from the beginning.
-    :param float du: Pixels per subaperture
+    :param float du: pixel size, in meters
     :param int nsh: Number of subharmonics. (default``=0`` for no subharmonics)
     
     To use this class, you must instantiate it, and then call :meth:`setup`. Since :meth:`setup` returns the instance, you can do::
@@ -69,7 +69,7 @@ class BlowingScreen(Screen):
         self._vel.flags.writeable = False
         self._tmax = tmax
         self._outshape = tuple(np.copy(self.shape).astype(np.int))
-        self._shape = tuple((np.array(self.shape) + np.abs(self._vel) * self._tmax).astype(np.int))
+        self._shape = tuple((np.array(self.shape) + np.abs(self._vel) * np.ceil(self._tmax / self._du)).astype(np.int))
         self._all = None
     
     
@@ -94,7 +94,7 @@ class BlowingScreen(Screen):
         :returns: The screen for this timestep.
         """
         import scipy.ndimage.interpolation
-        shift = t * self._vel
+        shift = t * self._vel / self._du
         shifted = scipy.ndimage.interpolation.shift(
             input = self.screen,
             shift = shift,
@@ -143,9 +143,9 @@ class ManyLayerScreen(BlowingScreen):
     :param int seed: Random number generator seed for :mod:`numpy.random`
     :param array vel: The velocity array, at least 2-dimensional, ``[[v_x1,v_y1],[v_x2,v_y2]]``
     :param array strength: The relative strengths of each layer. (by default, all layers have the same strength.)
-    :param int tmax: The number of timesteps to generate phase for. Timesteps 
+    :param float tmax: The amount of time to generate phase for, in seconds. Timesteps 
         beyond this value will see the screen wrapped around and started from the beginning.
-    :param float du: Pixels per subaperture
+    :param float du: Pixel size, in meters.
     :param int nsh: Number of subharmonics. (default``=0`` for no subharmonics)
     
     To use this class, you must instantiate it, and then call :meth:`setup`. Since :meth:`setup` returns the instance, you can do::
@@ -169,7 +169,7 @@ class ManyLayerScreen(BlowingScreen):
         super(ManyLayerScreen, self).__init__(shape, r0, seed, vel=None, **kwargs)
         
         self._vel = vel
-        self._shape = tuple((np.array(self.shape) + np.abs(np.max(self._vel,axis=1)) * self._tmax).astype(np.int))
+        self._shape = tuple(np.array(self.shape) + np.abs(np.max(self._vel,axis=0)) * np.ceil(self._tmax / self._du).astype(np.int))
         
         self._screens = np.zeros((self._vel.shape[0],)+self._shape)
         
@@ -191,7 +191,7 @@ class ManyLayerScreen(BlowingScreen):
         :returns: The screen for this timestep.
         """
         import scipy.ndimage.interpolation
-        shifts = t * self._vel
+        shifts = t * self._vel / self._du
         shifted = np.zeros_like(self._screens)
         for i,(shift,screen) in enumerate(zip(shifts,self._screens)):
             shifted[i,...] = scipy.ndimage.interpolation.shift(
