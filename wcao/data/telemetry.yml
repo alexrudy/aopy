@@ -4,6 +4,9 @@ Keck:
     rate: 1054
     d: 0.56 # 56 cm Subapertures
     n: 26
+    tau: 0.89e-3
+    gain: 0.5
+    integrator_c: 0.99
   data:
     root: '~/Development/Astronomy/WindPrediction/WindPrediction/telem_analysis_13'
     cases:

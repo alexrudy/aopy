@@ -35,7 +35,7 @@ class WCAOTelemetry(ConsoleContext):
         self._phase = None
         self.phase_path = self.filepath("proc","phase","fits")
         self._fmode = None
-        self.fmode_path = self.filepath("proc","fmode","fits")
+        self.fmode_path = self.filepath("proc","fmodes","fits")
         self.raw_path = os.path.expanduser(os.path.join(self.config["data.root"],self.config["data.cases.{0.casename:s}.raw_data".format(self.case)]))
         self.data_config = self.config["data.cases.{0.casename:s}".format(self.case)]
         
@@ -69,7 +69,8 @@ class WCAOTelemetry(ConsoleContext):
         
     def filename(self,prepend="data",ext="fits"):
         """docstring for filename"""
-        return "{prepend}_{config}.{ext}".format(
+        return "{casename}_{prepend}.{ext}".format(
+            casename= self.case.casename,
             prepend=prepend,
             config=self.config.hash[:8],
             ext=ext,
@@ -110,7 +111,7 @@ class WCAOTelemetry(ConsoleContext):
         
     def _remap_disp2d(self,rawdata):
         """Use the Keck disp2d re-mapper"""
-        from .keck import disp2d
+        from .keck import disp2d,transfac
         import scipy.fftpack
         self.aperture = Aperture(disp2d(np.ones(rawdata.shape[1])))
         self._nt = rawdata.shape[0]
@@ -119,11 +120,20 @@ class WCAOTelemetry(ConsoleContext):
         for t in self.looper(range(self._nt)):
             self._phase[t,...] = disp2d(rawdata[t,:])
             self._fmode[t,...] = scipy.fftpack.fft2(self._phase[t,...])
+            
+    def _trans_disp2d(self):
+        """docstring for _trans_keck"""
+        self._fmode_dmtransfer = transfac()
+        
+    def _trans_ones(self):
+        """docstring for _trans_ones"""
+        self._fmode_dmtransfer = np.ones(self._fmode.shape[1:])
         
     def load_raw(self):
         """Load raw data from files."""
         rawdata = getattr(self,'_load_'+self.config["data.cases.{0.casename:s}.raw_format".format(self.case)])()
         getattr(self,'_remap_'+self.config["data.cases.{0.casename:s}.raw_remap".format(self.case)])(rawdata)
+        getattr(self,'_trans_'+self.config.get("data.cases.{0.casename:s}.raw_remap".format(self.case),"ones"))
     
     def load_phase(self):
         """Load phase data from files."""
@@ -145,8 +155,10 @@ class WCAOTelemetry(ConsoleContext):
             self._fmode = ffile[0].data[0,...] + 1j * ffile[0].data[1,...]
         self._nt = self._fmode.shape[0]
         if self.aperture is None:
-            import numpy.fft
-            self.aperture = Aperture(numpy.fft.ifft2(self._fmode[0,...]) != 0)
+            import scipy.fftpack
+            self.aperture = Aperture(scipy.fftpack.ifft2(self._fmode[0,...]) != 0)
+        getattr(self,'_trans_'+self.config.get("data.cases.{0.casename:s}.raw_remap".format(self.case),"ones"))
+        
     
     def save_fmode(self):
         """Save fourier mode data to files."""
