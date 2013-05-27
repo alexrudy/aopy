@@ -33,9 +33,21 @@ class ConsoleContext(object):
         """Whether to use the builtin range or a progressbar"""
         return self._console
         
-    def _pseudoloop(self,iterator):
+    def _pseudoloop(self,total_or_items):
         """docstring for _pseudoloop"""
+        from astropy.util.misc import isiterable
+        if isiterable(total_or_items):
+            iterator = iter(total_or_items)
+            total = len(total_or_items)
+        else:
+            try:
+                total = int(total_or_items)
+            except TypeError:
+                raise TypeError("Argument must be int or sequence")
+            else:
+                iterator = iter(xrange(self._total))
         return iterator
+        
         
     @console.setter
     def console(self,value):
