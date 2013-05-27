@@ -17,9 +17,6 @@ import pidly
 from aopy.atmosphere import wind
 from wcao.estimators.gaussnewton import GaussNewtonEstimator
 from wcao.data.core import WCAOCase
-from astropy.utils.console import ProgressBar
-from astropy.io import fits
-from pyshell.config import StructuredConfiguration
 from pyshell.loggers import getSimpleLogger
 from pyshell.util import ipydb
 
