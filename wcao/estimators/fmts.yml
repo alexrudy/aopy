@@ -1,0 +1,7 @@
+fitting:
+  float_peak: true
+  initial_alpha: 0.999
+  mask_radius: 0.02
+  max_alpha: 0.9995
+  min_alpha: 0.5
+  search_radius: 0.02
