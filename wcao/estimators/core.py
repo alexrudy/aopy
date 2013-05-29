@@ -6,6 +6,19 @@
 #  Created by Alexander Rudy on 2013-04-29.
 #  Copyright 2013 Alexander Rudy. All rights reserved.
 # 
+"""
+WCAO Estimator Template Classes
+===============================
+
+
+:class:`BaseEstimator` – Template Class
+---------------------------------------
+
+.. autoclass::
+    BaseEstimator
+    :members:
+
+"""
 from __future__ import (absolute_import, unicode_literals, division,
                         print_function)
 
@@ -23,7 +36,7 @@ class Base(ConsoleContext):
         
     
 class BaseEstimator(Base):
-    """A base estimator"""
+    """A base estimator class. This class should be subclassed"""
     
     __metaclass__ = abc.ABCMeta
     

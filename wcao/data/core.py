@@ -6,6 +6,16 @@
 #  Created by Alexander Rudy on 2013-05-01.
 #  Copyright 2013 Alexander Rudy. All rights reserved.
 # 
+"""
+Core WCAO Data Structures
+=========================
+
+.. autoclass::
+    WCAOCase
+    :members:
+
+"""
+
 from __future__ import (absolute_import, unicode_literals, division,
                         print_function)
 
