@@ -207,6 +207,8 @@ def fitter(x,alpha,peak,center):
     """Our mystery fitting function."""
     f = peak/(1 - 2*alpha*np.cos(x-center) + alpha**2.0)
     return f
+    
+
 
 class FourierModeEstimator(BaseEstimator):
     """Estimates wind using the Fourier Mode Timeseries Method"""
@@ -278,6 +280,26 @@ class FourierModeEstimator(BaseEstimator):
         self.log.debug("Masking %d noisy positions from PSDs" % np.sum(mask))
         self.psd[mask] = 0.0
         
+    def _save_periodogram(self,filename,clobber=False):
+        """Save the periodogram to a fits file."""
+        from astropy.io import fits
+        psd = np.array([np.real(self.psd),np.imag(self.psd)])
+        HDU = fits.PrimaryHDU(psd)
+        HDU.header['CaseName'] = self.case.casename
+        # HDU.header['Hash'] = self.config.hash
+        HDU.header['rate'] = self.case.rate
+        HDU.writeto(filename,clobber=clobber)
+        
+    def _load_periodogram(self,filename):
+        """Load the periodogram from a fits file."""
+        from astropy.io import fits
+        
+        with fits.open(filename) as FitsFile:
+            self.psd = FitsFile[0].data[0] + 1j * FitsFile[0].data[1]
+            rate = FitsFile[0].header['rate']
+            length = self.psd.shape[0]
+            self.hz = np.mgrid[-1*length/2:length/2] / length * rate
+        
     def _create_peak_template(self):
         """Make peak templates for correlation fitting"""
         import scipy.fftpack
@@ -321,6 +343,58 @@ class FourierModeEstimator(BaseEstimator):
         omega = self.omega
         layers, identifier = find_and_fit_peaks_in_mode(k,l,psd,template,omega,**kwargs)
         return layers
+    
+    def _save_peaks_to_table(self,filename,clobber=False):
+        """Save found peaks to a table."""
+        from astropy.io import fits
+        k = np.zeros((self.nlayers,),dtype=np.int)
+        l = np.zeros((self.nlayers,),dtype=np.int)
+        alpha = np.zeros((self.nlayers,),dtype=np.float)
+        omega = np.zeros((self.nlayers,),dtype=np.float)
+        power = np.zeros((self.nlayers,),dtype=np.float)
+        rms = np.zeros((self.nlayers,),dtype=np.float)
+        
+        pol = 0
+        for k_i in range(self.layers.shape[0]):
+            for l_i in range(self.layers.shape[1]):
+                for layer in self.layers[k_i,l_i]:
+                    k[pol] = k_i
+                    l[pol] = l_i
+                    alpha[pol] = layer["alpha"]
+                    omega[pol] = layer["omega"]
+                    power[pol] = layer["variance"]
+                    rms[pol] = layer["rms"]
+                    pol += 1
+        c_k = fits.Column(name="k",format="I",array=k)
+        c_l = fits.Column(name="l",format="I",array=l)
+        c_alpha = fits.Column(name="alpha",format="E",array=alpha)
+        c_omega = fits.Column(name="omega",format="E",array=omega)
+        c_power = fits.Column(name="power",format="E",array=power)
+        c_rms   = fits.Column(name="rms"  ,format="E",array=rms)
+        tbl_hdu = fits.new_table(fits.ColDefs([c_k,c_l,c_alpha,c_omega,c_power,c_rms]))
+        tbl_hdu.writeto(filename,clobber=clobber)
+        
+    def _read_peaks_from_table(self,filename):
+        """docstring for _read_peaks_from_table"""
+        from astropy.io import fits
+        self.layers = np.empty(self.psd.shape[1:],dtype=object)
+        with fits.open(filename) as FitsFile:
+            table = FitsFile[1].data
+        self.nlayers = 0
+        for k_i in range(self.layers.shape[0]):
+            for l_i in range(self.layers.shape[0]):
+                select = (table['k'] == k_i) & (table['l'] == l_i)
+                layers = []
+                for layer in table[select]:
+                    layers.append({
+                    'alpha' : layer['alpha'],
+                    'omega' : layer['omega'],
+                    'variance' : layer['power'],
+                    'rms' : layer['rms']
+                    })
+                    self.nlayers += 1
+                self.layers[k_i,l_i] = layers
+            
     
     @property
     def omega(self):
@@ -396,8 +470,9 @@ class Periodogram(ConsoleContext):
         print("Showing %d layers" % len(layers))
         fit = np.zeros_like(self.plan.psd[:,k,l],dtype=np.float)
         for i,layer in enumerate(layers):
-            fit += fitter(self.plan.omega,layer["alpha"],layer["variance"],layer["omega"])
-            ax.plot(self.plan.hz,fit,':',label="Peak %d" % i)
+            Ifit = fitter(self.plan.omega,layer["alpha"],layer["variance"],layer["omega"])
+            fit += Ifit
+            ax.plot(self.plan.hz,Ifit,':',label="Peak %d" % i)
         ax.plot(self.plan.hz,fit,label="Total Fit")
         ax.legend(*ax.get_legend_handles_labels())
         
