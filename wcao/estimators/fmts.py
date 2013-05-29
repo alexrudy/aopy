@@ -6,6 +6,42 @@
 #  Created by Alexander Rudy on 2013-05-14.
 #  Copyright 2013 Alexander Rudy. All rights reserved.
 # 
+"""
+FMTS – Fourier Mode Temporal-Spatial Estimator
+==============================================
+
+This estimator uses the Fourier Wind Identification scheme to detect individual wind layers in telemtry data.
+
+:class:`FourierModeEstimator`
+-----------------------------
+
+.. autoclass:: 
+    FourierModeEstimator
+    :members:
+    :inherited-members:
+    :private-members:
+    
+    
+Supporting Functions
+--------------------
+
+.. autofunction::
+    periodogram
+    
+.. autofunction::
+    find_and_fit_peaks_in_mode
+    
+.. autofunction::
+    pool_find_and_fit_peaks_in_modes
+    
+.. autofunction::
+    find_and_fit_peak
+    
+.. autofunction::
+    fitter
+
+"""
+
 from __future__ import (absolute_import, unicode_literals, division,
                         print_function)
 
@@ -22,7 +58,14 @@ from pyshell.config import DottedConfiguration
 from pyshell import getLogger
 
 def periodogram(data, periodogram_length, window=None, half_overlap=True):
-    """Make a periodogram."""
+    """Make a periodogram from N-dimensional data.
+    
+    :param ndarray data: The data to be made into a periodogram. The peridogoram will be made across axis 0.
+    :param int periodogram_length: The length of the desired periodogram.
+    :param ndarray window: The windowing function for the periodogram. If it is `None`, a standard windowing function will be used.
+    :param bool half_overlap: Whether to half-overlap the segments of the periodogram.
+    
+    """
     import scipy.fftpack
     total_length = data.shape[0]
     psd_shape = tuple((periodogram_length,)+data.shape[1:])
@@ -48,10 +91,63 @@ def periodogram(data, periodogram_length, window=None, half_overlap=True):
     psd /= periodogram_length
     return psd
     
+def pool_find_and_fit_peaks_in_modes(args):
+    """An interface to :func:`find_and_fit_peaks_in_mode` which takes a single argument to unpack.
+    
+    :param args: The tuple of arguments to be unpacked.
+    
+    Note that the parameter ``identifier`` is used to identify this calculation in multiprocessing pools. Its value is arbitrary. In ``fmts``, this becomes the tuple ``(k,l)``.
+    
+    To correctly pack arguments::
+        
+        args = identifier,psd,template,omega,kwargs
+        
+    """
+    identifier,psd,template,omega,kwargs = args
+    return (find_and_fit_peaks_in_mode(psd,template,omega,**kwargs), identifier)
+    
+def find_and_fit_peaks_in_mode(psd,template,omega,max_layers=6,**kwargs):
+    """Find and fit peaks in a specific spatial fourier mode.
+    
+    :param ndarray psd: A power-spectral-distribution on which to find peaks.
+    :param ndarray template: A template peak spectrum
+    :param ndarray omega: The Omegas which provide the scale to the PSD.
+    :param int max_layers: The maximum number of layers to find. Peak fitting might fail earlier and return fewer peaks.
+    :keyword kwargs: The keywords are passed through to :func:`find_and_fit_peak`
+    :return: A list of layers found in this PSD. Each layer is recorded as a dictionary with the fitting parameters.
+    
+    """    
+    fit = np.zeros_like(psd)
+    mask = np.zeros_like(psd,dtype=np.bool)
+    layers = []
+    layer_n = 0
+    looking = True
+    
+    while looking:
+        
+        psd = psd - fit
+        looking, layer, mask, fit = find_and_fit_peak(psd,mask,template,omega,**kwargs)
+        if looking:
+            layer_n += 1.0
+            layers.append(layer)
+        if layer_n >= max_layers:
+            looking = False
+    
+    return layers
+    
 def find_and_fit_peak(psd,mask,template,omega,
     search_radius=1,mask_radius=1,float_peak=False,
-    ialpha=0.99,min_alpha=0,max_alpha=1,**kwargs):
-    """Find and fit a single peak"""
+    ialpha=0.99,min_alpha=0,max_alpha=1,maxfev=1e3,**kwargs):
+    """Find and fit a single peak in a psd.
+    
+    :param ndarray psd: A power-spectral-distribution on which to find peaks.
+    :param ndarray mask: A binary mask to block out the PSD. This is passed back and forth.
+    :param ndarray template: A template peak spectrum
+    :param ndarray omega: The Omegas which provide the scale to the PSD.
+    :param int max_layers: The maximum number of layers to find. Peak fitting might fail earlier and return fewer peaks.
+    :keyword kwargs: The keywords are passed through to :func:`find_and_fit_peak`    
+    
+    """
     import scipy.signal
     from aopy.util.curvefit import curvefit
     
@@ -80,7 +176,7 @@ def find_and_fit_peak(psd,mask,template,omega,
     if float_peak:
         p0 = np.array([ialpha,1.0,np.real(est_omega)])
         popt, pcov, infodict, errmsg, ier = curvefit(fitter,omega,np.real(psd),p0,
-            sigma=weights,full_output=True)
+            sigma=weights,full_output=True,maxfev=int(maxfev))
         est_omega = popt[2]
     else:
         popt, pcov, infodict, errmsg, ier = curvefit(fitter,omega,np.real(psd),p0,
@@ -108,7 +204,7 @@ def find_and_fit_peak(psd,mask,template,omega,
     
     
 def fitter(x,alpha,peak,center):
-    """docstring for fitter"""
+    """Our mystery fitting function."""
     f = peak/(1 - 2*alpha*np.cos(x-center) + alpha**2.0)
     return f
 
@@ -119,7 +215,12 @@ class FourierModeEstimator(BaseEstimator):
         self.config = DottedConfiguration.make(config)
     
     def setup(self,case):
-        """docstring for setup"""
+        """Setup the estimator by providing a case object.
+        
+        :param case: The WCAOCase object.
+        :return: ``self``
+        
+        """
         self.case = case
         self.rate = self.case.rate
         self.config.merge(self.case.config)
@@ -145,7 +246,7 @@ class FourierModeEstimator(BaseEstimator):
         self.psd = scipy.fftpack.fftshift(psd,axes=0)
         
     def _periodogram_to_phase(self):
-        """docstring for _periodogram_to_phase"""
+        """Convert the periodogram to phase."""
         import scipy.fftpack
         s = 1j*2.0*np.pi*scipy.fftpack.fftshift(self.hz)
         bigT = 1.0/self.rate
@@ -167,11 +268,12 @@ class FourierModeEstimator(BaseEstimator):
         wid = per_length/8.0
         ca = per_length/2 + wid
         cb = per_length/2 - wid
-        noise_psds = np.median(self.psd[ca:cb,...],axis=0)
         with warnings.catch_warnings():
             warnings.simplefilter('ignore')
-            noise_stds = np.std(self.psd[ca:cb,...],axis=0)
+            noise_psds = np.median(self.psd[ca:cb,...],axis=0)
             noise_psds[np.isnan(noise_psds)] = 0.0
+            noise_stds = np.std(self.psd[ca:cb,...],axis=0)
+            noise_stds[np.isnan(noise_stds)] = 0.0
         mask = self.psd <= (noise_psds + 2.0*noise_stds)
         self.log.debug("Masking %d noisy positions from PSDs" % np.sum(mask))
         self.psd[mask] = 0.0
@@ -185,62 +287,48 @@ class FourierModeEstimator(BaseEstimator):
         
     def _find_and_fit_peaks(self):
         """Find and fit peaks in each PSD"""
+        from astropy.utils.console import ProgressBar
+        from itertools import product
         self.layers = np.empty(self.psd.shape[1:],dtype=object)
-        if self.console:
-            from astropy.utils.console import ProgressBar
-            pbar = ProgressBar(self.psd.shape[1]*self.psd.shape[2])
-        else:
-            pbar = None
-        for k in range(self.psd.shape[1]):
-            for l in range(self.psd.shape[2]):
-                self.layers[k,l] = self._find_and_fit_peaks_in_mode(k,l)
-                if pbar is not None:
-                    pbar.update()
-
-    def _find_and_fit_peaks_in_mode(self,k,l):
-        """Find and fit peaks in a specific spatial fourier mode.
+        modes = list(product(range(self.psd.shape[1]),range(self.psd.shape[2])))
+        kwargs = dict(self.config["fitting"])
+        psd = self.psd
+        template = self.template_ft
+        omega = self.omega
         
-        :param int k:
-        :param int l:
+        args = [ ((k,l),psd[:,k,l],template,omega,kwargs) for k,l in modes ]
+        layers = ProgressBar.map(pool_find_and_fit_peaks_in_modes,args,multiprocess=True)
+        nlayers = 0
+        for layer,ident in layers:
+            k,l = ident
+            self.layers[k,l] = layer
+            nlayers += len(layer)
+        self.log.info("Found %d peaks",nlayers)
+        self.nlayers = nlayers
+    
+    
+    def _find_and_fit_peaks_in_mode(self,k,l):
+        """This method finds and fits independent peaks in single layers, similar to the way :meth:`_find_and_fit_peaks` works, but operating independently.
+        
+        :param k: The spatial fourier `k` mode number.
+        :param l: The spatial fourier `l` mode number.
         
         """
         
-        self.config.setdefault("fitting.search_radius",0.02)
-        self.config.setdefault("fitting.mask_radius",0.02)
-        self.config.setdefault("fitting.initial_alpha",0.9990)
-        self.config.setdefault("fitting.min_alpha",0.50)
-        self.config.setdefault("fitting.max_alpha",0.9995)
-        self.config.setdefault("fitting.float_peak",True)
-        max_layers = self.config.get("layers.max_layers",6)
-        
+        kwargs = dict(self.config["fitting"])
         psd = self.psd[:,k,l]
-        
-        fit = np.zeros_like(psd)
-        mask = np.zeros_like(psd,dtype=np.bool)
-        layers = []
-        layer_n = 0
-        looking = True
-        
-        while looking:
-            
-            psd = psd - fit
-            looking, layer, mask, fit = find_and_fit_peak(psd,mask,self.template_ft,self.omega,**self.config["fitting"])
-            if looking:
-                layer_n += 1.0
-                layers.append(layer)
-            if layer_n >= max_layers:
-                looking = False
-        
+        template = self.template_ft
+        omega = self.omega
+        layers, identifier = find_and_fit_peaks_in_mode(k,l,psd,template,omega,**kwargs)
         return layers
-    
     
     @property
     def omega(self):
-        """docstring for omega"""
+        """Omega"""
         return self.hz / self.rate * 2 * np.pi
         
     def estimate(self):
-        """docstring for estimate"""
+        """Perform the full estimate."""
         self._periodogram()
         self._periodogram_to_phase()
         self._split_atmosphere_and_noise()
@@ -248,12 +336,16 @@ class FourierModeEstimator(BaseEstimator):
         self._find_and_fit_peaks()
         
     def finish(self):
-        """docstring for finish"""
+        """Save the results back to the original WCAOCase"""
         pass
         
         
 class Periodogram(ConsoleContext):
-    """PowerSpectralDistributions"""
+    """This is an object for plotting periodograms.
+    
+    :param plan: The FMTS plan to use.
+    
+    """
     def __init__(self,plan):
         super(Periodogram, self).__init__()
         self.plan = plan
@@ -270,32 +362,57 @@ class Periodogram(ConsoleContext):
         ax.grid(True)
         
     def show_psd(self,ax,k,l,maxhz=50):
-        """docstring for show_psd"""
+        """Show an individual PSD.
+        
+        :param ax: A matplotlib axes object on which to plot.
+        :param int k: ``k``-mode.
+        :param int l: ``l``-mode.
+        :param float maxhz: The maximum ``hz`` value to display.
+        
+        """
         psd = self.plan.psd[:,k,l]
         self._show_psd(ax,psd,maxhz,title="$k={k:d}$ and $l={l:d}$".format(k=k,l=l))
         
     def show_template(self,ax):
-        """Show PSD template"""
+        """Show PSD template.
+        
+        :param ax: A matplotlib axes object on which to plot.
+        
+        """
         self._show_psd(ax,self.plan.template_ft,title="Template Peak PSD")
         
     def show_fit(self,ax,k,l,maxhz=50):
-        """Make a plan show a specific PSD fitting routine."""
+        """Make a plan show a specific PSD fitting routine.
+        
+        :param ax: A matplotlib axes object on which to plot.
+        :param int k: ``k``-mode.
+        :param int l: ``l``-mode.
+        :param float maxhz: The maximum ``hz`` value to display.
+        
+        """
         
         self.show_psd(ax,k,l,maxhz)
-        
-        layers = self.plan._find_and_fit_peaks_in_mode(k,l)
-        
-        fit = np.zeros_like(self.plan.psd[:,k,l])
-        for layer in layers:
+        layers = self.plan.layers[k,l]
+        print("Showing %d layers" % len(layers))
+        fit = np.zeros_like(self.plan.psd[:,k,l],dtype=np.float)
+        for i,layer in enumerate(layers):
             fit += fitter(self.plan.omega,layer["alpha"],layer["variance"],layer["omega"])
-        ax.plot(self.plan.hz,fit)
+            ax.plot(self.plan.hz,fit,':',label="Peak %d" % i)
+        ax.plot(self.plan.hz,fit,label="Total Fit")
+        ax.legend(*ax.get_legend_handles_labels())
         
     def show_fit_all(self,plt,k,l,maxhz=50):
-        """Make a plan show a specific PSD fitting routine."""
+        """Make a plan show a specific PSD fitting routine.
+        
+        :param plt: A matplotlib module to plot from.
+        :param int k: ``k``-mode.
+        :param int l: ``l``-mode.
+        :param float maxhz: The maximum ``hz`` value to display.
+        
+        """
         fig = plt.figure()
         ax = fig.add_subplot(111)
-        
-        layers = self.plan._find_and_fit_peaks_in_mode(k,l)
+        layers = self.plan.layers[k,l]
         psd = np.real(self.plan.psd[:,k,l])
         fit = np.zeros_like(self.plan.psd[:,k,l])
         for i,layer in enumerate(layers):
@@ -308,7 +425,8 @@ class Periodogram(ConsoleContext):
             plt.legend()
             fit += i_fit
             
-        ax.plot(self.plan.hz,fit)
+        ax.plot(self.plan.hz,fit,label="Fit")
+        ax.plot(self.plan.hz,fitter(self.plan.omega,layers[0]["alpha"],layers[0]["variance"],layers[0]["omega"]))
         self.show_psd(ax,k,l,maxhz)
     
         

@@ -5,3 +5,8 @@ fitting:
   max_alpha: 0.9995
   min_alpha: 0.5
   search_radius: 0.02
+  maxfev: 1000
+logging:
+  loggers:
+    wcao.estimators.fmts.find_and_fit_peak:
+      level: CRITICAL
