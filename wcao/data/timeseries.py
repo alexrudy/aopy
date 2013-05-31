@@ -6,8 +6,13 @@
 #  Created by Alexander Rudy on 2013-05-01.
 #  Copyright 2013 Alexander Rudy. All rights reserved.
 # 
+from __future__ import (absolute_import, unicode_literals, division,
+                        print_function)
+
+import numpy as np
 
 from .estimator import WCAOEstimate
+
 
 class WCAOTimeseries(WCAOEstimate):
     """A representation of WCAO timeseries data"""
@@ -51,13 +56,18 @@ class WCAOTimeseries(WCAOEstimate):
         """The time array"""
         return np.arange(self.ntime) * self._timestep
         
-    def load_fits(self,filename=None):
+    def load(self,filename=None):
         """Load the data from a file."""
         if filename is None:
-            filename = self.fitsname
-        with fits.open(filename) as fitsfile:
-            self._init_data(fitsfile[0].data)
-            fitsfile.close()
+            filename = self.npyname
+        self._init_data(np.load(filename))
+            
+    def save(self,filename=None):
+        """Save the data to a fits file."""
+        if filename is None:
+            filename = self.npyname
+        np.save(filename,self._data)
+            
             
     def smoothed(self,window,mode='flat'):
         """docstring for smoothed"""
@@ -84,6 +94,8 @@ class WCAOTimeseries(WCAOEstimate):
             mdata = np.sqrt(np.sum(data**2.0,axis=2))
             for layer in range(self.nlayers):
                 rv += list(ax.plot(self.time,mdata[:,layer],**kwargs))
+        if len(data) > 1e3:
+            [ patch.set_rasterized(True) for patch in rv ]
         return rv
         
     def map(self,ax,smooth=None,**kwargs):
@@ -96,9 +108,14 @@ class WCAOTimeseries(WCAOEstimate):
         size = kwargs.pop("size",False)
         if size:
             kwargs["range"] = [[-size,size],[-size,size]]
-        title = kwargs.pop("label","{:s} {:s} {:s}".format(self.longname,self.name,self.instrument))
+        title = kwargs.pop("label",r"{:s} \verb+{:s}+ {:s}".format(self.longname,self.case.casename,self.case.instrument))
         ax.set_title(title)
+        circles = kwargs.pop("circles",[10,20,30,40])
         rv = []
+        if isinstance(circles,collections.Sequence):
+            circle_patch = make_circles(circles,color='w')
+            [ ax.add_artist(a) for a in circle_patch ]
+            rv += circle_patch
         for layer in range(self.nlayers):
             (counts, xedges, yedges, Image) = ax.hist2d(data[:,layer,0],data[:,layer,1],**kwargs)
             rv.append(Image)
@@ -108,14 +125,15 @@ class WCAOTimeseries(WCAOEstimate):
         """Do the basic threepanel plot"""
         if len(fig.axes) != 3:
             axes = [ fig.add_subplot(3,1,i+1) for i in range(3) ]
+            title = kwargs.pop("label",r"{:s} \verb+{:s}+ {:s}".format(self.longname,self.case.casename,self.case.instrument))
+            fig.suptitle(title)
         else:
             axes = fig.axes
         labels = ["$w_x$","$w_y$","$|w|$"]
         for i in range(3):
             label = labels[i]
-            self.timeseries(axes[i],coord=i,smooth=smooth,label="Wind {:s}".format(label),marker='None',ls='-',alpha=0.2,**kwargs)
-            self.timeseries(axes[i],coord=i,smooth=None,label="Wind {:s}".format(label),marker='.',alpha=0.2,**kwargs)
+            self.timeseries(axes[i],coord=i,label="Wind {:s}".format(label),marker='.',alpha=0.2,**kwargs)
+            self.timeseries(axes[i],coord=i,smooth=smooth,label="Wind {:s}".format(label),marker='None',ls='-',alpha=1.0,**kwargs)
             axes[i].set_title("Wind {:s}".format(label))
             axes[i].set_ylabel("Speed (m/s)")
         return fig
-        
