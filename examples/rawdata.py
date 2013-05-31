@@ -24,17 +24,7 @@ ipydb()
 import scipy.fftpack
 
 Data = WCAOCase("Keck","20070730_2",(WCAOCase.__module__,'telemetry.yml'))
-Plan = FourierModeEstimator().setup(Data)
+Data.telemetry.load_raw()
 Data.telemetry.save_fmode()
-Plan._periodogram()
-Plan._periodogram_to_phase()
-Plan._split_atmosphere_and_noise()
-Plan._save_periodogram("periodogram.fits",clobber=True)
+Data.telemetry.save_phase()
 
-if __name__ == '__main__':
-    import matplotlib.pyplot as plt
-    PG = Periodogram(Plan)
-    fig = plt.figure()
-    ax = fig.add_subplot(1,1,1)
-    PG.show_psd(ax,4,4,maxhz=500)
-    plt.show()

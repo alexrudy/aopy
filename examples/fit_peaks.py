@@ -20,7 +20,7 @@ from pyshell.loggers import getSimpleLogger, configure_logging
 from pyshell.util import ipydb
 import pyshell
 
-# configure_logging(pyshell.PYSHELL_LOGGING_STREAM_ALL)
+configure_logging(pyshell.PYSHELL_LOGGING_STREAM_ALL)
 
 ipydb()
 
@@ -33,11 +33,14 @@ Plan._load_periodogram("periodogram.fits")
 Plan._create_peak_template()
 Plan._find_and_fit_peaks()
 Plan._save_peaks_to_table("peaks.fits",clobber=True)
-# Plan._read_peaks_from_table("peaks.fits")
-Plot = Periodogram(Plan)
-import matplotlib.pyplot as plt
-fig = plt.figure()
-ax = fig.add_subplot(1,1,1)
-Plot.show_fit(ax,4,4)
-plt.show()
+if __name__ == '__main__':
+    Plot = Periodogram(Plan)
+    import matplotlib.pyplot as plt
+    fig = plt.figure()
+    ax = fig.add_subplot(1,1,1)
+    Plot.show_peak_fit(ax,4,4)
+    fig = plt.figure()
+    ax = fig.add_subplot(1,1,1)
+    Plot.show_template(ax,4,4)
+    plt.show()
 
