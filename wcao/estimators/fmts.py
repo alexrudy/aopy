@@ -137,14 +137,21 @@ def find_and_fit_peaks_in_mode(psd,template,omega,max_layers=6,**kwargs):
     return layers
     
 def floatingmax(data,scalar):
-    """docstring for recenter"""
+    """Find a center point using a three-point peak fit.
+    
+    :param ndarray data: The data which has a peak to be found.
+    :param ndarray scalar: A scalar along which to measure the peak.
+    :return: ``(data_v,scalar_v,data_f)`` where ``data_v`` is the value of the peak (interpolated)
+    
+    """
+    import scipy.interpolate
     assert scalar.shape == data.shape
     data_i = np.argmax(data)
     poles = data[np.array([-1, 0 , 1]) + data_i]
     f_pos = 0.5 * (poles[0] - poles[2]) / (poles[0] + poles[2] - 2.0 * poles[1])
     data_f = data_i + f_pos
-    data_v = np.interp(data_f,np.arange(data.size),data)
-    scalar_v = np.interp(data_f,np.arange(scalar.size),scalar)
+    data_v = scipy.interpolate.interp1d(np.arange(data.size),data,kind='linear')(data_f)
+    scalar_v = scipy.interpolate.interp1d(np.arange(scalar.size),scalar,kind='linear')(data_f)
     return data_v, scalar_v, data_f
     
 def find_and_fit_peak(psd,mask,template,omega,
@@ -627,12 +634,17 @@ class Periodogram(ConsoleContext):
         ax = fig.add_subplot(1,1,1)
         peaks_grid = self.plan.peaks_hz[:,:,:]
         peaks_grid = np.ma.array(peaks_grid,mask=(np.abs(peaks_grid) <= 2.0))
-        peaks_grid = peaks_grid[:,:,0]
-        for i in range(self.plan.peaks_hz.shape[2]):
-            peaks_grid[peaks_grid.mask] = self.plan.peaks_hz[:,:,i][peaks_grid.mask]
-            peaks_grid.mask = (np.abs(peaks_grid) <= 2.0)
+        peaks_dist = np.ma.argmin(np.ma.abs(peaks_grid),axis=2)
+        grid_dist = np.arange(self.plan.peaks_hz.shape[2])[np.newaxis,np.newaxis,:]
+        selection = (peaks_dist[:,:,np.newaxis] == grid_dist)
+        peaks_grid = self.plan.peaks_hz[selection].reshape(self.plan.peaks_hz.shape[:-1])
+        # for i in range(self.plan.peaks_hz.shape[2]):
+        #     peaks_grid[peaks_grid.mask] = self.plan.peaks_hz[:,:,i][peaks_grid.mask]
+        #     peaks_grid.mask = (np.abs(peaks_grid) <= 2.0)
         Im = ax.imshow(peaks_grid,interpolation='nearest')
-        fig.colorbar(Im)
+        ax.set_title("Valid Peaks (at most one per spatial mode)")
+        cbar = fig.colorbar(Im)
+        cbar.set_label("Hz")
         
     def show_fit(self,fig,vxvy=None):
         """docstring for show_fit"""
@@ -649,35 +661,50 @@ class Periodogram(ConsoleContext):
         print("Showing layer at v = [%.1f,%.1f]" % (self.plan.vv[vx],self.plan.vv[vy]))
         extent = [np.min(self.plan.ff),np.max(self.plan.ff),np.min(self.plan.ff),np.max(self.plan.ff)]
         
-        fit_peaks = np.copy(self.plan.peaks_hz)
-        fit_peaks = np.max(fit_peaks,axis=2)
-        matched_peaks = np.sum(self.plan.matched[:,:,:,vx,vy],axis=2)
-        fit_peaks[matched_peaks == 0] = np.nan
+        all_peaks = np.copy(self.plan.peaks_hz)
+        fit_peaks = all_peaks[:,:,0]
+        for i in range(all_peaks.shape[2]):
+            matched_peaks = self.plan.matched[:,:,i,vx,vy]
+            fit_peaks[matched_peaks != 0] = all_peaks[:,:,i][matched_peaks != 0]
+        matched_peaks = np.any(self.plan.matched[:,:,:,vx,vy],axis=2)
+        fit_peaks[~matched_peaks] = np.nan
         possible_peaks = self.plan.layer_peak_hz[:,:,vx,vy]
         possible = self.plan.fullpossible[:,:,vx,vy]
+        possible_peaks[possible == 0] = np.nan
         
         vmin = -20
         vmax = 20
         nmin = 0
-        nmax = np.max(possible_peaks)
+        nmax = 1
         
         ax1 = fig.add_subplot(2,2,1)
         Im = ax1.imshow(fit_peaks,extent=extent,interpolation='nearest',vmin=vmin,vmax=vmax)
         ax1.set_title("Fit Peaks")
-        fig.colorbar(Im)
+        cbar = fig.colorbar(Im)
+        cbar.set_label("Hz")
+        
         
         ax2 = fig.add_subplot(2,2,2)
-        Im = ax2.imshow(matched_peaks,extent=extent,interpolation='nearest',vmin=nmin,vmax=nmax)
+        Im = ax2.imshow(matched_peaks+possible,extent=extent,cmap='binary_r',interpolation='nearest',vmin=nmin,vmax=2)
         ax2.set_title("N Found Peaks")
+        cbar = fig.colorbar(Im)
+        cbar.set_label("N")
+        
+        
         
         ax3 = fig.add_subplot(2,2,3)
         Im = ax3.imshow(possible_peaks,extent=extent,interpolation='nearest',vmin=vmin,vmax=vmax)
         ax3.set_title("Theory")
-        fig.colorbar(Im)
+        cbar = fig.colorbar(Im)
+        cbar.set_label("Hz")
+        
         
         ax4 = fig.add_subplot(2,2,4)
-        ax4.imshow(possible,extent=extent,interpolation='nearest',vmin=nmin,vmax=nmax)
+        Im = ax4.imshow(possible,extent=extent,cmap='binary_r',interpolation='nearest',vmin=nmin,vmax=nmax)
         ax4.set_title("N Possible Peaks")
+        cbar = fig.colorbar(Im)
+        cbar.set_label("N")
+        
         
     def show_metric(self,ax):
         """Show a specific metric"""
