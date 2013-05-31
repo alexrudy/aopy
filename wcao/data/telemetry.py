@@ -38,7 +38,7 @@ class WCAOTelemetry(ConsoleContext):
         self.fmode_path = self.filepath("proc","fmodes","fits")
         self.raw_path = os.path.expanduser(os.path.join(self.config["data.root"],self.config["data.cases.{0.casename:s}.raw_data".format(self.case)]))
         self.data_config = self.config["data.cases.{0.casename:s}".format(self.case)]
-        
+        self.log = pyshell.getLogger(__name__)
         
     @property
     def phase(self):
@@ -83,13 +83,16 @@ class WCAOTelemetry(ConsoleContext):
     def _load_simulated(self):
         """Generate simulated data"""
         from aopy.atmosphere.wind import ManyLayerScreen
+        self.log.debug("Loading Simulated Data")
         self.aperture = Aperture(circle(self.config["system.n"]//2.0,self.config["system.n"]//2.0))
         wind = np.array(self.data_config["wind"],dtype=np.float)
-        wind /= self.config["system.d"]
-        wind /= self.config["system.rate"]
+        self.log.debug("Generated Aperture adn Wind")
         Screen = ManyLayerScreen(self.aperture.shape,
             self.data_config["r0"],du=self.config["system.d"],
-            vel=wind,tmax=self.data_config["raw_time"]).setup()
+            vel=wind,tmax=self.data_config["raw_time"],delay=True)
+        self.log.debug("Generating Screen of size %g %g" % Screen.shape)
+        Screen.setup()
+        self.log.debug("Loaded Simulated Data")        
         return Screen
         
     def _load_trs(self):
@@ -102,12 +105,15 @@ class WCAOTelemetry(ConsoleContext):
     def _remap_3d_screen(self,rawdata):
         """Basically, a null-remap"""
         import scipy.fftpack
+        self.log.debug("Remaping Simulated Data")        
         self._nt = self.data_config["ntime"]
         self._phase = np.zeros((self._nt,)+self.aperture.shape)
         self._fmode = np.zeros((self._nt,)+self.aperture.shape,dtype=np.complex)
         for t in self.looper(range(self._nt)):
             self._phase[t,...] = rawdata.get_screen(t)
             self._fmode[t,...] = scipy.fftpack.fft2(self._phase[t,...])
+        self.log.debug("Remaped Simulated Data")
+        
         
     def _remap_disp2d(self,rawdata):
         """Use the Keck disp2d re-mapper"""
@@ -133,7 +139,7 @@ class WCAOTelemetry(ConsoleContext):
         """Load raw data from files."""
         rawdata = getattr(self,'_load_'+self.config["data.cases.{0.casename:s}.raw_format".format(self.case)])()
         getattr(self,'_remap_'+self.config["data.cases.{0.casename:s}.raw_remap".format(self.case)])(rawdata)
-        getattr(self,'_trans_'+self.config.get("data.cases.{0.casename:s}.raw_remap".format(self.case),"ones"))
+        getattr(self,'_trans_'+self.config.get("data.cases.{0.casename:s}.raw_trans".format(self.case),"ones"))
     
     def load_phase(self):
         """Load phase data from files."""
@@ -157,7 +163,7 @@ class WCAOTelemetry(ConsoleContext):
         if self.aperture is None:
             import scipy.fftpack
             self.aperture = Aperture(scipy.fftpack.ifft2(self._fmode[0,...]) != 0)
-        getattr(self,'_trans_'+self.config.get("data.cases.{0.casename:s}.raw_remap".format(self.case),"ones"))
+        getattr(self,'_trans_'+self.config.get("data.cases.{0.casename:s}.raw_trans".format(self.case),"ones"))
         
     
     def save_fmode(self):
