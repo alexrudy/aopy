@@ -20,7 +20,7 @@ from pyshell.loggers import getSimpleLogger, configure_logging
 from pyshell.util import ipydb
 import pyshell
 
-configure_logging(pyshell.PYSHELL_LOGGING_STREAM_ALL)
+configure_logging(pyshell.PYSHELL_LOGGING)
 
 ipydb()
 

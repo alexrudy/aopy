@@ -1,10 +1,11 @@
 fitting:
   float_peak: true
   initial_alpha: 0.999
-  mask_radius: 10
-  max_alpha: 1.5
+  mask_radius: 0.01
+  max_alpha: 1.0
   min_alpha: 0.5
-  search_radius: 10
+  min_power: 0.00001
+  search_radius: 0.05
   maxfev: 1000
 logging:
   loggers:

@@ -111,7 +111,7 @@ class WCAOTelemetry(ConsoleContext):
         self._fmode = np.zeros((self._nt,)+self.aperture.shape,dtype=np.complex)
         for t in self.looper(range(self._nt)):
             self._phase[t,...] = rawdata.get_screen(t)
-            self._fmode[t,...] = scipy.fftpack.fft2(self._phase[t,...])
+            self._fmode[t,...] = scipy.fftpack.fftshift(scipy.fftpack.fft2(self._phase[t,...]))
         self.log.debug("Remaped Simulated Data")
         
         
@@ -125,7 +125,7 @@ class WCAOTelemetry(ConsoleContext):
         self._fmode = np.zeros((self._nt,)+self.aperture.shape,dtype=np.complex)
         for t in self.looper(range(self._nt)):
             self._phase[t,...] = disp2d(rawdata[t,:])
-            self._fmode[t,...] = scipy.fftpack.fft2(self._phase[t,...])
+            self._fmode[t,...] = scipy.fftpack.fftshift(scipy.fftpack.fft2(self._phase[t,...]))
             
     def _trans_disp2d(self):
         """docstring for _trans_keck"""
@@ -134,6 +134,11 @@ class WCAOTelemetry(ConsoleContext):
     def _trans_ones(self):
         """docstring for _trans_ones"""
         self._fmode_dmtransfer = np.ones(self._fmode.shape[1:])
+        
+    def _trans_fftshift(self):
+        """docstring for _trans_fftshift"""
+        import scipy.fftpack
+        self._fmode = scipy.fftpack.fftshift(self._fmode,axes=(1,2))
         
     def load_raw(self):
         """Load raw data from files."""

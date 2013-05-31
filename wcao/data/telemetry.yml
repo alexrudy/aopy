@@ -46,7 +46,7 @@ keck_simulated:
   data:
     root: '~/Development/Astronomy/WindPrediction/WindPrediction/telem_analysis_13'
     cases:
-      'sim_0':
+      'sim_1':
         r0: 0.30
         wind:
           - [ 2.0, 5.0 ]
@@ -54,6 +54,6 @@ keck_simulated:
         raw_time: 500
         raw_format: 'simulated'
         raw_remap: '3d_screen'
-        raw_trans: 'disp2d'
+        raw_trans: 'fftshift'
         raw_data: 'data/keck/raw/data_30jul07/dataset2.dat'
       

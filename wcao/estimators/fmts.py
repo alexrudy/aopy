@@ -136,6 +136,17 @@ def find_and_fit_peaks_in_mode(psd,template,omega,max_layers=6,**kwargs):
     
     return layers
     
+def floatingmax(data,scalar):
+    """docstring for recenter"""
+    assert scalar.shape == data.shape
+    data_i = np.argmax(data)
+    poles = data[np.array([-1, 0 , 1]) + data_i]
+    f_pos = 0.5 * (poles[0] - poles[2]) / (poles[0] + poles[2] - 2.0 * poles[1])
+    data_f = data_i + f_pos
+    data_v = np.interp(data_f,np.arange(data.size),data)
+    scalar_v = np.interp(data_f,np.arange(scalar.size),scalar)
+    return data_v, scalar_v, data_f
+    
 def find_and_fit_peak(psd,mask,template,omega,
     search_radius=1,mask_radius=1,float_peak=False,
     ialpha=0.99,min_alpha=0,max_alpha=1,maxfev=1e3,min_power=1e-3,**kwargs):
@@ -155,14 +166,15 @@ def find_and_fit_peak(psd,mask,template,omega,
     log = getLogger(__name__ + ".find_and_fit_peak")
     psd[psd < 0] = 0.0
     psd[mask] = 0.0
-    correl = scipy.signal.fftconvolve(template,psd,mode='same')
+    correl = np.real(scipy.fftpack.ifft(template * scipy.fftpack.fft(psd)))
     max_i = np.argmax(correl)
     max_v = np.max(correl)
     success = None
-    #TODO: Sub-pixel matching for the peak!
-    est_omega = omega[max_i]
-    layer = {}
+    peak = {}
     fit_psd = np.empty_like(psd)
+    
+    #TODO: Sub-pixel matching for the peak!
+    est_correl, est_omega, est_pos = floatingmax(np.real(correl),omega)
     log.debug("Estimated Peak Value at %.3f", est_omega)
     
     p0 = np.array([ialpha,1.0],dtype=np.float)
@@ -182,9 +194,8 @@ def find_and_fit_peak(psd,mask,template,omega,
     else:
         popt, pcov, infodict, errmsg, ier = curvefit(fitter,omega,np.real(psd),p0,
             sigma=weights,args=(np.real(est_omega),),full_output=True,maxfev=int(maxfev))
-    
     if popt[1] <= min_power:
-        log.warning("Peak Power is negative! %g",popt[1])
+        log.warning("Peak Power is too small! %g",popt[1])
         success = False
     elif popt[0] < min_alpha or popt[0] > max_alpha:
         log.warning("Alpha out of range! %.3f",popt[0])
@@ -196,17 +207,17 @@ def find_and_fit_peak(psd,mask,template,omega,
         success = True
         log.info("Found a peak at alpha=%f omega=%f, power=%g",popt[0],est_omega,popt[1])
         fit_psd = fitter(omega,popt[0],popt[1],est_omega)
-        layer["alpha"] = popt[0]
-        layer["omega"] = est_omega
-        layer["variance"] = popt[1]
-        layer["rms"] = np.sqrt(np.sum(fit_psd))
+        peak["alpha"] = popt[0]
+        peak["omega"] = est_omega
+        peak["variance"] = popt[1]
+        peak["rms"] = np.sqrt(np.sum(fit_psd))
         mask = (mask | (np.abs(omega - est_omega) < mask_radius))
     else:
         success = False
     
     log.debug("{}:{}".format(ier,errmsg))
     
-    return success, layer, mask, fit_psd
+    return success, peak, mask, fit_psd
     
     
 def fitter(x,alpha,peak,center):
@@ -279,7 +290,7 @@ def create_layer_metric(peaks,npeaks,omega,klshape,rate,maxv=40,deltav=0.5,D=0.5
     """
     log = getLogger(__name__+'create_layer_metric')    
     import scipy.fftpack
-    peaks_hz = peaks_array_from_grid(peaks,npeaks)[...,1] * rate / (2.0 * np.pi)
+    peaks_hz = scipy.fftpack.fftshift(peaks_array_from_grid(peaks,npeaks)[...,1] * rate / (2.0 * np.pi),axes=(0,1))
     print(np.max(peaks_hz),np.min(peaks_hz))
     minv = -1*maxv
     numv = (maxv-minv)//deltav + 1.0
@@ -358,7 +369,7 @@ class FourierModeEstimator(BaseEstimator):
     def _periodogram_to_phase(self):
         """Convert the periodogram to phase."""
         import scipy.fftpack
-        s = 1j*2.0*np.pi*scipy.fftpack.fftshift(self.hz)
+        s = 1j*2.0*np.pi*scipy.fftpack.ifftshift(self.hz)
         bigT = 1.0/self.rate
         s[0] = 1.0
         wfs_cont = (1.0 - np.exp(-bigT*s))/(bigT*s)
@@ -370,7 +381,7 @@ class FourierModeEstimator(BaseEstimator):
         cofz = self.config["system.gain"]/(1.0 - self.config["system.integrator_c"]*zinv)
         delay_term = wfs_cont*dm_cont*delay_cont
         tf_to_convert_to_phase = np.abs((1 + delay_term*cofz)/(cofz))**2.0
-        self.psd *= np.tile(tf_to_convert_to_phase[:,np.newaxis,np.newaxis],(1,)+self.psd.shape[1:])
+        self.psd *= scipy.fftpack.fftshift(np.tile(tf_to_convert_to_phase[:,np.newaxis,np.newaxis],(1,)+self.psd.shape[1:]),axes=0)
     
     def _split_atmosphere_and_noise(self):
         """Split PSDs into atmosphere and noise terms."""
@@ -548,27 +559,38 @@ class Periodogram(ConsoleContext):
         :param float maxhz: The maximum ``hz`` value to display.
         
         """
-        import scipy.signal
+        import scipy.fftpack
         
         self.show_psd(ax,k,l,maxhz,label="Raw PSD")
         peaks = self.plan.peaks[k,l]
         print("Showing %d peaks" % len(peaks))
-        psd = np.real(self.plan.psd[:,k,l])
-        fit = np.zeros_like(psd,dtype=np.float)
+        this_psd = np.real(self.plan.psd[:,k,l])
+        fit = np.zeros_like(this_psd,dtype=np.float)
+        if correlax is not None:
+            correl = np.real(scipy.fftpack.ifft(self.plan.template_ft * scipy.fftpack.fft(this_psd)))
+            correlax.plot(correl)
+            # correlax.plot(self.plan.template_ft)
+            # correlax.plot(this_psd)
         for i,peak in enumerate(peaks):
-            this_psd = psd-fit
-            this_psd[this_psd <= 0.0] = 0.0
             Ifit = fitter(self.plan.omega,peak["alpha"],peak["variance"],peak["omega"])
+            search_radius = self.plan.config["fitting.search_radius"]
+            weights = (np.abs(self.plan.omega - peak["omega"]) <= search_radius).astype(np.int)
+            fitline, = ax.plot(self.plan.hz,this_psd*weights,'--')
             peak_hz = peak["omega"] * self.plan.rate / (2.0 * np.pi)
             print("Plotting peak %d, alpha=%g, hz=%g, power=%g" % (i, peak["alpha"], peak_hz, peak["variance"]))
-            fitline, = ax.plot(self.plan.hz,this_psd,'--')
             fit += Ifit
+            this_psd = this_psd-fit
+            this_psd[this_psd <= 0.0] = 0.0
             line, = ax.plot(self.plan.hz,Ifit,':',label="Peak %d" % i, color=fitline.get_color())
+            mask_radius = self.plan.config["fitting.mask_radius"]
+            this_psd = this_psd * (np.abs(self.plan.omega - peak["omega"]) >= mask_radius).astype(np.int)
             if correlax is not None:
-                correl = scipy.signal.fftconvolve(self.plan.template_ft,this_psd,mode='same')
-                correlax.plot(self.plan.hz,correl)
+                pass
+                # correl = scipy.signal.fftconvolve(self.plan.template_ft,this_psd,mode='same')
+                # correlax.plot(correl,color=fitline.get_color())
             if stopafter is not None and i == stopafter:
                 break
+        fitline, = ax.plot(self.plan.hz,this_psd,'--')
         ax.plot(self.plan.hz,fit,"-.",label="Total Fit")
         ax.legend(*ax.get_legend_handles_labels())
         
@@ -606,21 +628,26 @@ class Periodogram(ConsoleContext):
         peaks_grid = self.plan.peaks_hz[:,:,:]
         peaks_grid = np.ma.array(peaks_grid,mask=(np.abs(peaks_grid) <= 2.0))
         peaks_grid = peaks_grid[:,:,0]
+        for i in range(self.plan.peaks_hz.shape[2]):
+            peaks_grid[peaks_grid.mask] = self.plan.peaks_hz[:,:,i][peaks_grid.mask]
+            peaks_grid.mask = (np.abs(peaks_grid) <= 2.0)
         Im = ax.imshow(peaks_grid,interpolation='nearest')
         fig.colorbar(Im)
         
     def show_fit(self,fig,vxvy=None):
         """docstring for show_fit"""
         if vxvy is None:
+            metric = self.plan.metric
+            metric[np.isnan(metric)] = 0.0
             vx,vy = np.unravel_index(np.argmax(self.plan.metric),self.plan.metric.shape)
         else:
             vx,vy = vxvy
+            vx = np.argmin(np.abs(self.plan.vv - vx))
+            vy = np.argmin(np.abs(self.plan.vv - vy))
+            
+            
         print("Showing layer at v = [%.1f,%.1f]" % (self.plan.vv[vx],self.plan.vv[vy]))
         extent = [np.min(self.plan.ff),np.max(self.plan.ff),np.min(self.plan.ff),np.max(self.plan.ff)]
-        ax1 = fig.add_subplot(2,2,1)
-        ax2 = fig.add_subplot(2,2,2)
-        ax3 = fig.add_subplot(2,2,3)
-        ax4 = fig.add_subplot(2,2,4)
         
         fit_peaks = np.copy(self.plan.peaks_hz)
         fit_peaks = np.max(fit_peaks,axis=2)
@@ -633,17 +660,22 @@ class Periodogram(ConsoleContext):
         vmax = 20
         nmin = 0
         nmax = np.max(possible_peaks)
-        ax1.imshow(fit_peaks,extent=extent,interpolation='nearest',vmin=vmin,vmax=vmax)
-        ax1.set_title("Fit Peaks")
         
-        ax2.imshow(matched_peaks,extent=extent,interpolation='nearest',vmin=nmin,vmax=nmax)
+        ax1 = fig.add_subplot(2,2,1)
+        Im = ax1.imshow(fit_peaks,extent=extent,interpolation='nearest',vmin=vmin,vmax=vmax)
+        ax1.set_title("Fit Peaks")
+        fig.colorbar(Im)
+        
+        ax2 = fig.add_subplot(2,2,2)
+        Im = ax2.imshow(matched_peaks,extent=extent,interpolation='nearest',vmin=nmin,vmax=nmax)
         ax2.set_title("N Found Peaks")
         
-        
+        ax3 = fig.add_subplot(2,2,3)
         Im = ax3.imshow(possible_peaks,extent=extent,interpolation='nearest',vmin=vmin,vmax=vmax)
         ax3.set_title("Theory")
         fig.colorbar(Im)
         
+        ax4 = fig.add_subplot(2,2,4)
         ax4.imshow(possible,extent=extent,interpolation='nearest',vmin=nmin,vmax=nmax)
         ax4.set_title("N Possible Peaks")
         
