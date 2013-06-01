@@ -7,8 +7,8 @@
 #  Copyright 2013 Alexander Rudy. All rights reserved.
 # 
 """
-FMTS – Fourier Mode Temporal-Spatial Estimator
-==============================================
+:mod:`fmts` – Fourier Mode Temporal-Spatial Estimator
+=====================================================
 
 This estimator uses the Fourier Wind Identification scheme to detect individual wind layers in telemtry data.
 
@@ -18,12 +18,18 @@ This estimator uses the Fourier Wind Identification scheme to detect individual 
 .. autoclass:: 
     FourierModeEstimator
     :members:
+
+:class:`FourierModeEstimator` – Operational Functions
+*****************************************************
+
+.. autoclass::
+    FourierModeEstimator
+    :exclude-members: setup, estimate, finish, omega
     :inherited-members:
     :private-members:
     
-    
 Supporting Functions
---------------------
+********************
 
 .. autofunction::
     periodogram
@@ -36,6 +42,9 @@ Supporting Functions
     
 .. autofunction::
     find_and_fit_peak
+    
+.. autofunction::
+    create_layer_metric
     
 .. autofunction::
     fitter
@@ -293,12 +302,28 @@ def create_layer_metric(peaks,npeaks,omega,klshape,rate,maxv=40,deltav=0.5,D=0.5
     :param float deltav: Velocity steps for search
     :param float D: Telescope Diameter
     :param float lowest_hz: The lowested detected hz.
+    :param float dist_hz: The distance, in hz, for which to count a detection.
+    
+    The grids in this method have 4 or 5 axes. The axes are as follows:
+    
+    1. The x-direction spatial frequency
+    2. The y-direction spatial frequency
+    3. The x-direction velocity
+    4. The y-direction velocity
+    5. (Optional) The direction of peaks detected.
     
     """
-    log = getLogger(__name__+'create_layer_metric')    
+    # Setup the algorithm
+    log = getLogger(__name__+'.create_layer_metric')    
     import scipy.fftpack
-    peaks_hz = scipy.fftpack.fftshift(peaks_array_from_grid(peaks,npeaks)[...,1] * rate / (2.0 * np.pi),axes=(0,1))
-    print(np.max(peaks_hz),np.min(peaks_hz))
+    
+    # Data
+    # TODO: Figure out why this shift is necessary.
+    # Note: The peaks grid is selected on column 1 so that the omega paramter is returned.
+    peaks_hz = scipy.fftpack.fftshift(peaks_array_from_grid(peaks,npeaks)[...,1] * rate / (2.0 * np.pi),axes=(0,1))[:,:,np.newaxis,np.newaxis,:]
+    log.debug("Created Peaks")
+    
+    # Search Grid
     minv = -1*maxv
     numv = (maxv-minv)//deltav + 1.0
     maxf = np.max(peaks_hz)
@@ -306,35 +331,111 @@ def create_layer_metric(peaks,npeaks,omega,klshape,rate,maxv=40,deltav=0.5,D=0.5
     vv = np.arange(numv) * deltav + minv
     log.debug("Created ff: %r vv: %r" % (ff.shape,vv.shape))
     fx,fy, vx, vy = np.meshgrid(ff,ff,vv,vv)
-    # log.debug("Grid-Zeros: %g, %g, %g, %g" % (fx[1,2,3,4],fy[1,2,3,4],vx[1,2,3,4],vy[1,2,3,4]))
     log.debug("Created Grids")
     
+    # Validity Criterion
     valid = np.ones(ff.shape + ff.shape,dtype=np.int)
     valid[0,0] = 0.0
     min_layer_hz_npeaks = frac * np.sum(valid)
     log.debug("Created Validity Criterion")
     
+    # Theoretical Data
     layer_peak_hz = fx * vx + fy * vy
     log.debug("Calculated Layer Hz")
-    log.debug("[%g,%g]" % (np.min(fx),np.max(fx)))
+    
+    # Possible Match Peaks
     possible = np.abs(layer_peak_hz) >= lowest_hz
     possible &= (min_layer_hz_npeaks <= np.sum(possible,axis=(0,1)))
-    possible = (possible[:,:,np.newaxis,:,:] & (np.abs(peaks_hz[:,:,:,np.newaxis,np.newaxis]) >= lowest_hz))
-    no_possible = np.sum(possible,axis=2) == 0.0
-    matched = np.zeros_like(vx,dtype=np.int)
-    matched = (np.abs(layer_peak_hz[:,:,np.newaxis,:,:] - peaks_hz[:,:,:,np.newaxis,np.newaxis]) <= dist_hz) & (possible)
+    possible = (possible[...,np.newaxis] & (np.abs(peaks_hz) >= lowest_hz))
+    no_possible = np.sum(possible,axis=-1) == 0.0
+    log.debug("Calculated Possible Peaks")
     
-    metric_filtered = np.any(matched,axis=2).astype(np.int)
-    metric_filtered[no_possible] = 0.0
-    possible_filtered = np.any(possible,axis=2).astype(np.int)
+    # Matched Peaks
+    matched = (np.abs(layer_peak_hz[...,np.newaxis] - peaks_hz) <= dist_hz) & (possible)
+    
+    # Calculation of the Metric
+    
+    # Collapsing along N peaks.
+    matched_filtered = np.any(matched,axis=-1).astype(np.int)
+    possible_filtered = np.any(possible,axis=-1).astype(np.int)
+    
+    # Calculating metric at every spatial frequency
     possible_filtered[no_possible] = 1.0
-    print(np.max(metric_filtered),np.max(possible),possible_filtered.shape)
-    metric = metric_filtered/possible_filtered
+    metric_filtered = matched_filtered/possible_filtered
     possible_filtered[no_possible] = 0.0
-    collapse_possible = np.sum(possible_filtered,axis=(0,1))
-    collapse_metric = np.sum(metric_filtered,axis=(0,1)).astype(np.float)/collapse_possible.astype(np.float)
     
-    return collapse_metric, metric, collapse_possible, possible_filtered, vv, ff, peaks_hz, matched, layer_peak_hz
+    # Collapsing along spatial frequencies
+    matched_collapsed = np.sum(matched_filtered,axis=(0,1)).astype(np.float)
+    possible_collapsed = np.sum(possible_filtered,axis=(0,1)).astype(np.float)
+    no_possible_collapsed = (possible_collapsed == 0)
+    
+    # Caclulating the summed metric for each velocity
+    possible_collapsed[no_possible_collapsed] = 1.0
+    collapse_metric = matched_collapsed/possible_collapsed
+    possible_collapsed[no_possible_collapsed] = 0.0
+    
+    infodict = {
+        'ff' : ff,
+        'vv' : vv,
+        'peaks_hz' : peaks_hz,
+        'full_matched' : matched,
+        'fv_matched' : matched_filtered,
+        'fv_layer_hz' : layer_peak_hz,
+        'fv_possible' : possible_filtered,
+        'v_matched' : matched_collapsed,
+        'v_possible' : possible_collapsed,
+        'v_metric' : collapse_metric,
+    }
+    
+    return collapse_metric, possible_collapsed, matched_collapsed, infodict
+    
+
+def recenter(x,y,data,box):
+    """docstring for recenter"""
+    import scipy.ndimage.measurements
+    
+    cen_xm = x - box//2 if x - box//2 >= 0 else 0
+    cen_ym = y - box//2 if y - box//2 >= 0 else 0
+    cen_xp = x + box//2 if x + box //2 < data.shape[0] else data.shape[0] - 1
+    cen_yp = y + box//2 if y + box//2 < data.shape[1] else data.shape[1] - 1
+    
+    com_x,com_y = scipy.ndimage.measurements.center_of_mass(data[cen_xm:cen_xp,cen_ym:cen_yp])
+    
+    c_x = com_x + cen_xm
+    c_y = com_y + cen_ym
+    
+    return c_x, c_y
+    
+
+def find_via_watershed(metric,vv,spacing=20,min_layer_threshold=0.6,centroid=None):
+    """docstring for find_via_watershed"""
+    log = getLogger(__name__ + ".find_via_watershed")
+    import skimage.feature
+    centroid = spacing if centroid is None else centroid
+    log.debug("Finding Peaks")
+    result = skimage.feature.peak_local_max(metric,min_distance=spacing,threshold_abs=min_layer_threshold)
+    layers = []
+    layer_pos = []
+    log.debug("Recentering %d Peaks" % result.shape[0])
+    for peak_x,peak_y in result:
+        if np.array(layer_pos).ndim != 2 or (np.sum(np.power(np.array(layer_pos) - np.array([peak_y,peak_x]),2),axis=1) >= np.power(spacing,2)).all():            
+            com_y, com_x = recenter(peak_x,peak_y,metric,centroid)
+            vx = np.interp(com_x,np.arange(vv.shape[0]),vv)
+            vy = -1*np.interp(com_y,np.arange(vv.shape[0]),vv)
+            pvx = vx + 0.25
+            pvy = vy# - 0.25
+            layers.append({
+                'vx' : vx,
+                'vy' : vy,
+                'ivx' : peak_x,
+                'ivy' : peak_y,
+                'pvx': pvx,
+                'pvy': pvy,
+                'm' : metric[peak_x,peak_y],
+            })
+            layer_pos.append([peak_x,peak_y])
+    return layers
+    
 
 class FourierModeEstimator(BaseEstimator):
     """Estimates wind using the Fourier Mode Timeseries Method"""
@@ -360,6 +461,23 @@ class FourierModeEstimator(BaseEstimator):
             self._fmode_dmtransfer = np.ones_like(self._fmode[0])
         return self
     
+    @property
+    def omega(self):
+        """Omega"""
+        return (self.hz / self.rate) * 2.0 * np.pi
+        
+    def estimate(self):
+        """Perform the full estimate."""
+        self._periodogram()
+        self._periodogram_to_phase()
+        self._split_atmosphere_and_noise()
+        self._create_peak_template()
+        self._find_and_fit_peaks()
+        self._fit_peaks_to_metric()
+        
+    def finish(self):
+        """Save the results back to the original WCAOCase"""
+        pass
     
     def _periodogram(self):
         """Create a periodogram from a set of fourier modes."""
@@ -432,8 +550,8 @@ class FourierModeEstimator(BaseEstimator):
         """Make peak templates for correlation fitting"""
         import scipy.fftpack
         
-        self.template = periodogram(np.ones((self.psd.shape[0]*self.psd.shape[0]),dtype=np.complex),self.psd.shape[0])
-        self.template_ft = np.conj(scipy.fftpack.fftshift(scipy.fftpack.fft(self.template)))
+        template = periodogram(np.ones((self.psd.shape[0]*self.psd.shape[0]),dtype=np.complex),self.psd.shape[0])
+        self.template_ft = np.conj(scipy.fftpack.fftshift(scipy.fftpack.fft(template)))
         self.peaks = np.empty(self.psd.shape[1:],dtype=object)
         self.npeaks = np.empty(self.psd.shape[1:],dtype=np.int)
         
@@ -489,45 +607,30 @@ class FourierModeEstimator(BaseEstimator):
         
     def _fit_peaks_to_metric(self):
         """Fit each peak to a metric."""
-        self.metric, self.fullmetric, self.possible, self.fullpossible, self.vv, self.ff, self.peaks_hz, self.matched, self.layer_peak_hz = create_layer_metric(self.peaks,self.npeaks,self.omega,self.psd.shape[1:],self.rate)
-    
-    
-    @property
-    def omega(self):
-        """Omega"""
-        return (self.hz / self.rate) * 2.0 * np.pi
+        self.metric, self.possible, self.matched, self.match_info = create_layer_metric(self.peaks,self.npeaks,self.omega,self.psd.shape[1:],self.rate)
         
-    def estimate(self):
-        """Perform the full estimate."""
-        self._periodogram()
-        self._periodogram_to_phase()
-        self._split_atmosphere_and_noise()
-        self._create_peak_template()
-        self._find_and_fit_peaks()
-        self._fit_peaks_to_metric()
-        
-    def finish(self):
-        """Save the results back to the original WCAOCase"""
-        pass
+    def _find_layers_in_watershed(self):
+        """Find layers in watershed"""
+        self.layers = find_via_watershed(self.metric,self.match_info["vv"])
         
         
-class Periodogram(ConsoleContext):
+class FMTSVisualizer(ConsoleContext):
     """This is an object for plotting periodograms.
     
     :param plan: The FMTS plan to use.
     
     """
     def __init__(self,plan):
-        super(Periodogram, self).__init__()
+        super(FMTSVisualizer, self).__init__()
         self.plan = plan
-        self.log = getLogger(__name__)
+        self.log = getLogger(".".join([__name__,self.__class__.__name__]))
         
     def _show_psd(self,ax,psd,maxhz=50,title="",**kwargs):
         """docstring for _show_psd"""
         if title:
             ax.set_title("Periodogram for {title}".format(title=title))
-        ax.set_xlabel("Frequency (Hz)")
-        ax.set_ylabel("Power")
+        ax.set_xlabel(r"$f_t\;(\mathrm{Hz})$")
+        ax.set_ylabel(r"Power (arbitrary units)")
         ax.plot(self.plan.hz,np.real(psd),**kwargs)
         ax.set_xlim(-1*maxhz,maxhz)
         ax.set_yscale('log')
@@ -546,18 +649,7 @@ class Periodogram(ConsoleContext):
         psd = self.plan.psd[:,k,l]
         self._show_psd(ax,psd,maxhz,title=title,**kwargs)
         
-    def show_template(self,ax,k,l):
-        """Show PSD template.
-        
-        :param ax: A matplotlib axes object on which to plot.
-        
-        """
-        import scipy.signal
-        # self._show_psd(ax,self.plan.template_ft,title="Template Peak PSD")
-        correl = scipy.signal.fftconvolve(self.plan.template_ft,self.plan.psd[:,k,l],mode='same')
-        ax.plot(self.plan.hz,correl)
-        
-    def show_peak_fit(self,ax,k,l,maxhz=50,stopafter=None,correlax=None):
+    def show_peak_fit(self,ax,k,l,maxhz=50):
         """Make a plan show a specific PSD fitting routine.
         
         :param ax: A matplotlib axes object on which to plot.
@@ -567,37 +659,26 @@ class Periodogram(ConsoleContext):
         
         """
         import scipy.fftpack
-        
         self.show_psd(ax,k,l,maxhz,label="Raw PSD")
         peaks = self.plan.peaks[k,l]
-        print("Showing %d peaks" % len(peaks))
+        self.log.info("Showing PSD for k={:d} l={:d}".format(k,l))
+        self.log.debug("Showing %d peaks" % len(peaks))
         this_psd = np.real(self.plan.psd[:,k,l])
         fit = np.zeros_like(this_psd,dtype=np.float)
-        if correlax is not None:
-            correl = np.real(scipy.fftpack.ifft(self.plan.template_ft * scipy.fftpack.fft(this_psd)))
-            correlax.plot(correl)
-            # correlax.plot(self.plan.template_ft)
-            # correlax.plot(this_psd)
         for i,peak in enumerate(peaks):
             Ifit = fitter(self.plan.omega,peak["alpha"],peak["variance"],peak["omega"])
             search_radius = self.plan.config["fitting.search_radius"]
             weights = (np.abs(self.plan.omega - peak["omega"]) <= search_radius).astype(np.int)
             fitline, = ax.plot(self.plan.hz,this_psd*weights,'--')
             peak_hz = peak["omega"] * self.plan.rate / (2.0 * np.pi)
-            print("Plotting peak %d, alpha=%g, hz=%g, power=%g" % (i, peak["alpha"], peak_hz, peak["variance"]))
+            self.log.debug("Plotting peak %d, alpha=%g, hz=%g, power=%g" % (i, peak["alpha"], peak_hz, peak["variance"]))
             fit += Ifit
             this_psd = this_psd-fit
             this_psd[this_psd <= 0.0] = 0.0
             line, = ax.plot(self.plan.hz,Ifit,':',label="Peak %d" % i, color=fitline.get_color())
             mask_radius = self.plan.config["fitting.mask_radius"]
             this_psd = this_psd * (np.abs(self.plan.omega - peak["omega"]) >= mask_radius).astype(np.int)
-            if correlax is not None:
-                pass
-                # correl = scipy.signal.fftconvolve(self.plan.template_ft,this_psd,mode='same')
-                # correlax.plot(correl,color=fitline.get_color())
-            if stopafter is not None and i == stopafter:
-                break
-        fitline, = ax.plot(self.plan.hz,this_psd,'--')
+        fitline, = ax.plot(self.plan.hz,this_psd,'--',label="Residuals")
         ax.plot(self.plan.hz,fit,"-.",label="Total Fit")
         ax.legend(*ax.get_legend_handles_labels())
         
@@ -632,93 +713,123 @@ class Periodogram(ConsoleContext):
     def show_peaks(self,fig):
         """docstring for show_peaks"""
         ax = fig.add_subplot(1,1,1)
-        peaks_grid = self.plan.peaks_hz[:,:,:]
-        peaks_grid = np.ma.array(peaks_grid,mask=(np.abs(peaks_grid) <= 2.0))
-        peaks_dist = np.ma.argmin(np.ma.abs(peaks_grid),axis=2)
-        grid_dist = np.arange(self.plan.peaks_hz.shape[2])[np.newaxis,np.newaxis,:]
+        peaks_grid = np.ma.array(self.plan.match_info["peaks_hz"][:,:,0,0,:],mask=(np.abs(self.plan.match_info["peaks_hz"][:,:,0,0,:]) <= 2.0))
+        peaks_dist = np.ma.argmin(np.ma.abs(peaks_grid),axis=-1)
+        grid_dist = np.arange(self.plan.match_info["peaks_hz"].shape[-1])[np.newaxis,np.newaxis,:]
         selection = (peaks_dist[:,:,np.newaxis] == grid_dist)
-        peaks_grid = self.plan.peaks_hz[selection].reshape(self.plan.peaks_hz.shape[:-1])
-        # for i in range(self.plan.peaks_hz.shape[2]):
-        #     peaks_grid[peaks_grid.mask] = self.plan.peaks_hz[:,:,i][peaks_grid.mask]
-        #     peaks_grid.mask = (np.abs(peaks_grid) <= 2.0)
+        peaks_grid = self.plan.match_info["peaks_hz"][:,:,0,0,:][selection].reshape(self.plan.match_info["peaks_hz"].shape[:-3])
         Im = ax.imshow(peaks_grid,interpolation='nearest')
         ax.set_title("Valid Peaks (at most one per spatial mode)")
+        self._spf_format(ax)
         cbar = fig.colorbar(Im)
-        cbar.set_label("Hz")
+        cbar.set_label(r"$f_t\;(\mathrm{Hz})$")
         
-    def show_fit(self,fig,vxvy=None):
-        """docstring for show_fit"""
-        if vxvy is None:
-            metric = self.plan.metric
-            metric[np.isnan(metric)] = 0.0
-            vx,vy = np.unravel_index(np.argmax(self.plan.metric),self.plan.metric.shape)
-        else:
-            vx,vy = vxvy
-            vx = np.argmin(np.abs(self.plan.vv - vx))
-            vy = np.argmin(np.abs(self.plan.vv - vy))
+    def show_fit(self,fig):
+        """Show the peakfit results at a specific layer position."""
+        
+        nlayers = len(self.plan.layers)
+        fig.subplots_adjust(hspace=0.5)
+        self.log.info("Showing %d layers" % nlayers)
+        for n,layer in enumerate(self.plan.layers):    
+            
+            self.log.info("Showing layer %d at v = [%.1f,%.1f]" % (n,layer['vx'],layer['vy']))
+            vx,vy = layer['ivx'],layer['ivy']
+            extent = [np.min(self.plan.match_info["ff"]),np.max(self.plan.match_info["ff"])] * 2
+        
+            all_peaks = np.copy(self.plan.match_info["peaks_hz"])
+            fit_peaks = all_peaks[...,0,0,0]
+            for i in range(all_peaks.shape[-1]):
+                matched_peaks = np.copy(self.plan.match_info["full_matched"][:,:,vx,vy,i])
+                fit_peaks[matched_peaks != 0] = all_peaks[...,0,0,i][matched_peaks != 0]
+            matched_peaks = np.any(self.plan.match_info["full_matched"][:,:,vx,vy,:],axis=-1)
+            fit_peaks[~matched_peaks] = np.nan
+            possible_peaks = np.copy(self.plan.match_info["fv_layer_hz"][:,:,vx,vy])
+            possible = np.copy(self.plan.match_info["fv_possible"][:,:,vx,vy])
+            possible_peaks[possible == 0] = np.nan
+        
+            vmin = -20
+            vmax = 20
+            nmin = 0
+            nmax = 1
+        
+            from matplotlib.colors import ListedColormap
+            cmap = ListedColormap(['w','r','g'], name='from_list')
+        
+            ax1 = fig.add_subplot(4,nlayers,(0*nlayers+n+1))
+            Im = ax1.imshow(fit_peaks,extent=extent,interpolation='nearest',vmin=vmin,vmax=vmax)
+            ax1.set_title("Fit Peaks")
+            self._spf_format(ax1)
+            cbar = fig.colorbar(Im)
+            cbar.set_label(r"$f_t\;(\mathrm{Hz})$")
+        
+        
+            ax2 = fig.add_subplot(4,nlayers,(1*nlayers+n+1))
+            Im = ax2.imshow(matched_peaks+possible,extent=extent,cmap=cmap,interpolation='nearest',vmin=nmin,vmax=2)
+            ax2.set_title("Found Peaks")
+            self._spf_format(ax2)
+            cbar = fig.colorbar(Im)
+            cbar.set_ticks([2.0/6.0 * (2*x+1) for x in range(3)])
+            cbar.set_ticklabels(["Not Possible","Possible","Match"])
+        
+        
+            ax3 = fig.add_subplot(4,nlayers,(2*nlayers+n+1))
+            Im = ax3.imshow(possible_peaks,extent=extent,interpolation='nearest',vmin=vmin,vmax=vmax)
+            ax3.set_title("Theory")
+            self._spf_format(ax3)
+            cbar = fig.colorbar(Im)
+            cbar.set_label(r"$f_t\;(\mathrm{Hz})$")
+        
+        
+            ax4 = fig.add_subplot(4,nlayers,(3*nlayers+n+1))
+            cmap = ListedColormap(['w','r'], name='from_list')
+            Im = ax4.imshow(possible,extent=extent,cmap=cmap,interpolation='nearest',vmin=nmin,vmax=nmax)
+            self._spf_format(ax4)
+            ax4.set_title("Possible Peaks")
+            cbar = fig.colorbar(Im)
+            cbar.set_ticks([0.25,0.75])
+            cbar.set_ticklabels(["Not Possible","Possible"])
+            
+            x = (n*2+1)/(nlayers*2)
+            x = (x + 0.15)/(1.15)
+            y = 0.02
+            fig.text(x,y,"Layer at v = [%.1f,%.1f], matching %.1f\%%" % (self.plan.match_info["vv"][vx],self.plan.match_info["vv"][vy],layer["m"]*100),ha='center')
             
             
-        print("Showing layer at v = [%.1f,%.1f]" % (self.plan.vv[vx],self.plan.vv[vy]))
-        extent = [np.min(self.plan.ff),np.max(self.plan.ff),np.min(self.plan.ff),np.max(self.plan.ff)]
-        
-        all_peaks = np.copy(self.plan.peaks_hz)
-        fit_peaks = all_peaks[:,:,0]
-        for i in range(all_peaks.shape[2]):
-            matched_peaks = self.plan.matched[:,:,i,vx,vy]
-            fit_peaks[matched_peaks != 0] = all_peaks[:,:,i][matched_peaks != 0]
-        matched_peaks = np.any(self.plan.matched[:,:,:,vx,vy],axis=2)
-        fit_peaks[~matched_peaks] = np.nan
-        possible_peaks = self.plan.layer_peak_hz[:,:,vx,vy]
-        possible = self.plan.fullpossible[:,:,vx,vy]
-        possible_peaks[possible == 0] = np.nan
-        
-        vmin = -20
-        vmax = 20
-        nmin = 0
-        nmax = 1
-        
-        ax1 = fig.add_subplot(2,2,1)
-        Im = ax1.imshow(fit_peaks,extent=extent,interpolation='nearest',vmin=vmin,vmax=vmax)
-        ax1.set_title("Fit Peaks")
-        cbar = fig.colorbar(Im)
-        cbar.set_label("Hz")
-        
-        
-        ax2 = fig.add_subplot(2,2,2)
-        Im = ax2.imshow(matched_peaks+possible,extent=extent,cmap='binary_r',interpolation='nearest',vmin=nmin,vmax=2)
-        ax2.set_title("N Found Peaks")
-        cbar = fig.colorbar(Im)
-        cbar.set_label("N")
-        
-        
-        
-        ax3 = fig.add_subplot(2,2,3)
-        Im = ax3.imshow(possible_peaks,extent=extent,interpolation='nearest',vmin=vmin,vmax=vmax)
-        ax3.set_title("Theory")
-        cbar = fig.colorbar(Im)
-        cbar.set_label("Hz")
-        
-        
-        ax4 = fig.add_subplot(2,2,4)
-        Im = ax4.imshow(possible,extent=extent,cmap='binary_r',interpolation='nearest',vmin=nmin,vmax=nmax)
-        ax4.set_title("N Possible Peaks")
-        cbar = fig.colorbar(Im)
-        cbar.set_label("N")
         
         
     def show_metric(self,ax):
         """Show a specific metric"""
         # print(np.max(self.plan.metric),np.min(self.plan.metric))
-        extent = [np.min(self.plan.vv),np.max(self.plan.vv),np.min(self.plan.vv),np.max(self.plan.vv)]
-        Image = ax.imshow(self.plan.metric,extent=extent,interpolation='nearest',vmin=0.0,vmax=1.0)
+        extent = [np.min(self.plan.match_info["vv"]),np.max(self.plan.match_info["vv"])] * 2
+        Image = ax.imshow(self.plan.metric*100,extent=extent,interpolation='nearest',vmin=0,vmax=100)
         ax.set_title("Peak Metric")
+        if hasattr(self.plan,'layers'):
+            for i,layer in enumerate(self.plan.layers):
+                print("Plotting layer at {vx:.2f},{vy:.2f} with match {m:f}".format(**layer))
+                ax.plot(layer['pvx'],layer['pvy'],'ko')
+                ax.annotate("{:d}".format(i+1),(layer['pvx'],layer['pvy']),
+                    color='k',bbox=dict(fc='w'),xytext=(-10,10),textcoords='offset points')
+        self._metric_format(ax)
+        cbar = ax.figure.colorbar(Image)
+        cbar.set_label(r"\% Match")
         return Image
+        
+    def _spf_format(self,ax):
+        """docstring for _spf_format"""
+        ax.set_xlabel(r"$f_x\; \mathrm{(m^{-1})}$")
+        ax.set_ylabel(r"$f_y\; \mathrm{(m^{-1})}$")
+        
+    def _metric_format(self,ax):
+        """docstring for _metric_format"""
+        ax.set_xlabel(r"$v_x\; \mathrm{(m/s)}$")
+        ax.set_ylabel(r"$v_y\; \mathrm{(m/s)}$")
         
     def show_mask(self,ax):
         """docstring for show_mask"""
-        extent = [np.min(self.plan.vv),np.max(self.plan.vv),np.min(self.plan.vv),np.max(self.plan.vv)]
+        extent = [np.min(self.plan.match_info["vv"]),np.max(self.plan.match_info["vv"])] * 2
         Image = ax.imshow(self.plan.possible,extent=extent,interpolation='nearest')
         ax.set_title("Peak Mask")
+        self._metric_format(ax)
         return Image
     
         

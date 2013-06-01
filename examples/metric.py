@@ -14,7 +14,7 @@ import os, os.path
 
 import numpy as np
 
-from wcao.estimators.fmts import FourierModeEstimator,Periodogram
+from wcao.estimators.fmts import FourierModeEstimator,FMTSVisualizer
 from wcao.data.core import WCAOCase
 from pyshell.loggers import getSimpleLogger, configure_logging
 from pyshell.util import ipydb
@@ -33,7 +33,7 @@ Plan._load_periodogram("periodogram.fits")
 Plan._read_peaks_from_table("peaks.fits")
 Plan._fit_peaks_to_metric()
 if __name__ == '__main__':
-    Plot = Periodogram(Plan)
+    Plot = FMTSVisualizer(Plan)
     import matplotlib.pyplot as plt
     fig = plt.figure()
     ax = fig.add_subplot(1,1,1)
@@ -43,7 +43,7 @@ if __name__ == '__main__':
     fig.colorbar(Plot.show_mask(ax))
     fig = plt.figure()
     Plot.show_fit(fig)
-    fig = plt.figure()
-    Plot.show_peaks(fig)
+    # fig = plt.figure()
+    # Plot.show_peaks(fig)
     plt.show()
 

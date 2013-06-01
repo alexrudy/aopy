@@ -86,6 +86,9 @@ pygments_style = 'sphinx'
 # A list of ignored prefixes for module index sorting.
 #modindex_common_prefix = []
 
+# The ordering of methods in autodoc
+autodoc_member_order = 'bysource'
+
 
 # -- Options for HTML output ---------------------------------------------------
 
