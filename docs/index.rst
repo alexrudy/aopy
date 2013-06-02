@@ -32,10 +32,11 @@ Contents:
     :maxdepth: 2
     
     wcao/index.rst
-    wcao/wcao.data.core.rst
+    wcao/wcao.data.rst
     wcao/wcao.estimators.rst
-    wcao/wcao.estimators.core.rst
     wcao/wcao.estimators.fmts.rst
+    wcao/wcao.estimators.gaussnewton.rst
+    
 
 
 Indices and tables
