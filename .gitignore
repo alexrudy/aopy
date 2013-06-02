@@ -47,4 +47,5 @@ tests/pkg
 *.txt
 
 *.profile
+*.log*
 
