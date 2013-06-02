@@ -7,10 +7,6 @@
 #  Copyright 2013 Alexander Rudy. All rights reserved.
 # 
 """
-WCAO Estimator Template Classes
-===============================
-
-
 :class:`BaseEstimator` – Template Class
 ---------------------------------------
 
@@ -36,7 +32,9 @@ class Base(ConsoleContext):
         
     
 class BaseEstimator(Base):
-    """A base estimator class. This class should be subclassed"""
+    """A base estimator class. This class should be subclassed, and the methods :meth:`setup`, :meth:`estimate`, and :meth:`finish` should be replaced by functional methods.
+    
+    """
     
     __metaclass__ = abc.ABCMeta
     
@@ -46,15 +44,19 @@ class BaseEstimator(Base):
     
     @abc.abstractmethod
     def setup(self,data):
-        """Setup from data"""
+        """Setup from an instance of :class:`wcao.data.core.case`. The :class:`~wcao.data.core.case` can be held as a member object and used throughout :meth:`estimate`.
+        
+        """
         pass
     
     @abc.abstractmethod
     def estimate(self):
-        """Do the estimation."""
+        """
+        Do the estimation of the wind magnitude and direction. This method is the method which will be profiled, so it should be fast. It can refer to the :class:`wcao.data.core.case` initialized in :meth:`setup`. It should do **only** the estimation.
+        """
         pass
         
     @abc.abstractmethod
     def finish(self):
-        """Finish of the estimation"""
+        """Return the estimate to the original :class:`wcao.data.core.case` object. This method should clean up and record data, such that the :meth:`estimate` method could be called again."""
         pass

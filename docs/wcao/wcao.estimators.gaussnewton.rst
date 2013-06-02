@@ -1,0 +1,1 @@
+.. automodule:: wcao.estimators.gaussnewton

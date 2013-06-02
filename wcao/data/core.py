@@ -7,8 +7,8 @@
 #  Copyright 2013 Alexander Rudy. All rights reserved.
 # 
 """
-Core WCAO Data Structures
-=========================
+:mod:`wcao.data.core` – WCAO Data Structures
+============================================
 
 .. autoclass::
     WCAOCase

@@ -1,3 +1,3 @@
-WCAO - Wind-Controller Adaptive Optics
-======================================
+:mod:`wcao` - Wind-Controller Adaptive Optics
+=============================================
 

@@ -7,13 +7,13 @@
 #  Copyright 2013 Alexander Rudy. All rights reserved.
 # 
 """
-:mod:`fmts` – Fourier Mode Temporal-Spatial Estimator
-=====================================================
+:mod:`wcao.estimators.fmts` – Fourier Mode Temporal-Spatial Estimator
+---------------------------------------------------------------------
 
 This estimator uses the Fourier Wind Identification scheme to detect individual wind layers in telemtry data.
 
 :class:`FourierModeEstimator`
------------------------------
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. autoclass:: 
     FourierModeEstimator
@@ -157,7 +157,12 @@ def floatingmax(data,scalar):
     assert scalar.shape == data.shape
     data_i = np.argmax(data)
     poles = data[np.array([-1, 0 , 1]) + data_i]
-    f_pos = 0.5 * (poles[0] - poles[2]) / (poles[0] + poles[2] - 2.0 * poles[1])
+    bot = (poles[0] + poles[2] - 2.0 * poles[1])
+    top = (poles[0] - poles[2])
+    if bot == 0.0:
+        f_pos = poles[1]
+    else:
+        f_pos = 0.5 *  top/bot 
     data_f = data_i + f_pos
     data_v = scipy.interpolate.interp1d(np.arange(data.size),data,kind='linear')(data_f)
     scalar_v = scipy.interpolate.interp1d(np.arange(scalar.size),scalar,kind='linear')(data_f)
@@ -210,8 +215,12 @@ def find_and_fit_peak(psd,mask,template,omega,
     else:
         popt, pcov, infodict, errmsg, ier = curvefit(fitter,omega,np.real(psd),p0,
             sigma=weights,args=(np.real(est_omega),),full_output=True,maxfev=int(maxfev))
+    fit_psd = fitter(omega,popt[0],popt[1],est_omega)
     if popt[1] <= min_power:
         log.warning("Peak Power is too small! %g",popt[1])
+        success = False
+    elif np.max(fit_psd) > 10.0 * np.max(np.real(psd)*weights):
+        log.warning("Peak Power is much greater than PSD! %g >> %g", popt[1],np.max(np.real(psd)*weights))
         success = False
     elif popt[0] < min_alpha or popt[0] > max_alpha:
         log.warning("Alpha out of range! %.3f",popt[0])
@@ -222,7 +231,6 @@ def find_and_fit_peak(psd,mask,template,omega,
     elif success is None:
         success = True
         log.info("Found a peak at alpha=%f omega=%f, power=%g",popt[0],est_omega,popt[1])
-        fit_psd = fitter(omega,popt[0],popt[1],est_omega)
         peak["alpha"] = popt[0]
         peak["omega"] = est_omega
         peak["variance"] = popt[1]
@@ -346,18 +354,19 @@ def create_layer_metric(peaks,npeaks,omega,klshape,rate,maxv=40,deltav=0.5,D=0.5
     # Possible Match Peaks
     possible = np.abs(layer_peak_hz) >= lowest_hz
     possible &= (min_layer_hz_npeaks <= np.sum(possible,axis=(0,1)))
-    possible = (possible[...,np.newaxis] & (np.abs(peaks_hz) >= lowest_hz))
-    no_possible = np.sum(possible,axis=-1) == 0.0
+    valid = (np.abs(peaks_hz) >= lowest_hz)
     log.debug("Calculated Possible Peaks")
     
     # Matched Peaks
-    matched = (np.abs(layer_peak_hz[...,np.newaxis] - peaks_hz) <= dist_hz) & (possible)
-    
+    matched = (np.abs(layer_peak_hz[...,np.newaxis] - peaks_hz) <= dist_hz) & possible[...,np.newaxis] & valid
+    log.debug("Matched Peaks")
     # Calculation of the Metric
     
     # Collapsing along N peaks.
     matched_filtered = np.any(matched,axis=-1).astype(np.int)
-    possible_filtered = np.any(possible,axis=-1).astype(np.int)
+    possible_filtered = np.copy(possible)
+    no_possible = possible == 0.0
+    
     
     # Calculating metric at every spatial frequency
     possible_filtered[no_possible] = 1.0
@@ -373,6 +382,8 @@ def create_layer_metric(peaks,npeaks,omega,klshape,rate,maxv=40,deltav=0.5,D=0.5
     possible_collapsed[no_possible_collapsed] = 1.0
     collapse_metric = matched_collapsed/possible_collapsed
     possible_collapsed[no_possible_collapsed] = 0.0
+    
+    log.debug("Calculated Metric")
     
     infodict = {
         'ff' : ff,
@@ -407,7 +418,7 @@ def recenter(x,y,data,box):
     return c_x, c_y
     
 
-def find_via_watershed(metric,vv,spacing=20,min_layer_threshold=0.6,centroid=None):
+def find_via_watershed(metric,vv,spacing=20,min_layer_threshold=0.4,centroid=None):
     """docstring for find_via_watershed"""
     log = getLogger(__name__ + ".find_via_watershed")
     import skimage.feature
@@ -442,6 +453,7 @@ class FourierModeEstimator(BaseEstimator):
     def __init__(self,config=(__name__,"fmts.yml")):
         super(FourierModeEstimator, self).__init__()
         self.config = DottedConfiguration.make(config)
+        self.initialze()
     
     def setup(self,case):
         """Setup the estimator by providing a case object.
@@ -474,10 +486,37 @@ class FourierModeEstimator(BaseEstimator):
         self._create_peak_template()
         self._find_and_fit_peaks()
         self._fit_peaks_to_metric()
+        self._find_layers_in_watershed()
         
     def finish(self):
         """Save the results back to the original WCAOCase"""
-        pass
+        from wcao.data.fmtsmap import WCAOFMTSMap
+        self.case.addresult(self ,WCAOFMTSMap, "FT")
+        self.initialze()
+        
+        
+    def initialze(self):
+        """Initialize internal variables."""
+        # Base Data
+        self.case = None
+        self.rate = None
+        self._fmode = None
+        self._fmode_dmtransfer = None
+        
+        # Periodogram
+        self.psd = None
+        self.hz = None
+        
+        # Peaks
+        self.peaks = None
+        self.npeaks = None
+        
+        self.metric = None
+        self.possible = None
+        self.matched = None
+        self.match_info = None
+        
+        self.layers = None
     
     def _periodogram(self):
         """Create a periodogram from a set of fourier modes."""
@@ -530,7 +569,6 @@ class FourierModeEstimator(BaseEstimator):
         psd = np.array([np.real(self.psd),np.imag(self.psd)])
         HDU = fits.PrimaryHDU(psd)
         HDU.header['CaseName'] = self.case.casename
-        # HDU.header['Hash'] = self.config.hash
         HDU.header['rate'] = self.rate
         HDU_hz = fits.ImageHDU(self.hz)
         HDUList = fits.HDUList([HDU,HDU_hz])
@@ -560,6 +598,7 @@ class FourierModeEstimator(BaseEstimator):
         """Find and fit peaks in each PSD"""
         from astropy.utils.console import ProgressBar
         from itertools import product
+        
         modes = list(product(range(self.psd.shape[1]),range(self.psd.shape[2])))
         kwargs = dict(self.config["fitting"])
         psd = self.psd
@@ -614,222 +653,6 @@ class FourierModeEstimator(BaseEstimator):
         self.layers = find_via_watershed(self.metric,self.match_info["vv"])
         
         
-class FMTSVisualizer(ConsoleContext):
-    """This is an object for plotting periodograms.
-    
-    :param plan: The FMTS plan to use.
-    
-    """
-    def __init__(self,plan):
-        super(FMTSVisualizer, self).__init__()
-        self.plan = plan
-        self.log = getLogger(".".join([__name__,self.__class__.__name__]))
-        
-    def _show_psd(self,ax,psd,maxhz=50,title="",**kwargs):
-        """docstring for _show_psd"""
-        if title:
-            ax.set_title("Periodogram for {title}".format(title=title))
-        ax.set_xlabel(r"$f_t\;(\mathrm{Hz})$")
-        ax.set_ylabel(r"Power (arbitrary units)")
-        ax.plot(self.plan.hz,np.real(psd),**kwargs)
-        ax.set_xlim(-1*maxhz,maxhz)
-        ax.set_yscale('log')
-        ax.grid(True)
-        
-    def show_psd(self,ax,k,l,maxhz=50,title=None,**kwargs):
-        """Show an individual PSD.
-        
-        :param ax: A matplotlib axes object on which to plot.
-        :param int k: ``k``-mode.
-        :param int l: ``l``-mode.
-        :param float maxhz: The maximum ``hz`` value to display.
-        
-        """
-        title = "$k={k:d}$ and $l={l:d}$".format(k=k,l=l) if title is None else title
-        psd = self.plan.psd[:,k,l]
-        self._show_psd(ax,psd,maxhz,title=title,**kwargs)
-        
-    def show_peak_fit(self,ax,k,l,maxhz=50):
-        """Make a plan show a specific PSD fitting routine.
-        
-        :param ax: A matplotlib axes object on which to plot.
-        :param int k: ``k``-mode.
-        :param int l: ``l``-mode.
-        :param float maxhz: The maximum ``hz`` value to display.
-        
-        """
-        import scipy.fftpack
-        self.show_psd(ax,k,l,maxhz,label="Raw PSD")
-        peaks = self.plan.peaks[k,l]
-        self.log.info("Showing PSD for k={:d} l={:d}".format(k,l))
-        self.log.debug("Showing %d peaks" % len(peaks))
-        this_psd = np.real(self.plan.psd[:,k,l])
-        fit = np.zeros_like(this_psd,dtype=np.float)
-        for i,peak in enumerate(peaks):
-            Ifit = fitter(self.plan.omega,peak["alpha"],peak["variance"],peak["omega"])
-            search_radius = self.plan.config["fitting.search_radius"]
-            weights = (np.abs(self.plan.omega - peak["omega"]) <= search_radius).astype(np.int)
-            fitline, = ax.plot(self.plan.hz,this_psd*weights,'--')
-            peak_hz = peak["omega"] * self.plan.rate / (2.0 * np.pi)
-            self.log.debug("Plotting peak %d, alpha=%g, hz=%g, power=%g" % (i, peak["alpha"], peak_hz, peak["variance"]))
-            fit += Ifit
-            this_psd = this_psd-fit
-            this_psd[this_psd <= 0.0] = 0.0
-            line, = ax.plot(self.plan.hz,Ifit,':',label="Peak %d" % i, color=fitline.get_color())
-            mask_radius = self.plan.config["fitting.mask_radius"]
-            this_psd = this_psd * (np.abs(self.plan.omega - peak["omega"]) >= mask_radius).astype(np.int)
-        fitline, = ax.plot(self.plan.hz,this_psd,'--',label="Residuals")
-        ax.plot(self.plan.hz,fit,"-.",label="Total Fit")
-        ax.legend(*ax.get_legend_handles_labels())
-        
-    def show_fit_all(self,plt,k,l,maxhz=50):
-        """Make a plan show a specific PSD fitting routine.
-        
-        :param plt: A matplotlib module to plot from.
-        :param int k: ``k``-mode.
-        :param int l: ``l``-mode.
-        :param float maxhz: The maximum ``hz`` value to display.
-        
-        """
-        fig = plt.figure()
-        ax = fig.add_subplot(111)
-        peaks = self.plan.peaks[k,l]
-        psd = np.real(self.plan.psd[:,k,l])
-        fit = np.zeros_like(self.plan.psd[:,k,l])
-        for i,peak in enumerate(peaks):
-            i_fit = fitter(self.plan.omega,peak["alpha"],peak["variance"],peak["omega"])
-            i_fig = plt.figure()
-            i_ax = i_fig.add_subplot(111)
-            i_ax.plot(self.plan.hz,i_fit,label="Fit")
-            self._show_psd(i_ax,psd - fit - i_fit, label="Residual")
-            self._show_psd(i_ax,psd - fit,label="Data",title="Peak {:d} in $k={k:d}$ and $l={l:d}$".format(i,k=k,l=l))
-            plt.legend()
-            fit += i_fit
-            
-        ax.plot(self.plan.hz,fit,label="Fit")
-        # ax.plot(self.plan.hz,fitter(self.plan.omega,peak[0]["alpha"],peak[0]["variance"],peak[0]["omega"]))
-        self.show_psd(ax,k,l,maxhz)
-        
-    def show_peaks(self,fig):
-        """docstring for show_peaks"""
-        ax = fig.add_subplot(1,1,1)
-        peaks_grid = np.ma.array(self.plan.match_info["peaks_hz"][:,:,0,0,:],mask=(np.abs(self.plan.match_info["peaks_hz"][:,:,0,0,:]) <= 2.0))
-        peaks_dist = np.ma.argmin(np.ma.abs(peaks_grid),axis=-1)
-        grid_dist = np.arange(self.plan.match_info["peaks_hz"].shape[-1])[np.newaxis,np.newaxis,:]
-        selection = (peaks_dist[:,:,np.newaxis] == grid_dist)
-        peaks_grid = self.plan.match_info["peaks_hz"][:,:,0,0,:][selection].reshape(self.plan.match_info["peaks_hz"].shape[:-3])
-        Im = ax.imshow(peaks_grid,interpolation='nearest')
-        ax.set_title("Valid Peaks (at most one per spatial mode)")
-        self._spf_format(ax)
-        cbar = fig.colorbar(Im)
-        cbar.set_label(r"$f_t\;(\mathrm{Hz})$")
-        
-    def show_fit(self,fig):
-        """Show the peakfit results at a specific layer position."""
-        
-        nlayers = len(self.plan.layers)
-        fig.subplots_adjust(hspace=0.5)
-        self.log.info("Showing %d layers" % nlayers)
-        for n,layer in enumerate(self.plan.layers):    
-            
-            self.log.info("Showing layer %d at v = [%.1f,%.1f]" % (n,layer['vx'],layer['vy']))
-            vx,vy = layer['ivx'],layer['ivy']
-            extent = [np.min(self.plan.match_info["ff"]),np.max(self.plan.match_info["ff"])] * 2
-        
-            all_peaks = np.copy(self.plan.match_info["peaks_hz"])
-            fit_peaks = all_peaks[...,0,0,0]
-            for i in range(all_peaks.shape[-1]):
-                matched_peaks = np.copy(self.plan.match_info["full_matched"][:,:,vx,vy,i])
-                fit_peaks[matched_peaks != 0] = all_peaks[...,0,0,i][matched_peaks != 0]
-            matched_peaks = np.any(self.plan.match_info["full_matched"][:,:,vx,vy,:],axis=-1)
-            fit_peaks[~matched_peaks] = np.nan
-            possible_peaks = np.copy(self.plan.match_info["fv_layer_hz"][:,:,vx,vy])
-            possible = np.copy(self.plan.match_info["fv_possible"][:,:,vx,vy])
-            possible_peaks[possible == 0] = np.nan
-        
-            vmin = -20
-            vmax = 20
-            nmin = 0
-            nmax = 1
-        
-            from matplotlib.colors import ListedColormap
-            cmap = ListedColormap(['w','r','g'], name='from_list')
-        
-            ax1 = fig.add_subplot(4,nlayers,(0*nlayers+n+1))
-            Im = ax1.imshow(fit_peaks,extent=extent,interpolation='nearest',vmin=vmin,vmax=vmax)
-            ax1.set_title("Fit Peaks")
-            self._spf_format(ax1)
-            cbar = fig.colorbar(Im)
-            cbar.set_label(r"$f_t\;(\mathrm{Hz})$")
-        
-        
-            ax2 = fig.add_subplot(4,nlayers,(1*nlayers+n+1))
-            Im = ax2.imshow(matched_peaks+possible,extent=extent,cmap=cmap,interpolation='nearest',vmin=nmin,vmax=2)
-            ax2.set_title("Found Peaks")
-            self._spf_format(ax2)
-            cbar = fig.colorbar(Im)
-            cbar.set_ticks([2.0/6.0 * (2*x+1) for x in range(3)])
-            cbar.set_ticklabels(["Not Possible","Possible","Match"])
-        
-        
-            ax3 = fig.add_subplot(4,nlayers,(2*nlayers+n+1))
-            Im = ax3.imshow(possible_peaks,extent=extent,interpolation='nearest',vmin=vmin,vmax=vmax)
-            ax3.set_title("Theory")
-            self._spf_format(ax3)
-            cbar = fig.colorbar(Im)
-            cbar.set_label(r"$f_t\;(\mathrm{Hz})$")
-        
-        
-            ax4 = fig.add_subplot(4,nlayers,(3*nlayers+n+1))
-            cmap = ListedColormap(['w','r'], name='from_list')
-            Im = ax4.imshow(possible,extent=extent,cmap=cmap,interpolation='nearest',vmin=nmin,vmax=nmax)
-            self._spf_format(ax4)
-            ax4.set_title("Possible Peaks")
-            cbar = fig.colorbar(Im)
-            cbar.set_ticks([0.25,0.75])
-            cbar.set_ticklabels(["Not Possible","Possible"])
-            
-            x = (n*2+1)/(nlayers*2)
-            x = (x + 0.15)/(1.15)
-            y = 0.02
-            fig.text(x,y,"Layer at v = [%.1f,%.1f], matching %.1f\%%" % (self.plan.match_info["vv"][vx],self.plan.match_info["vv"][vy],layer["m"]*100),ha='center')
-            
-            
-        
-        
-    def show_metric(self,ax):
-        """Show a specific metric"""
-        # print(np.max(self.plan.metric),np.min(self.plan.metric))
-        extent = [np.min(self.plan.match_info["vv"]),np.max(self.plan.match_info["vv"])] * 2
-        Image = ax.imshow(self.plan.metric*100,extent=extent,interpolation='nearest',vmin=0,vmax=100)
-        ax.set_title("Peak Metric")
-        if hasattr(self.plan,'layers'):
-            for i,layer in enumerate(self.plan.layers):
-                print("Plotting layer at {vx:.2f},{vy:.2f} with match {m:f}".format(**layer))
-                ax.plot(layer['pvx'],layer['pvy'],'ko')
-                ax.annotate("{:d}".format(i+1),(layer['pvx'],layer['pvy']),
-                    color='k',bbox=dict(fc='w'),xytext=(-10,10),textcoords='offset points')
-        self._metric_format(ax)
-        cbar = ax.figure.colorbar(Image)
-        cbar.set_label(r"\% Match")
-        return Image
-        
-    def _spf_format(self,ax):
-        """docstring for _spf_format"""
-        ax.set_xlabel(r"$f_x\; \mathrm{(m^{-1})}$")
-        ax.set_ylabel(r"$f_y\; \mathrm{(m^{-1})}$")
-        
-    def _metric_format(self,ax):
-        """docstring for _metric_format"""
-        ax.set_xlabel(r"$v_x\; \mathrm{(m/s)}$")
-        ax.set_ylabel(r"$v_y\; \mathrm{(m/s)}$")
-        
-    def show_mask(self,ax):
-        """docstring for show_mask"""
-        extent = [np.min(self.plan.match_info["vv"]),np.max(self.plan.match_info["vv"])] * 2
-        Image = ax.imshow(self.plan.possible,extent=extent,interpolation='nearest')
-        ax.set_title("Peak Mask")
-        self._metric_format(ax)
-        return Image
+
     
         

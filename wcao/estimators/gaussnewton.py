@@ -6,6 +6,20 @@
 #  Created by Jaberwocky on 2013-04-18.
 #  Copyright 2013 Jaberwocky. All rights reserved.
 # 
+"""
+:mod:`wcao.estimators.gaussnewton` – An iterative Gauss-Newton estimator
+------------------------------------------------------------------------
+
+
+:class:`GaussNewtonEstimator`
+*****************************
+
+.. autoclass::
+    GaussNewtonEstimator
+    :members:
+
+"""
+
 from __future__ import (absolute_import, unicode_literals, division,
                         print_function)
 
