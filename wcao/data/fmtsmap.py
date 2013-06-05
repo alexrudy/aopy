@@ -10,6 +10,8 @@ from __future__ import (absolute_import, unicode_literals, division,
                         print_function)
 import numpy as np
 
+import datetime
+
 from .estimator import WCAOEstimate
 from ..estimators.fmts import FourierModeEstimator
 
@@ -32,7 +34,7 @@ class WCAOFMTSMap(WCAOEstimate):
         self.peaks = plan.peaks
         self.npeaks = plan.npeaks
         
-        self.fit_config = plan.config["fitting"]
+        self.fmts_config = plan.config["FMTS"]
         
         self.metric = plan.metric
         self.possible = plan.possible
@@ -70,7 +72,18 @@ class WCAOFMTSMap(WCAOEstimate):
             ax.autoscale(axis='y')
             ax.grid(True)
     
-    def _spf_format(self,ax,data,do_label=True,do_scale=True,do_cbar=True,**kwargs):
+    def _header(self,fig):
+        """Add this object's header"""
+        inst = self.case.instrument.replace("_"," ")
+        ltext = r"{instrument:s} during \verb|{casename:s}|".format(instrument=inst,casename=self.case.casename)
+        fig.text(0.02,0.98,ltext,ha='left')
+        
+        today = datetime.date.today().isoformat()
+        rtext = r"Analysis on {date:s} with {config:s}".format(date=today,config=self.case.config.hash)
+        fig.text(0.98,0.98,rtext,ha='right')
+        
+    
+    def _spf_format(self,ax,data,do_label=True,do_scale=True,do_cbar=True,do_kl=False,**kwargs):
         """docstring for _spf_format"""
         if do_scale:
             extent = [np.min(self.match_info["ff"]),np.max(self.match_info["ff"])] * 2
@@ -81,6 +94,14 @@ class WCAOFMTSMap(WCAOEstimate):
             cbar = ax.figure.colorbar(image)
         else:
             cbar = None
+        if do_kl:
+            k = data.shape[0]//2
+            l = data.shape[1]//2
+            ax2 = ax.twinx().twiny()
+            ax2.set_xlim(-k,k)
+            ax2.set_ylim(-l,l)
+            ax2.set_xlabel(r"$k$")
+            ax2.set_ylabel(r"$l$")
         ax.set_xlabel(r"$f_x\; \mathrm{(m^{-1})}$")
         ax.set_ylabel(r"$f_y\; \mathrm{(m^{-1})}$")
         return cbar
@@ -97,6 +118,28 @@ class WCAOFMTSMap(WCAOEstimate):
         ax.set_xlabel(r"$v_x\; \mathrm{(m/s)}$")
         ax.set_ylabel(r"$v_y\; \mathrm{(m/s)}$")
         return cbar
+        
+    def _metric_circles(self,ax,dist=10,origin=[0,0],color='w',crosshair=True):
+        """Show metric circles"""
+        from matplotlib.patches import Circle
+        from matplotlib.lines import Line2D
+        xm,xp = ax.get_xlim()
+        ym,yp = ax.get_ylim()
+        rm = np.max(np.abs([xm,xp,ym,yp]))
+        nc = rm//dist
+        Rs = [ (n+1)*dist for n in range(int(nc)) ]
+        circles = [Circle(origin,R,fc='none',ec=color,ls='dashed',zorder=0.1) for R in Rs]
+        if crosshair:
+            Rmax = max(Rs)
+            major = [ -Rmax, Rmax ]
+            minor = [ 0 , 0 ]
+            coords = [ (major,minor), (minor,major)]
+            for xdata,ydata in coords:
+                circles.append(
+                    Line2D(xdata,ydata,ls='dashed',color=color,marker='None',zorder=0.1)
+                )
+        [ ax.add_artist(a) for a in circles ]
+        return circles
     
     def show_psd(self,ax,k,l,maxhz=50,title=None,**kwargs):
         """Show an individual PSD.
@@ -135,8 +178,8 @@ class WCAOFMTSMap(WCAOEstimate):
         this_psd = np.real(self.psd[:,k,l])
         fit = np.zeros_like(this_psd,dtype=np.float)
         
-        search_radius = self.fit_config["search_radius"]
-        mask_radius = self.fit_config["mask_radius"]
+        search_radius = self.fmts_config["fitting.search_radius"]
+        mask_radius = self.fmts_config["fitting.mask_radius"]
         
         for i,peak in enumerate(peaks):
             
@@ -168,6 +211,7 @@ class WCAOFMTSMap(WCAOEstimate):
         
         # Legend
         ax.legend(*ax.get_legend_handles_labels())
+        self._header(ax.figure)
         
     
     def view_peaks(self,ax):
@@ -180,13 +224,21 @@ class WCAOFMTSMap(WCAOEstimate):
         cbar = self._spf_format(ax,peaks_grid)
         cbar.set_label(r"$f_t\;(\mathrm{Hz})$")
         ax.set_title("Valid Peaks (at most one per spatial mode)")
+        self._header(ax.figure)
     
     def show_peaks(self,ax):
         """Show a count of the peaks at each mode."""
         peaks = np.sum(self.match_info["peaks_hz"][:,:,0,0,:] != 0,axis=-1)
-        cbar = self._spf_format(ax,peaks)
+        from matplotlib.colors import ListedColormap,BoundaryNorm
+        import matplotlib.cm
+        cmap = ListedColormap([matplotlib.cm.jet(i) for i in range(matplotlib.cm.jet.N)])
+        norm = BoundaryNorm(np.arange(np.max(peaks)+1) - 0.5,cmap.N)
+        cbar = self._spf_format(ax,peaks,do_kl=False,cmap=cmap,norm=norm)
+        cbar.set_ticks(np.arange(np.max(peaks)+1))
+        cbar.set_ticklabels(map("{:d}".format,np.arange(np.max(peaks)+1)))
         cbar.set_label("N")
         ax.set_title("Number of peaks found at each mode.")
+        self._header(ax.figure)
     
     def show_fit(self,fig,residual=False):
         """Show the peakfit results at a specific layer position."""
@@ -194,7 +246,7 @@ class WCAOFMTSMap(WCAOEstimate):
         nlayers = len(self.layers)
         fig.subplots_adjust(hspace=0.5)
         self.log.info("Showing %d layers" % nlayers)
-        
+        self._header(fig)
         
         vmin = -20
         vmax = 20
@@ -247,7 +299,7 @@ class WCAOFMTSMap(WCAOEstimate):
                 cbar.set_label(r"$f_t\;(\mathrm{Hz})$")
             
             x = (n*2+1)/(ncol*2)
-            x = (x + 0.15)/(1.15)
+            x = (x + 0.10)/(1.10)
             y = 0.02
             fig.text(x,y,"Layer at v = [%.1f,%.1f], matching %.1f\%%" % (self.match_info["vv"][vx],self.match_info["vv"][vy],layer["m"]*100),ha='center')
             
@@ -274,6 +326,7 @@ class WCAOFMTSMap(WCAOEstimate):
         """Show a specific metric"""
         # print(np.max(self.plan.metric),np.min(self.plan.metric))
         cbar = self._metric_format(ax,self.metric*100,vmin=0,vmax=100)
+        self._metric_circles(ax)
         ax.set_title("Peak Metric")
         for i,layer in enumerate(self.layers):
             print("Plotting layer at {vx:.2f},{vy:.2f} with match {m:f}".format(**layer))
@@ -285,12 +338,14 @@ class WCAOFMTSMap(WCAOEstimate):
             ax.figure.text(x,y,
                 "%d) Layer at v = [%.1f,%.1f], matching %.1f\%%" % (i+1,layer["vx"],layer['vy'],layer["m"]*100))
         cbar.set_label(r"\% Match")
+        self._header(ax.figure)
         
     def show_mask(self,ax):
         """docstring for show_mask"""
         ax.set_title("Peak Mask")
         cbar = self._metric_format(ax,self.possible)
         cbar.set_label("N")
+        self._header(ax.figure)
     
 
         
