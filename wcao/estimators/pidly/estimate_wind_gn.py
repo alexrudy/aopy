@@ -54,8 +54,7 @@ class GaussNewtonPIDLY(BasePIDLYEstimator):
         self.IDL("p_ap_inloc = ptr_new(ap_inloc)")
         self.IDL("wind = [0.0,0.0]")
         self.IDL("ewind = fltarr(2)")
-        if self.nstep is not None:
-            self.IDL("results = fltarr({nstep:d},2)".format(nstep=self.nstep))
+        self.IDL("results = fltarr({nstep:d},2)".format(nstep=self.nstep))
         self.load_phase()
         return self
     
@@ -64,8 +63,8 @@ class GaussNewtonPIDLY(BasePIDLYEstimator):
         if self.array_mode is "fits":
             self.IDL.ex("sig = readfits('{:s}',tmphead)".format(os.path.relpath(self.filename)),print_output=False)
         
-    def estimate(self,tstep):
-        """docstring for estimate"""
+    def estimate(self):
+        """Perform the full estimate"""
         cmd = textwrap.dedent("""\
         previous = sig[*,*,{prev:d}]
         current = sig[*,*,{curr:d}]
@@ -75,16 +74,17 @@ class GaussNewtonPIDLY(BasePIDLYEstimator):
         ptr_free,pcurr
         ptr_free,pprev
         wind[0] = ewind[0,0]
-        wind[1] = ewind[0,1]""").format(
-            iter = self.iterations,
-            curr = tstep,
-            prev = tstep-1,
-        ).splitlines()
-        if self.nstep is not None:
-            cmd += ["results[{curr:d},*] = wind".format(curr=tstep)]
-        for line in cmd:
-            self.IDL.ex(line,print_output=False)
-        if self.nstep is None:
-            return self.IDL.ev("ewind").T
-        else:
-            return
+        wind[1] = ewind[0,1]
+        results[{curr:d},*] = wind""")
+        for i in xrange(1,self.nstep):
+            this_cmd = cmd.format(
+                prev = (i-1),
+                curr = (i),
+                iter = self.iterations
+            )
+            for line in this_cmd:
+                self.IDL.ex(line,print_output=False)
+                
+    def finish(self):
+        """docstring for finish"""
+    pass

@@ -55,6 +55,11 @@ class WCAOPipeline(Pipeline):
         """Save Screen to File"""
         from astropy.io import fits
         fits.writeto(self.config["Wind.filename"],self.screen_data,clobber=True)
+        
+    @depends('fill_screen')
+    def load_case(self):
+        """docstring for load_case"""
+        self.case = 
     
     def results_struct(self):
         """Make results structure"""
@@ -72,8 +77,8 @@ class WCAOPipeline(Pipeline):
         from wcao.analysis.data import WCAOTimeseries
         
         results = np.zeros((self.config["Simulation.tmax"],2))
-        plan = GaussNewtonEstimator().setup(np.ones(tuple(self.config["Instrument.shape"])))
-        results = self.run_from_plan(plan,lambda i : (self.screen_data[i,...],self.screen_data[i-1,...]))
+        plan = GaussNewtonEstimator().setup()
+        results = 
         self.results["GaussNewton"] = WCAOTimeseries("GN","","Sim",results)
         
         
@@ -112,7 +117,7 @@ class WCAOPipeline(Pipeline):
         results = self.run_from_plan(plan,lambda i : (i,))
         self.results["GaussNewton pIDLy"] = WCAOTimeseries("GN","pIDLy","Sim",results)
         
-    def run_from_plan(self,plan,argfunc):
+    def run_from_plan(self,plan,argfunc=lambda i : None):
         """Run from a plan."""
         from astropy.utils.console import ProgressBar
         import numpy as np
