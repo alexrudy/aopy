@@ -43,7 +43,6 @@ class WCAOCase(ConsoleContext):
     def __init__(self, instrument, casename, configuration):
         super(WCAOCase, self).__init__()
         self._config = StructuredConfiguration.make(configuration)
-        self._config.dn = StructuredConfiguration
         self.instrument = instrument
         self.casename = casename
         self.results = {}

@@ -140,6 +140,13 @@ class WCAOTelemetry(ConsoleContext):
         import scipy.fftpack
         self._fmode = scipy.fftpack.fftshift(self._fmode,axes=(1,2))
         
+    def _trans_offset(self):
+        """Perform an offset transfer"""
+        import scipy.fftpack
+        self._fmode = scipy.fftpack.fftshift(self._fmode,axes=(1,2))
+        self._fmode = np.sqrt(self._fmode[2:] * self._fmode[:-2])
+        self._nt = self._nt - 2
+        
     def load_raw(self):
         """Load raw data from files."""
         rawdata = getattr(self,'_load_'+self.config["data.cases.{0.casename:s}.raw_format".format(self.case)])()
