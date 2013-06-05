@@ -295,7 +295,7 @@ def peaks_array_from_grid(peaks,npeaks):
     return peaks_grid
     
     
-def create_layer_metric(peaks,npeaks,omega,klshape,rate,maxv=40,deltav=0.5,D=0.56,frac=0.4,lowest_hz=2.0,dist_hz=1.0):
+def create_layer_metric(peaks,npeaks,omega,klshape,rate,maxv=100,deltav=5,frac=0.5,lowest_hz=2.0,dist_hz=1.0,D=1):
     """Create a layer metric for finding individual layers.
 
     :param ndarray peaks: A full peak grid.
@@ -398,7 +398,15 @@ def create_layer_metric(peaks,npeaks,omega,klshape,rate,maxv=40,deltav=0.5,D=0.5
     
 
 def recenter(x,y,data,box):
-    """docstring for recenter"""
+    """Recenter a point ``x,y`` using a bounding box.
+    
+    :param int x: The x position.
+    :param int y: The y position.
+    :param ndarray data: The data to recenter.
+    :param ndarray box: The size of the box to use.
+    
+    Uses :func:`scipy.ndimage.measurements`
+    """
     import scipy.ndimage.measurements
     
     cen_xm = x - box//2 if x - box//2 >= 0 else 0
@@ -458,7 +466,7 @@ class FourierModeEstimator(BaseEstimator):
     """Estimates wind using the Fourier Mode Timeseries Method"""
     def __init__(self,config=(__name__,"fmts.yml")):
         super(FourierModeEstimator, self).__init__()
-        self.config = DottedConfiguration.make(config)
+        self._config = DottedConfiguration.make(config)
         self.initialze()
     
     def setup(self,case):
@@ -470,7 +478,8 @@ class FourierModeEstimator(BaseEstimator):
         """
         self.case = case
         self.rate = self.case.rate
-        self.config.merge(self.case.config)
+        self.config = self.case.config
+        self.config.imerge(self._config)
         
         self._fmode = self.case.telemetry.fmode
         if hasattr(self.case.telemetry,'_fmode_dmtransfer'):
@@ -492,7 +501,7 @@ class FourierModeEstimator(BaseEstimator):
         self._create_peak_template()
         self._find_and_fit_peaks()
         self._fit_peaks_to_metric()
-        self._find_layers_in_watershed()
+        self._find_layers()
         
     def finish(self):
         """Save the results back to the original WCAOCase"""
@@ -528,46 +537,54 @@ class FourierModeEstimator(BaseEstimator):
         """Create a periodogram from a set of fourier modes."""
         import scipy.fftpack
         total_length = self.case.telemetry.nt
-        per_length = self.config.get("periodogram.length",2048)
-        if self.config.get("periodogram.mean_remove",True):
-            self._fmode -= np.mean(self._fmode,axis=0)
-        psd = periodogram(self._fmode,per_length,half_overlap=self.config.get("periodogram.half_overlap",True))
-        psd *= self._fmode_dmtransfer[:psd.shape[1],:psd.shape[2]]
+        per_length = self.config["FMTS.periodogram.length"]
+        if self.config.get("FMTS.periodogram.mean_remove",True):
+            fmode = self._fmode - np.mean(self._fmode,axis=0)[np.newaxis,:,:]
+        psd = periodogram(fmode, per_length,
+            half_overlap=self.config.get("FMTS.periodogram.half_overlap",True))
+        psd *= self._fmode_dmtransfer[np.newaxis,:psd.shape[1],:psd.shape[2]]
         self.hz = np.mgrid[-1*per_length/2:per_length/2] / per_length * self.rate
         self.psd = scipy.fftpack.fftshift(psd,axes=0)
         
     def _periodogram_to_phase(self):
         """Convert the periodogram to phase."""
-        import scipy.fftpack
-        s = 1j*2.0*np.pi*scipy.fftpack.ifftshift(self.hz)
-        bigT = 1.0/self.rate
-        s[0] = 1.0
-        wfs_cont = (1.0 - np.exp(-bigT*s))/(bigT*s)
-        s[0] = 0.0
-        wfs_cont[0] = 1.0
-        dm_cont = wfs_cont
-        delay_cont = np.exp(-1.0*self.config["system.tau"]*s)
-        zinv = np.exp(-1.0*bigT*s)
-        cofz = self.config["system.gain"]/(1.0 - self.config["system.integrator_c"]*zinv)
-        delay_term = wfs_cont*dm_cont*delay_cont
-        tf_to_convert_to_phase = np.abs((1 + delay_term*cofz)/(cofz))**2.0
-        self.psd *= scipy.fftpack.fftshift(np.tile(tf_to_convert_to_phase[:,np.newaxis,np.newaxis],(1,)+self.psd.shape[1:]),axes=0)
+        if self.case.telemetry.data_config["type"] == 'closed-loop-dm-commands':
+            import scipy.fftpack
+            s = 1j*2.0*np.pi*(self.hz)
+            bigT = 1.0/self.rate
+            wfs_cont = (1.0 - np.exp(-bigT*s))/(bigT*s)
+            wfs_cont[s == 0] = 1.0
+            dm_cont = wfs_cont
+            delay_cont = np.exp(-1.0*self.config["system.tau"]*s)
+            zinv = np.exp(-1.0*bigT*s)
+            cofz = self.config["system.gain"]/(1.0 - self.config["system.integrator_c"]*zinv)
+            delay_term = wfs_cont*dm_cont*delay_cont
+            tf_to_convert_to_phase = np.abs((1 + delay_term*cofz)/(cofz))**2.0
+        else:
+            tf_to_convert_to_phase = np.ones_like(self.hz)
+        
+        self.psd *= (tf_to_convert_to_phase)[:,np.newaxis,np.newaxis]
     
     def _split_atmosphere_and_noise(self):
         """Split PSDs into atmosphere and noise terms."""
-        per_length = self.psd.shape[2]
-        wid = per_length/8.0
-        ca = per_length/2 + wid
-        cb = per_length/2 - wid
-        with warnings.catch_warnings():
-            warnings.simplefilter('ignore')
-            noise_psds = np.median(self.psd[ca:cb,...],axis=0)
-            noise_psds[np.isnan(noise_psds)] = 0.0
-            noise_stds = np.std(self.psd[ca:cb,...],axis=0)
-            noise_stds[np.isnan(noise_stds)] = 0.0
-        mask = self.psd <= (noise_psds + 2.0*noise_stds)
-        self.log.debug("Masking %d noisy positions from PSDs" % np.sum(mask))
-        self.psd[mask] = 0.0
+        if self.config.get("FMTS.noise.remove",True):
+            import scipy.fftpack
+            per_length = self.config["FMTS.periodogram.length"]
+            wid = per_length*self.config["FMTS.noise.frac"]//2
+            ca = per_length//2 - wid
+            cb = per_length//2 + wid
+            ns = self.config["FMTS.noise.n_sigma"]
+            with warnings.catch_warnings():
+                warnings.simplefilter('ignore')
+                noise_psds = np.median(scipy.fftpack.fftshift(self.psd,axes=0)[ca:cb,...],axis=0)
+                noise_psds[np.isnan(noise_psds)] = 0.0
+                noise_stds = np.std(scipy.fftpack.fftshift(self.psd,axes=0)[ca:cb,...],axis=0)
+                noise_stds[np.isnan(noise_stds)] = 0.0
+            mask = self.psd < (noise_psds + ns*noise_stds)[np.newaxis,...]
+            self.log.info("Masking %d noisy positions from PSDs" % np.sum(mask))
+            np.savetxt("noise.txt",noise_psds)
+            np.savetxt("noise_sig.txt",noise_stds)
+            self.psd[mask] = 0.0
         
     def _save_periodogram(self,filename,clobber=False):
         """Save the periodogram to a fits file."""
@@ -606,13 +623,13 @@ class FourierModeEstimator(BaseEstimator):
         from itertools import product
         
         modes = list(product(range(self.psd.shape[1]),range(self.psd.shape[2])))
-        kwargs = dict(self.config["fitting"])
+        kwargs = dict(self.config["FMTS.fitting"])
         psd = self.psd
         template = self.template_ft
         omega = self.omega
         
         args = [ ((k,l),psd[:,k,l],template,omega,kwargs) for k,l in modes ]
-        peaks = ProgressBar.map(pool_find_and_fit_peaks_in_modes,args,multiprocess=True)
+        peaks = ProgressBar.map(pool_find_and_fit_peaks_in_modes,args,multiprocess=self.config["FMTS.multiprocess"])
         for peak_mode,ident in peaks:
             k,l = ident
             self.peaks[k,l] = peak_mode
@@ -627,7 +644,7 @@ class FourierModeEstimator(BaseEstimator):
         :param l: The spatial fourier `l` mode number.
         
         """
-        kwargs = dict(self.config["fitting"])
+        kwargs = dict(self.config["FMTS.fitting"])
         psd = self.psd[:,k,l]
         template = self.template_ft
         omega = self.omega
@@ -652,11 +669,12 @@ class FourierModeEstimator(BaseEstimator):
         
     def _fit_peaks_to_metric(self):
         """Fit each peak to a metric."""
-        self.metric, self.possible, self.matched, self.match_info = create_layer_metric(self.peaks,self.npeaks,self.omega,self.psd.shape[1:],self.rate)
+        self.metric, self.possible, self.matched, self.match_info = create_layer_metric(self.peaks,self.npeaks,self.omega,
+            self.psd.shape[1:],self.rate,D=self.case.subapd,**self.config["FMTS.metric"])
         
-    def _find_layers_in_watershed(self):
-        """Find layers in watershed"""
-        self.layers = find_via_watershed(self.metric,self.match_info["vv"])
+    def _find_layers(self):
+        """Find layers"""
+        self.layers = find_layers(self.metric,self.match_info["vv"],**self.config["FMTS.layers"])
         
         
 
