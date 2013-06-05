@@ -14,7 +14,7 @@ import os, os.path
 
 import numpy as np
 
-from wcao.estimators.fmts import FourierModeEstimator,FMTSVisualizer
+from wcao.estimators.fmts import FourierModeEstimator
 from wcao.data.core import WCAOCase
 from pyshell.loggers import getSimpleLogger
 from pyshell.util import ipydb
@@ -25,16 +25,17 @@ import scipy.fftpack
 
 Data = WCAOCase("Keck","20070730_2",(WCAOCase.__module__,'telemetry.yml'))
 Plan = FourierModeEstimator().setup(Data)
-Data.telemetry.save_fmode()
+# Data.telemetry.save_fmode()
 Plan._periodogram()
 Plan._periodogram_to_phase()
+np.savetxt("phPSD04.txt",np.real(Plan.psd[:,4,0]))
 Plan._split_atmosphere_and_noise()
 Plan._save_periodogram("periodogram.fits",clobber=True)
 
-if __name__ == '__main__':
-    import matplotlib.pyplot as plt
-    PG = FMTSVisualizer(Plan)
-    fig = plt.figure()
-    ax = fig.add_subplot(1,1,1)
-    PG.show_psd(ax,4,4,maxhz=500)
-    plt.show()
+# if __name__ == '__main__':
+#     import matplotlib.pyplot as plt
+#     PG = FMTSVisualizer(Plan)
+#     fig = plt.figure()
+#     ax = fig.add_subplot(1,1,1)
+#     PG.show_psd(ax,4,4,maxhz=500)
+#     plt.show()

@@ -20,43 +20,31 @@ from pyshell.loggers import getSimpleLogger, configure_logging
 from pyshell.util import ipydb
 import pyshell
 
+# configure_logging(pyshell.PYSHELL_LOGGING)
 
 ipydb()
 
 import matplotlib.pyplot as plt
-from matplotlib.backends.backend_pdf import PdfPages
 
-Data = WCAOCase("Keck","20070730_2",(WCAOCase.__module__,'telemetry.yml'))
+Data = WCAOCase("GeMS","11106030531_pol_wfs4",(WCAOCase.__module__,'telemetry.yml'))
 Plan = FourierModeEstimator().setup(Data)
 Plan.estimate()
 Plan.finish()
-configure_logging(pyshell.PYSHELL_LOGGING_STREAM_ALL)
-
-pdf = PdfPages(Data.name+".pdf")
-
 fig = plt.figure()
 ax = fig.add_subplot(1,1,1)
 Data.results["FT"].show_metric(ax)
-pdf.savefig(fig)
 
 fig = plt.figure()
 ax = fig.add_subplot(1,1,1)
-Data.results["FT"].show_peak_fit(ax,0,5)
-pdf.savefig(fig)
-
+Data.results["FT"].show_peak_fit(ax,4,0)
 fig = plt.figure()
 ax = fig.add_subplot(1,1,1)
 Data.results["FT"].show_mask(ax)
-pdf.savefig(fig)
-
 fig = plt.figure()
 Data.results["FT"].show_fit(fig)
-pdf.savefig(fig)
-
 fig = plt.figure()
 ax = fig.add_subplot(1,1,1)
 Data.results["FT"].show_peaks(ax)
-pdf.savefig(fig)
 
-pdf.close()
-print("Saved to {:s}".format(Data.name+".pdf"))
+plt.show()
+
