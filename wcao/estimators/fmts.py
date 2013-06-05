@@ -151,14 +151,15 @@ def floatingmax(data,scalar):
     import scipy.interpolate
     assert scalar.shape == data.shape
     data_i = np.argmax(data)
-    poles = data[np.array([-1, 0 , 1]) + data_i]
+    poles = data[np.mod(np.array([-1, 0 , 1]) + data_i,data.shape[0])]
     bot = (poles[0] + poles[2] - 2.0 * poles[1])
     top = (poles[0] - poles[2])
     if bot == 0.0:
         f_pos = poles[1]
     else:
-        f_pos = 0.5 *  top/bot 
-    data_f = data_i + f_pos
+        f_pos = 0.5 *  top/bot
+    data_f = (data_i + f_pos) % data.shape[0]
+    data_f = data.size - 1 if data_f > (data.size - 1) else data_f
     data_v = scipy.interpolate.interp1d(np.arange(data.size),data,kind='linear')(data_f)
     scalar_v = scipy.interpolate.interp1d(np.arange(scalar.size),scalar,kind='linear')(data_f)
     return data_v, scalar_v, data_f
