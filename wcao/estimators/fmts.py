@@ -96,9 +96,9 @@ def periodogram(data, periodogram_length, window=None, half_overlap=True):
     psd = np.zeros(psd_shape,dtype=np.complex)
     for a in start_indices:
         psd += np.power(np.abs(scipy.fftpack.fft(data[a:a+periodogram_length]*window,axis=0)),2.0)
-    psd /= num_intervals
-    psd /= np.sum(window**2.0,axis=0)
-    psd /= periodogram_length
+    psd = psd / num_intervals
+    psd = psd / np.sum(window**2.0,axis=0)
+    psd = psd / periodogram_length
     return psd
     
 def pool_find_and_fit_peaks_in_modes(args):
@@ -116,7 +116,7 @@ def pool_find_and_fit_peaks_in_modes(args):
     identifier,psd,template,omega,kwargs = args
     return (find_and_fit_peaks_in_mode(psd,template,omega,**kwargs), identifier)
     
-def find_and_fit_peaks_in_mode(psd,template,omega,max_layers=6,**kwargs):
+def find_and_fit_peaks_in_mode(psd,template,omega,max_peaks=6,**kwargs):
     """Find and fit peaks in a specific spatial fourier mode.
     
     :param ndarray psd: A power-spectral-distribution on which to find peaks.
@@ -129,21 +129,16 @@ def find_and_fit_peaks_in_mode(psd,template,omega,max_layers=6,**kwargs):
     """    
     fit = np.zeros_like(psd)
     mask = np.zeros_like(psd,dtype=np.bool)
-    layers = []
-    layer_n = 0
-    looking = True
+    peaks = []
     
-    while looking:
-        
+    for n in range(max_peaks):
         psd = psd - fit
-        looking, layer, mask, fit = find_and_fit_peak(psd,mask,template,omega,**kwargs)
-        if looking:
-            layer_n += 1.0
-            layers.append(layer)
-        if layer_n >= max_layers:
-            looking = False
+        looking, peak, mask, fit = find_and_fit_peak(psd,mask,template,omega,**kwargs)
+        if not looking:
+            break
+        peaks.append(peak)
     
-    return layers
+    return peaks
     
 def floatingmax(data,scalar):
     """Find a center point using a three-point peak fit.
@@ -418,9 +413,19 @@ def recenter(x,y,data,box):
     return c_x, c_y
     
 
-def find_via_watershed(metric,vv,spacing=20,min_layer_threshold=0.4,centroid=None):
-    """docstring for find_via_watershed"""
-    log = getLogger(__name__ + ".find_via_watershed")
+def find_layers(metric,vv,spacing=10,min_layer_threshold=0.75,centroid=None):
+    """Find individual layers.
+    
+    :param ndarray metric: The metric to use.
+    :param ndarray vv: The scale for the metric.
+    :param float spacing: The minimum distance between peaks.
+    :param float min_layer_threshold: The minimum metric threshold
+    :param float centroid: The size of the box for centroiding. Defaults to ``spacing``.
+    
+    Uses :func:`skimage.feature` and :func:`recenter`.
+    
+    """
+    log = getLogger(__name__ + ".find_layers")
     import skimage.feature
     centroid = spacing if centroid is None else centroid
     log.debug("Finding Peaks")
