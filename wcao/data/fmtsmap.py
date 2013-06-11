@@ -189,7 +189,7 @@ class WCAOFMTSMap(WCAOEstimate):
             
             # The line that curvefit was aiming to find
             weights = (np.abs(self.omega - peak["omega"]) <= search_radius).astype(np.int)
-            fitline, = ax.plot(self.hz,this_psd*weights,'--')
+            fitline, = ax.plot(self.hz,this_psd*weights,'--.')
             
             # This particular fit.
             i_fit = fitter(self.omega,peak["alpha"],peak["variance"],peak["omega"])
