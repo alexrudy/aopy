@@ -10,7 +10,9 @@
 :mod:`wcao.estimators.fmts` – Fourier Mode Temporal-Spatial Estimator
 ---------------------------------------------------------------------
 
-This estimator uses the Fourier Wind Identification scheme to detect individual wind layers in telemtry data.
+This estimator uses the Fourier Wind Identification scheme to detect individual wind layers in telemtry data. The algorithm was originally published in Poyneer et. al. 2009. The algorithm uses a 3-D fourier transform of the pseudo-open-loop phase. The estimator does a spatial fourier transform, then uses the fact that :math:`f_t = f_x v_x + f_y v_y`, i.e. the fourier vector should rotate around the origin with a frequency dependent on the particular spatial frequency in question, and the frozen flow velocity in question.
+
+The :class:`FourierModeEstimator` performs the full estimation technique. It can be controlled through a configuration object, which is passed in to the :class:`FourierModeEstimator` constructor. The configuration object respect configuration values found in the :class:`WCAOCase` object in place of those directly in the configuration object. This allows the user to customize the behavior of the :class:`FourierModeEstimator` on a case-by-case basis.
 
 :class:`FourierModeEstimator`
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -48,6 +50,21 @@ Supporting Functions
     
 .. autofunction::
     fitter
+    
+.. autofunction::
+    find_layers
+
+Peak Grid Functions
+*******************
+
+.. autofunction::
+    peaks_from_table
+    
+.. autofunction::
+    peaks_to_table
+
+.. autofunction::
+    peaks_array_from_grid
 
 """
 
@@ -68,7 +85,14 @@ from pyshell.config import DottedConfiguration
 from pyshell import getLogger
 
 def periodogram(data, periodogram_length, window=None, half_overlap=True):
-    """Make a periodogram from N-dimensional data.
+    """Make a periodogram from N-dimensional data. The periodogram will be made across axis 0 of the data, and returned in axis 0 of the result. The periodogram is windowed by default. A custom window (which should be the same size as the expected output data) can be passed in at the window parameter.
+    
+    The default window is
+    
+    .. math::
+        w(x) = 0.42 - 0.5 \cos(2 \pi x / l) + 0.08 \cos(4 \pi x / l)
+        
+    where :math:`l` is the length of the periodogram, and :math:`x` is the position along that periodogram.
     
     :param ndarray data: The data to be made into a periodogram. The peridogoram will be made across axis 0.
     :param int periodogram_length: The length of the desired periodogram.
@@ -106,7 +130,9 @@ def pool_find_and_fit_peaks_in_modes(args):
     
     :param args: The tuple of arguments to be unpacked.
     
-    Note that the parameter ``identifier`` is used to identify this calculation in multiprocessing pools. Its value is arbitrary. In ``fmts``, this becomes the tuple ``(k,l)``.
+    Note that the parameter ``identifier`` is used to identify this calculation in multiprocessing pools. Its value is arbitrary. In ``fmts``, the identifier is the tuple ``(k,l)``.
+    
+    The packed argument `kwargs` should be the dictionary of keyword arguments which will be passed to the :func:`find_and_fit_peaks_in_mode` method.
     
     To correctly pack arguments::
         
@@ -173,8 +199,18 @@ def find_and_fit_peak(psd,mask,template,omega,
     :param ndarray mask: A binary mask to block out the PSD. This is passed back and forth.
     :param ndarray template: A template peak spectrum
     :param ndarray omega: The Omegas which provide the scale to the PSD.
-    :param int max_layers: The maximum number of layers to find. Peak fitting might fail earlier and return fewer peaks.
+    :param int search_radius: Limits the search for peaks to this distance around a correlation maximum.
+    :param int mask_radius: Removes pixels which are this close to previously found peaks.
+    :param bool float_peak: Whether to allow the correlation's peak value to be fit to the data, or to fix it at the correlation maximum.
+    :param float ialpha: The initial value of the :math:`\\alpha` parameter
+    :param float min_alpha: The minimum acceptable value of :math:`\\alpha`.
+    :param float max_alpha: The maximum acceptable value of :math:`\\alpha`.
+    :param int maxfev: The maximum number of function evaluations permitted during the curve fitting process. Larger values give more accurate results, but are slower.
+    :param float min_power: The minimum amount of power required to consider a peak a peak.
     :keyword kwargs: The keywords are passed through to :func:`find_and_fit_peak`    
+    :returns: ``success``,``peaks``,``mask``,``fit_psd``. ``success`` is a boolean. Mask is the current masking array, modified for any found peaks. ``peaks`` is the list of dictionaries of peak properties. ``fit_psd`` is the final template fit psd.
+    
+    The return values other than ``success`` are meaningless if ``success=False``.
     
     """
     import scipy.signal
@@ -241,12 +277,30 @@ def find_and_fit_peak(psd,mask,template,omega,
     
     
 def fitter(x,alpha,peak,center):
-    """Our mystery fitting function."""
+    """Our mystery fitting function.
+    
+    .. math::
+        f = \\frac{p}{(1 - 2 \\alpha \cos(x - \\bar{x}) + \\alpha^2)}
+    
+    """
     f = peak/(1 - 2*alpha*np.cos(x-center) + alpha**2.0)
     return f
     
-def peaks_to_table(peakgrid,npeaks):
-    """docstring for _layers_to_table"""
+def peaks_to_table(peakgrid,npeaks=None):
+    """Create a table from a grid of peaks.
+    
+    The grid of peaks should be a ``k``x``l`` array of lists of peak properties.
+    The table will be a record array with columns ``k``, ``l``, :math:`\\alpha`, :math:`\omega`, power, and fit ``rms``.
+    
+    :param ndarray peakgrid: The grid of peaks to form into a table.
+    :param int npeaks: The total number of peaks in the grid. If it isn't provided, it will be found, in order `N`.
+    :return: Record array of peaks.
+    
+    This function is the inverse of :func:`peaks_from_table`.
+    
+    """
+    if npeaks is None:
+        npeaks = sum([ len(x) for x in peakgrid.flat ])
     k = np.zeros((npeaks,),dtype=np.int)
     l = np.zeros((npeaks,),dtype=np.int)
     alpha = np.zeros((npeaks,),dtype=np.float)
@@ -268,26 +322,47 @@ def peaks_to_table(peakgrid,npeaks):
     return np.rec.fromarrays([k,l,alpha,omega,power,rms],names=["k","l","alpha","omega","power","rms"])
     
 def peaks_from_table(table,shape):
-    """Convert a layer-table back to a layer grid."""
+    """Convert a peaks-table back to a peak grid.
+    
+    This will result in a grid ``k``x``l`` of peaks, where each element in the gird is a list of peak properties. Each peak property is a dictionary with keys ``'alpha','omega','variance','rms'``.
+    
+    :param ndarray table: A record array with columns ``k``, ``l``, :math:`\\alpha`, :math:`\omega`, power, and fit ``rms``.
+    :param tuple shape: The shape of output grid, which should be the maximum ``k`` and ``l`` to be inserted.
+    :return: ``peaks_grid, npeaks`` where the grid is as specified above, and ``npeaks`` is a grid with the number of peaks in each element stored in that element.
+    
+    Note that ``k`` and ``l`` are indicies, not spatial frequencies, and so are always between 0 and their respective maxima.
+    
+    This function is the inverse of :func:`peaks_to_table`.
+    
+    """
     peaks_grid = np.empty(shape,dtype=object)
     npeaks = np.zeros(shape,dtype=np.int)
-    for k_i in range(shape[0]):
-        for l_i in range(shape[1]):
-            select = (table['k'] == k_i) & (table['l'] == l_i)
-            peaks = []
-            for peak in table[select]:
-                peaks.append({
-                'alpha' : peak['alpha'],
-                'omega' : peak['omega'],
-                'variance' : peak['power'],
-                'rms' : peak['rms']
-                })
-            peaks_grid[k_i,l_i] = peaks
-            npeaks[k_i,l_i] = len(peaks)
+    for k_i,l_i in itertools.product(*map(range,shape)):
+        select = (table['k'] == k_i) & (table['l'] == l_i)
+        peaks = []
+        for peak in table[select]:
+            peaks.append({
+            'alpha' : peak['alpha'],
+            'omega' : peak['omega'],
+            'variance' : peak['power'],
+            'rms' : peak['rms']
+            })
+        peaks_grid[k_i,l_i] = peaks
+        npeaks[k_i,l_i] = len(peaks)
     return peaks_grid, npeaks
     
-def peaks_array_from_grid(peaks,npeaks):
-    """docstring for peaks_array_from_table"""
+def peaks_array_from_grid(peaks,npeaks=None):
+    """The function turns a grid of peaks into a multidimensional array of peaks.
+    
+    The array will have shape ``(k,l,n,4)`` where ``n`` is the largest number of peaks in any ``k,l`` mode.
+    
+    :param ndarray peaks: The grid of peaks from which to draw items.
+    :param ndarray npeaks: An array specifying the number of peaks at each ``k,l`` position. If ``None``, it will be calculated.
+    :return: A 4-D grid of peak parameters. The dimensions are ``k,l,n,p`` where p is the parameter, stored as ``[alpha,omega,variance,rms]``.
+    
+    """
+    if npeaks is None:
+        npeaks = np.reshape([len(x) for x in peaks.flat],peaks.shape)
     peaks_grid = np.zeros(peaks.shape + (np.max(npeaks),4))
     for k,l in itertools.product(*map(range,peaks.shape)):
         if npeaks[k,l] > 0:
@@ -298,8 +373,8 @@ def peaks_array_from_grid(peaks,npeaks):
 def create_layer_metric(peaks,npeaks,omega,klshape,rate,maxv=100,deltav=5,frac=0.5,lowest_hz=2.0,dist_hz=1.0,D=1):
     """Create a layer metric for finding individual layers.
 
-    :param ndarray peaks: A full peak grid.
-    :param ndarray omega: Scaling omega array.
+    :param numpy.ndarray peaks: A full peak grid.
+    :param numpy.ndarray omega: Scaling omega array.
     :param tuple klshape: The shape of the PSD
     :param float rate: The sampling rate.
     :param float maxv: The maximum velocity to search for.    
@@ -307,6 +382,23 @@ def create_layer_metric(peaks,npeaks,omega,klshape,rate,maxv=100,deltav=5,frac=0
     :param float D: Telescope Diameter
     :param float lowest_hz: The lowested detected hz.
     :param float dist_hz: The distance, in hz, for which to count a detection.
+    :return: ``metric, possible, matched, info``
+    
+    The return values are:
+    
+    * ``metric`` is the final metric values, from 0-1, which determine layer likelihood.
+    * ``possible`` is the number of peaks which could have been matched for each velocity. This is primarily determined by ``lowest_hz``.
+    * ``matched`` is the number of peaks which were found to patch, within ``dist_hz``.
+    * ``info`` is a dictionary with the following elements:
+        - ``ff`` is the spatial frequency axis which applies to axis 1 & 2 below.
+        - ``vv`` is the velocity axis which applies to axis 3 & 4 below.
+        - ``peaks_hz`` is the peaks grid against which matching was done.
+        - ``full_matched`` is the full boolean array of matches, not collapsed along multiple peaks.
+        - ``fv_matched`` is the boolean array of matches, collapsed only along multiple peaks, but not along spatial frequency.
+        - ``fv_possible`` is the boolean array of possible matches, collapsed only along multiple peaks, but not along spatial frequency.
+        - ``v_matched`` is the array of matches, collapsed along multiple peaks, and along spatial frequency dimensions.
+        - ``v_possible`` is the array of possible matches, collapsed along multiple peaks, and along spatial frequency dimensions.
+        - ``v_metric`` is the final metric.
     
     The grids in this method have 4 or 5 axes. The axes are as follows:
     
@@ -360,25 +452,25 @@ def create_layer_metric(peaks,npeaks,omega,klshape,rate,maxv=100,deltav=5,frac=0
     
     # Collapsing along N peaks.
     matched_filtered = np.any(matched,axis=-1).astype(np.int)
-    possible_filtered = np.copy(possible)
-    no_possible = possible == 0.0
-    
+    no_possible = (possible == 0.0)
+    log.debug("Collapsed along N peaks")
     
     # Calculating metric at every spatial frequency
-    possible_filtered[no_possible] = 1.0
-    metric_filtered = matched_filtered/possible_filtered
-    possible_filtered[no_possible] = 0.0
+    possible[no_possible] = 1.0
+    metric_filtered = matched_filtered/possible
+    possible[no_possible] = 0.0
+    log.debug("Calculated full metric")
     
     # Collapsing along spatial frequencies
     matched_collapsed = np.sum(matched_filtered,axis=(0,1)).astype(np.float)
-    possible_collapsed = np.sum(possible_filtered,axis=(0,1)).astype(np.float)
+    possible_collapsed = np.sum(possible,axis=(0,1)).astype(np.float)
     no_possible_collapsed = (possible_collapsed == 0)
+    log.debug("Collapsed along Spatial Frequencies")
     
     # Caclulating the summed metric for each velocity
     possible_collapsed[no_possible_collapsed] = 1.0
     collapse_metric = matched_collapsed/possible_collapsed
     possible_collapsed[no_possible_collapsed] = 0.0
-    
     log.debug("Calculated Metric")
     
     infodict = {
@@ -388,7 +480,7 @@ def create_layer_metric(peaks,npeaks,omega,klshape,rate,maxv=100,deltav=5,frac=0
         'full_matched' : matched,
         'fv_matched' : matched_filtered,
         'fv_layer_hz' : layer_peak_hz,
-        'fv_possible' : possible_filtered,
+        'fv_possible' : possible,
         'v_matched' : matched_collapsed,
         'v_possible' : possible_collapsed,
         'v_metric' : collapse_metric,
@@ -463,7 +555,15 @@ def find_layers(metric,vv,spacing=10,min_layer_threshold=0.75,centroid=None):
     
 
 class FourierModeEstimator(BaseEstimator):
-    """Estimates wind using the Fourier Mode Timeseries Method"""
+    """Estimates wind using the Fourier Mode Timeseries Method.
+    
+    This object controls the entire estimation process. Estimation is run through the :meth:`estimate` method. The :meth:`setup` method takes a :class:`WCAOCase` object, which represents the telemetry dataset. The :meth:`finish` returns the results of this estimation to the original :class:`WCAOCase` object.
+    
+    :param config: The configuration for this case. It uses :meth:`pyshell.config.StructuredConfiguration.make` to create a configuration object.
+    
+    To reset this object to its original state (state before :meth:`setup`), call :meth:`initialize`.
+    
+    """
     def __init__(self,config=(__name__,"fmts.yml")):
         super(FourierModeEstimator, self).__init__()
         self._config = DottedConfiguration.make(config)
@@ -472,7 +572,7 @@ class FourierModeEstimator(BaseEstimator):
     def setup(self,case):
         """Setup the estimator by providing a case object.
         
-        :param case: The WCAOCase object.
+        :param case: The :class:`WCAOCase` object.
         :return: ``self``
         
         """
@@ -490,11 +590,17 @@ class FourierModeEstimator(BaseEstimator):
     
     @property
     def omega(self):
-        """Omega"""
+        """
+        .. math::
+            \\Omega = \\frac{f}{F} 2 \pi
+            
+        where :math:`f` is a sampling frequency and :math:`F` is the sampling rate.
+        
+        """
         return (self.hz / self.rate) * 2.0 * np.pi
         
     def estimate(self):
-        """Perform the full estimate."""
+        """Perform the full FMTS estimate."""
         self._periodogram()
         self._periodogram_to_phase()
         self._split_atmosphere_and_noise()
@@ -511,7 +617,7 @@ class FourierModeEstimator(BaseEstimator):
         
         
     def initialze(self):
-        """Initialize internal variables."""
+        """Initialize internal variables to reset the state."""
         # Base Data
         self.case = None
         self.rate = None
@@ -534,7 +640,17 @@ class FourierModeEstimator(BaseEstimator):
         self.layers = None
     
     def _periodogram(self):
-        """Create a periodogram from a set of fourier modes."""
+        """Create a periodogram from a set of fourier modes.
+        
+        Uses :func:`periodogram`, and removes the mean value from the fourier modes.
+        
+        Configuration Values:
+        
+        - ``FMTS.periodogram.length`` `(int)` The length of the periodogram.
+        - ``FMTS.periodogram.mean_remove`` `(bool)` Subtract the mean value from all foruier modes.
+        - ``FMTS.periodogram.half_overlap`` `(bool)` Whether the periodogram segments should half overlap.
+        
+        """
         import scipy.fftpack
         total_length = self.case.telemetry.nt
         per_length = self.config["FMTS.periodogram.length"]
@@ -547,7 +663,17 @@ class FourierModeEstimator(BaseEstimator):
         self.psd = scipy.fftpack.fftshift(psd,axes=0)
         
     def _periodogram_to_phase(self):
-        """Convert the periodogram to phase."""
+        """Convert the periodogram to phase.
+        
+        This method uses the telemetry data configuration value ``type`` to convert the measurements from telemetry into phase offset. The conversion uses a simplified model of a generic control law, as described by Poyneer et. al. 2009.
+        
+        Configuration Values:
+        
+        - ``system.tau`` The time delay of the system.
+        - ``system.gain`` The gain of the control loop.
+        - ``system.integrator_c`` The integration constant
+        
+        """
         if self.case.telemetry.data_config["type"] == 'closed-loop-dm-commands':
             import scipy.fftpack
             s = 1j*2.0*np.pi*(self.hz)
@@ -566,7 +692,17 @@ class FourierModeEstimator(BaseEstimator):
         self.psd *= (tf_to_convert_to_phase)[:,np.newaxis,np.newaxis]
     
     def _split_atmosphere_and_noise(self):
-        """Split PSDs into atmosphere and noise terms."""
+        """Split PSDs into atmosphere and noise terms.
+        
+        This method masks out noise values from the PSD, setting those values to 0. The noise is selected by taking a fraction of the higher temporal frequency terms.
+        
+        Configuration values:
+        
+        - ``FMTS.noise.remove`` `(bool)` Controls the use of the noise removal system.
+        - ``FMTS.noise.frac`` `(float)` The fraction of high frequency data points to examine.
+        - ``FMTS.noise.n_sigma`` `(flaot)` The number of :math:`\\sigma`` to use for clipping noise.
+        
+        """
         if self.config.get("FMTS.noise.remove",True):
             import scipy.fftpack
             per_length = self.config["FMTS.periodogram.length"]
@@ -582,12 +718,17 @@ class FourierModeEstimator(BaseEstimator):
                 noise_stds[np.isnan(noise_stds)] = 0.0
             mask = self.psd < (noise_psds + ns*noise_stds)[np.newaxis,...]
             self.log.info("Masking %d noisy positions from PSDs" % np.sum(mask))
-            np.savetxt("noise.txt",noise_psds)
-            np.savetxt("noise_sig.txt",noise_stds)
             self.psd[mask] = 0.0
         
     def _save_periodogram(self,filename,clobber=False):
-        """Save the periodogram to a fits file."""
+        """Save the periodogram to a fits file.
+        
+        The primary HDU contains the full ``t,k,l`` periodogram. The secondary HDU contains the frequency scale for this data. The secondary HDU could be recreated using the ``rate`` keyword in the primary header. The periodogram is stored with four axes, so reconstruction the data can be done like this::
+            
+            data = fitsdata[0] + 1j * fitsdata[1]
+            
+        
+        """
         from astropy.io import fits
         psd = np.array([np.real(self.psd),np.imag(self.psd)])
         HDU = fits.PrimaryHDU(psd)
@@ -598,7 +739,11 @@ class FourierModeEstimator(BaseEstimator):
         HDUList.writeto(filename,clobber=clobber)
         
     def _load_periodogram(self,filename):
-        """Load the periodogram from a fits file."""
+        """Load the periodogram from a fits file.
+        
+        This function loads periodograms which were saved by :meth:`_save_periodogram`.
+        
+        """
         from astropy.io import fits
         
         with fits.open(filename) as FitsFile:
@@ -608,7 +753,13 @@ class FourierModeEstimator(BaseEstimator):
             self.hz = FitsFile[1].data
         
     def _create_peak_template(self):
-        """Make peak templates for correlation fitting"""
+        """Make peak templates for correlation fitting. The peak template occurs for a PSD with all ones.
+        
+        The peak template is stored only in it its fourier transform form.
+        
+        
+        This method also sets up the empty arrays used to store peak fitting values.
+        """
         import scipy.fftpack
         
         template = periodogram(np.ones((self.psd.shape[0]*self.psd.shape[0]),dtype=np.complex),self.psd.shape[0])
@@ -618,7 +769,16 @@ class FourierModeEstimator(BaseEstimator):
         
         
     def _find_and_fit_peaks(self):
-        """Find and fit peaks in each PSD"""
+        """Find and fit peaks in each PSD. This can be done in parallell if requested.
+        
+        Configuration Items:
+        
+        - ``FMTS.fitting`` The dictionary of parameters used for :func`find_and_fit_peaks`.
+        - ``FMTS.multiprocess`` `(bool)` whether to parallelize.
+        
+        Peaks are stored in an object array, and the number of peaks at each mode is stored in a separate, parallel array.
+        
+        """
         from astropy.utils.console import ProgressBar
         from itertools import product
         
@@ -655,25 +815,32 @@ class FourierModeEstimator(BaseEstimator):
         
     
     def _save_peaks_to_table(self,filename,clobber=False):
-        """Save found peaks to a table."""
+        """Save found peaks to a table. The fits table is a simple way of storing the results from :func:`peaks_to_table`.
+        """
         from astropy.io import fits
         tbl_hdu = fits.new_table(peaks_to_table(self.peaks,np.sum(self.npeaks)))
         tbl_hdu.writeto(filename,clobber=clobber)
         
     def _read_peaks_from_table(self,filename):
-        """docstring for _read_peaks_from_table"""
+        """Loads found peaks from a fits file saved in the format of :meth:`_save_peaks_to_table`."""
         from astropy.io import fits
         with fits.open(filename) as FitsFile:
             table = FitsFile[1].data
             self.peaks, self.npeaks = peaks_from_table(table,self.psd.shape[1:])
         
     def _fit_peaks_to_metric(self):
-        """Fit each peak to a metric."""
+        """Fit each peak to a metric. The metric fitting is done by :func:`create_layer_metric`.
+        
+        Configuration Items:
+        
+        - ``FMTS.metric`` The keyword arguments for :func:`create_layer_metric`.
+        
+        """
         self.metric, self.possible, self.matched, self.match_info = create_layer_metric(self.peaks,self.npeaks,self.omega,
             self.psd.shape[1:],self.rate,D=self.case.subapd,**self.config["FMTS.metric"])
         
     def _find_layers(self):
-        """Find layers"""
+        """Find individual layers using :meth:`find_layers` which uses image processing techniques to select peak values in the metric."""
         self.layers = find_layers(self.metric,self.match_info["vv"],**self.config["FMTS.layers"])
         
         
