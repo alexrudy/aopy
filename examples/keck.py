@@ -25,12 +25,12 @@ ipydb()
 
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_pdf import PdfPages
+configure_logging(pyshell.PYSHELL_LOGGING)
 
 Data = WCAOCase("Keck","20070730_2",(WCAOCase.__module__,'telemetry.yml'))
 Plan = FourierModeEstimator().setup(Data)
 Plan.estimate()
 Plan.finish()
-configure_logging(pyshell.PYSHELL_LOGGING_STREAM_ALL)
 
 pdf = PdfPages(Data.name+".pdf")
 
