@@ -330,11 +330,11 @@ class WCAOFMTSMap(WCAOEstimate):
         ax.set_title("Peak Metric")
         for i,layer in enumerate(self.layers):
             print("Plotting layer at {vx:.2f},{vy:.2f} with match {m:f}".format(**layer))
-            ax.plot(layer['pvx'],layer['pvy'],'ko')
+            ax.plot(layer['pvx'],layer['pvy'],'ko',alpha=0.2)
             ax.annotate("{:d}".format(i+1),(layer['pvx'],layer['pvy']),
                 color='k',bbox=dict(fc='w'),xytext=(-10,10),textcoords='offset points')
             x = 0.2
-            y = 0.05+0.02*len(self.layers) - i*0.02
+            y = 0.05 + 0.02 * len(self.layers) - i * 0.02
             ax.figure.text(x,y,
                 "%d) Layer at v = [%.1f,%.1f], matching %.1f\%%" % (i+1,layer["vx"],layer['vy'],layer["m"]*100))
         cbar.set_label(r"\% Match")
