@@ -48,6 +48,19 @@ class WCAOCase(ConsoleContext):
         self.results = {}
         self.telemetry = WCAOTelemetry(self)
         
+    def __str__(self):
+        """Make a pretty string format of the contents of this WCAO case."""
+        lines = [ "WCAOCase: {:s}".format(self.name) ]
+        
+        if self.telemetry:
+            lines += [ "Telemetry: ", " " + str(self.telemetry) ]
+        
+        if len(self.results) > 0:
+            lines += [ "Estimator Results:" ]
+            lines += [ " " + str(result) for result in self.results.values() ]
+        
+        return "\n".join(lines)
+        
     @property
     def name(self):
         """Return the full name"""
@@ -74,7 +87,7 @@ class WCAOCase(ConsoleContext):
         return self.config["data.format"]
     
     def addresult(self,data,klass,dtype):
-        """Add a result"""
+        """Add a result for this case. The data type is used to identify this specific result, and trace its origins to an estimator."""
         self.results[dtype] = klass(self,data,dtype)
     
         

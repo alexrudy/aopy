@@ -53,6 +53,17 @@ class Aperture(object):
                 self, self.response.ndim
             )
         
+    def __shape_str__(self):
+        """Turn the shape of the aperture into a string."""
+        return "({:s})".format("x".join(map(str,self.shape)))
+        
+    def __str__(self):
+        """A pretty string printing of this aperture."""
+        return "Aperture shape {shape:s} open {per:d}%".format(
+            shape = self.__shape_str__(),
+            per = np.sum(self.pupil) / np.sum(np.ones_like(self.pupil)) * 100,
+        )
+        
     @property
     def pupil(self):
         """A boolean mask of the pupil plane. **Read-Only**"""

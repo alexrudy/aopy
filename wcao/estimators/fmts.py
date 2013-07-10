@@ -14,19 +14,22 @@ This estimator uses the Fourier Wind Identification scheme to detect individual 
 
 The :class:`FourierModeEstimator` performs the full estimation technique. It can be controlled through a configuration object, which is passed in to the :class:`FourierModeEstimator` constructor. The configuration object respect configuration values found in the :class:`WCAOCase` object in place of those directly in the configuration object. This allows the user to customize the behavior of the :class:`FourierModeEstimator` on a case-by-case basis.
 
+Results from this estimator are returned to an instance of :class:`~wcao.data.fmtsmap.WCAOFMTSMap`.
+
 :class:`FourierModeEstimator`
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. autoclass:: 
     FourierModeEstimator
     :members:
+    :exclude-members: omega
 
 :class:`FourierModeEstimator` – Operational Functions
 *****************************************************
 
 .. autoclass::
     FourierModeEstimator
-    :exclude-members: setup, estimate, finish, omega
+    :exclude-members: setup, estimate, finish
     :inherited-members:
     :private-members:
     
@@ -53,6 +56,9 @@ Supporting Functions
     
 .. autofunction::
     find_layers
+
+.. autofunction::
+    recenter
 
 Peak Grid Functions
 *******************
@@ -119,7 +125,7 @@ def periodogram(data, periodogram_length, window=None, half_overlap=True):
     
     psd = np.zeros(psd_shape,dtype=np.complex)
     for a in start_indices:
-        psd += np.power(np.abs(scipy.fftpack.fft(data[a:a+periodogram_length]*window,axis=0)),2.0)
+        psd += np.power(np.abs(scipy.fftpack.fft(data[a:a+periodogram_length] * window, axis=0)),2.0)
     psd = psd / num_intervals
     psd = psd / np.sum(window**2.0,axis=0)
     psd = psd / periodogram_length
@@ -208,7 +214,7 @@ def find_and_fit_peak(psd,mask,template,omega,
     :param int maxfev: The maximum number of function evaluations permitted during the curve fitting process. Larger values give more accurate results, but are slower.
     :param float min_power: The minimum amount of power required to consider a peak a peak.
     :keyword kwargs: The keywords are passed through to :func:`find_and_fit_peak`    
-    :returns: ``success``,``peaks``,``mask``,``fit_psd``. ``success`` is a boolean. Mask is the current masking array, modified for any found peaks. ``peaks`` is the list of dictionaries of peak properties. ``fit_psd`` is the final template fit psd.
+    :returns: ``success`` , ``peaks`` , ``mask`` , ``fit_psd``. ``success`` is a boolean. Mask is the current masking array, modified for any found peaks. ``peaks`` is the list of dictionaries of peak properties. ``fit_psd`` is the final template fit psd.
     
     The return values other than ``success`` are meaningless if ``success=False``.
     
@@ -289,7 +295,7 @@ def fitter(x,alpha,peak,center):
 def peaks_to_table(peakgrid,npeaks=None):
     """Create a table from a grid of peaks.
     
-    The grid of peaks should be a ``k``x``l`` array of lists of peak properties.
+    The grid of peaks should be a ``k`` x ``l`` array of lists of peak properties.
     The table will be a record array with columns ``k``, ``l``, :math:`\\alpha`, :math:`\omega`, power, and fit ``rms``.
     
     :param ndarray peakgrid: The grid of peaks to form into a table.
@@ -301,7 +307,7 @@ def peaks_to_table(peakgrid,npeaks=None):
     """
     if npeaks is None:
         npeaks = sum([ len(x) for x in peakgrid.flat ])
-    k = np.zeros((npeaks,),dtype=np.int)
+    k = np.zeros((npeaks,),dtype=np.int) 
     l = np.zeros((npeaks,),dtype=np.int)
     alpha = np.zeros((npeaks,),dtype=np.float)
     omega = np.zeros((npeaks,),dtype=np.float)
@@ -309,16 +315,15 @@ def peaks_to_table(peakgrid,npeaks=None):
     rms = np.zeros((npeaks,),dtype=np.float)
     
     pol = 0
-    for k_i in range(peakgrid.shape[0]):
-        for l_i in range(peakgrid.shape[1]):
-            for layer in peakgrid[k_i,l_i]:
-                k[pol] = k_i
-                l[pol] = l_i
-                alpha[pol] = layer["alpha"]
-                omega[pol] = layer["omega"]
-                power[pol] = layer["variance"]
-                rms[pol] = layer["rms"]
-                pol += 1
+    for k_i,l_i in itertools.product(*map(range,peakgrid.shape)):
+        for layer in peakgrid[k_i,l_i]:
+            k[pol] = k_i
+            l[pol] = l_i
+            alpha[pol] = layer["alpha"]
+            omega[pol] = layer["omega"]
+            power[pol] = layer["variance"]
+            rms[pol] = layer["rms"]
+            pol += 1
     return np.rec.fromarrays([k,l,alpha,omega,power,rms],names=["k","l","alpha","omega","power","rms"])
     
 def peaks_from_table(table,shape):
@@ -366,7 +371,7 @@ def peaks_array_from_grid(peaks,npeaks=None):
     peaks_grid = np.zeros(peaks.shape + (np.max(npeaks),4))
     for k,l in itertools.product(*map(range,peaks.shape)):
         if npeaks[k,l] > 0:
-            peaks_grid[k,l,:npeaks[k,l],:] = np.array([ [peak["alpha"], peak["omega"], peak["variance"], peak["rms"]] for peak in peaks[k,l]])
+            peaks_grid[k,l,:npeaks[k,l],:] = np.array([ [peak["alpha"], peak["omega"], peak["variance"], peak["rms"] ] for peak in peaks[k,l]])
     return peaks_grid
     
     
@@ -612,7 +617,7 @@ class FourierModeEstimator(BaseEstimator):
     def finish(self):
         """Save the results back to the original WCAOCase"""
         from wcao.data.fmtsmap import WCAOFMTSMap
-        self.case.addresult(self ,WCAOFMTSMap, "FT")
+        self.case.addresult(self, WCAOFMTSMap, "FT")
         self.initialze()
         
         
@@ -747,10 +752,10 @@ class FourierModeEstimator(BaseEstimator):
         from astropy.io import fits
         
         with fits.open(filename) as FitsFile:
-            self.psd = FitsFile[0].data[0] + 1j * FitsFile[0].data[1]
-            self.rate = FitsFile[0].header['rate']
+            self.psd = FitsFile[0].data[0].copy() + 1j * FitsFile[0].data[1].copy()
+            self.rate = np.copy(FitsFile[0].header['rate'])
             length = self.psd.shape[0]
-            self.hz = FitsFile[1].data
+            self.hz = FitsFile[1].data.copy()
         
     def _create_peak_template(self):
         """Make peak templates for correlation fitting. The peak template occurs for a PSD with all ones.
@@ -780,15 +785,13 @@ class FourierModeEstimator(BaseEstimator):
         
         """
         from astropy.utils.console import ProgressBar
-        from itertools import product
         
-        modes = list(product(range(self.psd.shape[1]),range(self.psd.shape[2])))
         kwargs = dict(self.config["FMTS.fitting"])
         psd = self.psd
         template = self.template_ft
         omega = self.omega
         
-        args = [ ((k,l),psd[:,k,l],template,omega,kwargs) for k,l in modes ]
+        args = [ ((k,l),psd[:,k,l],template,omega,kwargs) for k,l in itertools.product(range(self.psd.shape[1]),range(self.psd.shape[2])) ]
         peaks = ProgressBar.map(pool_find_and_fit_peaks_in_modes,args,multiprocess=self.config["FMTS.multiprocess"])
         for peak_mode,ident in peaks:
             k,l = ident
@@ -825,8 +828,7 @@ class FourierModeEstimator(BaseEstimator):
         """Loads found peaks from a fits file saved in the format of :meth:`_save_peaks_to_table`."""
         from astropy.io import fits
         with fits.open(filename) as FitsFile:
-            table = FitsFile[1].data
-            self.peaks, self.npeaks = peaks_from_table(table,self.psd.shape[1:])
+            self.peaks, self.npeaks = peaks_from_table(FitsFile[1].data,self.psd.shape[1:])
         
     def _fit_peaks_to_metric(self):
         """Fit each peak to a metric. The metric fitting is done by :func:`create_layer_metric`.

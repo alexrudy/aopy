@@ -6,6 +6,17 @@
 #  Created by Alexander Rudy on 2013-05-31.
 #  Copyright 2013 Alexander Rudy. All rights reserved.
 # 
+"""
+:mod:`wcao.data.fmtsmap` – FMTS Map Display Software
+====================================================
+
+.. autoclass::
+    WCAOFMTSMap
+    :members:
+    :private-members:
+
+"""
+
 from __future__ import (absolute_import, unicode_literals, division,
                         print_function)
 import numpy as np
@@ -24,8 +35,8 @@ class WCAOFMTSMap(WCAOEstimate):
         """Initialize the map data"""
         if plan is None:
             return
-        if not isinstance(plan,FourierModeEstimator):
-            raise ValueError("{:s} requires an instance of {:s} as data. Got {:s}".format(self.__class__.__name__,FourierModeEstimator.__name__,type(plan)))
+        if not isinstance(plan, FourierModeEstimator):
+            raise ValueError("{:s} requires an instance of {:s} as data. Got {:s}".format(self.__class__.__name__, FourierModeEstimator.__name__, type(plan)))
         
         self.psd = plan.psd
         self.hz = plan.hz
@@ -46,8 +57,17 @@ class WCAOFMTSMap(WCAOEstimate):
         
     @property
     def omega(self):
-        """docstring for omega"""
+        """Angular Frequency :math:`\Omgea`"""
         return (self.hz / self.rate) * 2.0 * np.pi
+        
+    def __str__(self):
+        """A line item representation of the FMTS map."""
+        return "{self._datatype:<3.3s}: {layers:2d} layer{plural:s} on a map ({shape:s})".format(
+            self = self,
+            shape = "x".join(map(str,self.metric.shape)),
+            layers = len(self.layers),
+            plural = "" if len(self.layers) == 1 else "s"
+        )
     
     def _show_psd(self,ax,psd,maxhz=50,do_label=True,do_scale=True,title="",**kwargs):
         """Internal method to properly format and show a PSD.
@@ -242,9 +262,9 @@ class WCAOFMTSMap(WCAOEstimate):
     
     def show_fit(self,fig,residual=False):
         """Show the peakfit results at a specific layer position."""
-        
+        import matplotlib.gridspec as gridspec
         nlayers = len(self.layers)
-        fig.subplots_adjust(hspace=0.5)
+        
         self.log.info("Showing %d layers" % nlayers)
         self._header(fig)
         
@@ -255,9 +275,14 @@ class WCAOFMTSMap(WCAOEstimate):
         
         nrow = 3
         ncol = nlayers + 1 if residual else nlayers
+        gs = gridspec.GridSpec(3,ncol,hspace=0.4)
+        
         from matplotlib.colors import ListedColormap
         list_cmap = ListedColormap(['w','r','g'], name='from_list')
         binary_cmap = ListedColormap(['w','r'], name='from_list')
+        
+        extent = [ np.min(self.match_info["ff"]), np.max(self.match_info["ff"]) ] * 2
+        
         do_cbar = False
         for n,layer in enumerate(self.layers):    
             
@@ -266,9 +291,8 @@ class WCAOFMTSMap(WCAOEstimate):
                 
             self.log.info("Showing layer %d at v = [%.1f,%.1f]" % (n,layer['vx'],layer['vy']))
             vx,vy = layer['ivx'],layer['ivy']
-            extent = [np.min(self.match_info["ff"]),np.max(self.match_info["ff"])] * 2
         
-            all_peaks = np.copy(self.match_info["peaks_hz"])
+            all_peaks = np.copy( self.match_info["peaks_hz"] )
             fit_peaks = all_peaks[...,0,0,0]
             for i in range(all_peaks.shape[-1]):
                 matched_peaks = np.copy(self.match_info["full_matched"][:,:,vx,vy,i])
@@ -278,21 +302,22 @@ class WCAOFMTSMap(WCAOEstimate):
             possible_peaks = np.copy(self.match_info["fv_layer_hz"][:,:,vx,vy])
             possible = np.copy(self.match_info["fv_possible"][:,:,vx,vy])
             possible_peaks[possible == 0] = np.nan
-            ax1 = fig.add_subplot(nrow,ncol,(0*ncol+n+1))
+            
+            ax1 = fig.add_subplot(gs[0,n])
             ax1.set_title("Fit Peaks")
             cbar = self._spf_format(ax1,fit_peaks,vmin=vmin,vmax=vmax,do_cbar=do_cbar)
             if do_cbar:
                 cbar.set_label(r"$f_t\;(\mathrm{Hz})$")
         
         
-            ax2 = fig.add_subplot(nrow,ncol,(1*ncol+n+1))
+            ax2 = fig.add_subplot(gs[1,n])
             ax2.set_title("Found Peaks")
             cbar = self._spf_format(ax2,matched_peaks+possible.astype(np.int),cmap=list_cmap,vmin=0,vmax=2,do_cbar=do_cbar)
             if do_cbar:
                 cbar.set_ticks([2.0/6.0 * (2*x+1) for x in range(3)])
                 cbar.set_ticklabels(["Not Possible","Possible","Match"])
         
-            ax3 = fig.add_subplot(nrow,ncol,(2*ncol+n+1))
+            ax3 = fig.add_subplot(gs[2,n])
             ax3.set_title("Theory")
             cbar = self._spf_format(ax3,possible_peaks,vmin=vmin,vmax=vmax,do_cbar=do_cbar)
             if do_cbar:

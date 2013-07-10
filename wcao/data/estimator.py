@@ -66,6 +66,10 @@ class WCAOEstimate(object):
         )
         self._init_data(data)
         
+    def __str__(self):
+        """Pretty string ASCII-table representation of a result."""
+        return "{0._datatype:s}: array={0._arraytype:s}, name={0.longname:s}".format(self)
+        
     @property
     def config(self):
         """The configuration!"""

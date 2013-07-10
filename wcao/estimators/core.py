@@ -10,6 +10,8 @@
 :class:`BaseEstimator` – Template Class
 ---------------------------------------
 
+The base estimator template class provides a scaffold for creating wind estimators which behave in a standard way, and which are therefore interchangeable with the other wind estimators found in :mod:`wcao`. Estimators should set up any non-data-dependent parameters in their initialization function, or using a configuration file. A call to :meth:`~BaseEstimator.setup` is then used to set up the data dependent parameters required by the estimator. The :meth:`~BaseEstimator.setup` method should do any work required before the estimator starts. Next the :meth:`~BaseEstimator.estimate` method is used to actually compute the wind estimates. When comparing the computational difficulty of methods, the time taken to execute the :meth:`~BaseEstimator.estimate` method is usually used. The :meth:`~BaseEstimator.finish` method is then used to create the appropriate results object class, and to add that result to the original :class:`WCAOCase` object.
+
 .. autoclass::
     BaseEstimator
     :members:

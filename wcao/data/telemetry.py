@@ -40,6 +40,16 @@ class WCAOTelemetry(ConsoleContext):
         self.data_config = self.config["data.cases.{0.casename:s}".format(self.case)]
         self.log = pyshell.getLogger(__name__)
         
+    def __str__(self):
+        """Single line string representation"""
+        return "{self.case.casename:12.12s}: {shape:>9.9s} x {ntime:<7.0g} = {time:3.1f}s at {rate:5.0g}Hz".format(
+            self = self,
+            shape = self.aperture.__shape_str__(),
+            ntime = self.nt,
+            time = self.nt / self.case.rate,
+            rate = self.case.rate,
+        )
+        
     @property
     def phase(self):
         """A phase property that properly falls through to loading functions."""
@@ -53,7 +63,7 @@ class WCAOTelemetry(ConsoleContext):
         
     @property
     def fmode(self):
-        """A phase property that properly falls through to loading functions."""
+        """A fourier mode property that properly falls through to loading functions."""
         if self._fmode is None and os.path.exists(self.fmode_path):
             self.load_fmode()
         elif self._fmode is None and os.path.exists(self.raw_path):
@@ -68,7 +78,7 @@ class WCAOTelemetry(ConsoleContext):
         return self._nt
         
     def filename(self,prepend="data",ext="fits"):
-        """docstring for filename"""
+        """A filename for this case"""
         return "{casename}_{prepend}.{ext}".format(
             casename= self.case.casename,
             prepend=prepend,
@@ -77,7 +87,7 @@ class WCAOTelemetry(ConsoleContext):
         )
     
     def filepath(self,kind,prepend="data",ext="fits"):
-        """Make a filepath"""
+        """Make a filepath for this case"""
         return os.path.expanduser(os.path.join(self.config["data.root"],"data",self.case.instrument,kind,self.filename(prepend,ext)))
         
     def _load_simulated(self):
@@ -117,7 +127,7 @@ class WCAOTelemetry(ConsoleContext):
         
     def _remap_disp2d(self,rawdata):
         """Use the Keck disp2d re-mapper"""
-        from .keck import disp2d,transfac
+        from .keck import disp2d
         import scipy.fftpack
         self.aperture = Aperture(disp2d(np.ones(rawdata.shape[1])))
         self._nt = rawdata.shape[0]
@@ -129,6 +139,7 @@ class WCAOTelemetry(ConsoleContext):
             
     def _trans_disp2d(self):
         """docstring for _trans_keck"""
+        from .keck import transfac
         self._fmode_dmtransfer = transfac()
         
     def _trans_ones(self):
@@ -164,7 +175,7 @@ class WCAOTelemetry(ConsoleContext):
     def save_phase(self):
         """Save phase data to files"""
         HDU = fits.PrimaryHDU(self._phase)
-        HDU.header["CONFIG"] = self.config.hash
+        HDU.header["CONFIG"] = (self.config.hash, "Hash for configuration")
         HDU.writeto(self.phase_path,clobber=True)
     
     def load_fmode(self):
@@ -182,6 +193,7 @@ class WCAOTelemetry(ConsoleContext):
         """Save fourier mode data to files."""
         fmodeout = np.array([np.real(self._fmode),np.imag(self._fmode)])
         HDU = fits.PrimaryHDU(fmodeout)
-        HDU.header["CONFIG"] = self.config.hash
+        HDU.header["CONFIG"] = (self.config.hash, "Hash for configuration")
+        HDU.header["DATA"] = ("data[0] + 1j * data[1]", "Data remap in python")
         HDU.writeto(self.fmode_path,clobber=True)
         
