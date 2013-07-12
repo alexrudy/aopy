@@ -192,13 +192,13 @@ def floatingmax(data,scalar):
         f_pos = 0.5 *  top/bot
     data_f = (data_i + f_pos) % data.shape[0]
     data_f = data.size - 1 if data_f > (data.size - 1) else data_f
-    data_v = scipy.interpolate.interp1d(np.arange(data.size),data,kind='linear')(data_f)
-    scalar_v = scipy.interpolate.interp1d(np.arange(scalar.size),scalar,kind='linear')(data_f)
+    data_v = scipy.interpolate.interp1d(np.arange(data.size), data, kind='linear')(data_f)
+    scalar_v = scipy.interpolate.interp1d(np.arange(scalar.size), scalar, kind='linear')(data_f)
     return data_v, scalar_v, data_f
     
-def find_and_fit_peak(psd,mask,template,omega,
-    search_radius=1,mask_radius=1,float_peak=False,
-    ialpha=0.99,min_alpha=0,max_alpha=1,maxfev=1e3,min_power=1e-3,**kwargs):
+def find_and_fit_peak(psd, mask, template, omega,
+    search_radius=1, mask_radius=1, float_peak=False,
+    ialpha=0.99, min_alpha=0, max_alpha=1, maxfev=1e3, min_power=1e-3):
     """Find and fit a single peak in a psd.
     
     :param ndarray psd: A power-spectral-distribution on which to find peaks.
@@ -258,17 +258,17 @@ def find_and_fit_peak(psd,mask,template,omega,
         log.warning("Peak Power is too small! %g",popt[1])
         success = False
     elif np.max(fit_psd) > 10.0 * np.max(np.real(psd)*weights):
-        log.warning("Peak Power is much greater than PSD! %g >> %g", popt[1],np.max(np.real(psd)*weights))
+        log.warning("Peak Power is much greater than PSD! %g >> %g", popt[1], np.max(np.real(psd)*weights))
         success = False
     elif popt[0] < min_alpha or popt[0] > max_alpha:
         log.warning("Alpha out of range! %.3f",popt[0])
         success = False
     elif ier not in [1,2,3,4]:
-        log.warning("Fitting Failure: %d: %s" % (ier,errmsg))
+        log.warning("Fitting Failure: %d: %s" % (ier, errmsg))
         success = False
     elif success is None:
         success = True
-        log.info("Found a peak at alpha=%f omega=%f, power=%g",popt[0],est_omega,popt[1])
+        log.info("Found a peak at alpha=%f omega=%f, power=%g", popt[0], est_omega,popt[1])
         peak["alpha"] = popt[0]
         peak["omega"] = est_omega
         peak["variance"] = popt[1]
@@ -446,7 +446,7 @@ def create_layer_metric(peaks,npeaks,omega,klshape,rate,maxv=100,deltav=5,frac=0
     
     # Possible Match Peaks
     possible = np.abs(layer_peak_hz) >= lowest_hz
-    possible &= (min_layer_hz_npeaks <= np.sum(possible,axis=(0,1)))
+    possible &= (min_layer_hz_npeaks <= np.sum(possible, axis=(0,1)))
     valid = (np.abs(peaks_hz) >= lowest_hz)
     log.debug("Calculated Possible Peaks")
     
