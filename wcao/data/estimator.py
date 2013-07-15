@@ -88,7 +88,7 @@ class WCAOEstimate(object):
     @property
     def fitsname(self):
         """The fits-file name for this object"""
-        return self._fitsname.format(
+        return self._dataname.format(
             instrument = self.case.instrument,
             name = self.case.casename,
             ext = self.config.get("WCAOEstimate.Data.fits.ext","fits"),
@@ -99,7 +99,7 @@ class WCAOEstimate(object):
     @property
     def npyname(self):
         """Numpy file name for this object"""
-        return self._fitsname.format(
+        return self._dataname.format(
             instrument = self.case.instrument,
             name = self.case.casename,
             ext = self.config.get("WCAOEstimate.Data.npy.ext","npy"),
@@ -123,8 +123,17 @@ class WCAOEstimate(object):
         """This method has no idea how to initialize data!"""
         raise NotImplementedError("{!r} has no concept of data!".format(self))
         
-
-
+    
+    @abc.abstractmethod
+    def save(self):
+        """Save this result to a file."""
+        pass
         
+    # @abc.abstractmethod
+    # def load(self):
+    #     """Load this result from a file."""
+    #     pass
+    #     
+    #     
         
         

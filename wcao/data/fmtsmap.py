@@ -22,38 +22,307 @@ from __future__ import (absolute_import, unicode_literals, division,
 import numpy as np
 
 import datetime
+import os.path
 
 from .estimator import WCAOEstimate
-from ..estimators.fmts import FourierModeEstimator
+from ..estimators.fmtsutil import peaks_to_table, peaks_array_from_grid, peaks_from_table, layers_to_table, layers_from_table
+
 
 class WCAOFMTSMap(WCAOEstimate):
-    """docstring for WCAOFMTSMap"""
+    """A representation of a FMTS Wind Estimate."""
     def __init__(self, *args, **kwargs):
         super(WCAOFMTSMap, self).__init__(*args, **kwargs)
     
     def _init_data(self,plan):
         """Initialize the map data"""
+        from ..estimators.fmts import FourierModeEstimator
+        
         if plan is None:
-            return
-        if not isinstance(plan, FourierModeEstimator):
+            self._initialize()
+        elif isinstance(plan, FourierModeEstimator):
+            self._init_from_plan(plan)
+        elif isinstance(plan, basestring):
+            self._init_from_files(plan)
+        else:
             raise ValueError("{:s} requires an instance of {:s} as data. Got {:s}".format(self.__class__.__name__, FourierModeEstimator.__name__, type(plan)))
         
+        
+    def _initialize(self):
+        """Initialize all of the data structures."""
+        from pyshell.config import StructuredConfiguration
+        self.psd = None
+        self.hz = None
+        self.rate = None
+        
+        self.peaks = None
+        self.npeaks = None
+        
+        self.fmts_config = StructuredConfiguration()
+        
+        self.metric = None
+        self.possible = None
+        self.matched = None
+        self.match_info = {}
+        
+    def _init_from_plan(self,plan):
+        """Initialize this results object from a plan."""
+        
+        # Periodogram Data
         self.psd = plan.psd
         self.hz = plan.hz
         self.rate = plan.rate
         
+        # Peaks Data
         self.peaks = plan.peaks
         self.npeaks = plan.npeaks
         
+        # Configuration Data
         self.fmts_config = plan.config["FMTS"]
         
+        # Metric Data
         self.metric = plan.metric
         self.possible = plan.possible
         self.matched = plan.matched
         self.match_info = plan.match_info
         
+        # Layer Data
         self.layers = plan.layers
         
+    def _init_from_files(self,filename):
+        """Initialize this results object from a set of files."""
+        self._load_from_files(filename)
+        
+    def _save_to_files(self,filename_root,clobber=False):
+        """Save all of the data for this object to files.
+        
+        :param filename_root: The root filename
+        
+        """
+        filename, ext  = os.path.splitext(filename_root)
+        self._save_periodogram(filename+"_periodogram.fits", clobber)
+        self._save_peaks_to_table(filename+"_peaks.fits", clobber)
+        self._save_configuration(filename+".yml", clobber)
+        self._save_metric(filename+'_metric.fits', clobber)
+        self._save_match_info(filename+"_match.fits", clobber, full_matched=True, peaks_hz=True)
+        self._save_layer_info(filename+"_layers.fits", clobber)
+        
+    def _load_from_files(self, filename_root):
+        """Load the full thing from files"""
+        filename, ext = os.path.splitext(filename_root)
+        self._load_periodogram(filename+"_periodogram.fits")
+        self._load_peaks_from_table(filename+"_peaks.fits")
+        self._load_configuration(filename+".yml")
+        self._load_metric(filename+"_metric.fits")
+        self._load_match_info(filename+"_match.fits")
+        self._load_layer_info(filename+"_layers.fits")
+        
+    def save(self, clobber=False):
+        """Save this result!"""
+        self._save_to_files(self.fitsname, clobber=clobber)
+        
+    def load(self):
+        """Load this result!"""
+        self._load_from_files(self.fitsname)
+        
+    def _set_fmts_header_values(self, hdu):
+        """Set the appropriate header values."""
+        hdu.header['FMTSinst'] = (self.case.instrument, 'Instrument Name')
+        hdu.header['FMTScase'] = (self.case.casename, 'Telemetry Case Name')
+        hdu.header['FMTShash'] = (self.fmts_config.hash, 'Configuration File Hash')
+        hdu.header['FMTSconf'] = (self.fmts_config.filename, 'Configuration File Name')
+        
+    def _read_fmts_header_values(self, hdu):
+        """Extract appropriate header values from the FMTS header."""
+        casename = hdu.header["FMTScase"]
+        instrument = hdu.header["FMTSinst"]
+        
+        if instrument != self.case.instrument:
+            self.log.warning("Loaded Instrument Name Mismatch: Loaded '{:s}' != '{:s}'".format(instrument,self.case.instrument))
+        if casename != self.case.casename:
+            self.log.warning("Loaded Casename Name Mismatch: Loaded '{:s}' != '{:s}'".format(casename,self.case.casename))
+            
+        
+    def _save_periodogram(self,filename,clobber=False):
+        """Save the periodogram to a fits file.
+        
+        The primary HDU contains the full ``t,k,l`` periodogram. The secondary HDU contains the frequency scale for this data. The secondary HDU could be recreated using the ``rate`` keyword in the primary header. The periodogram is stored with four axes, so reconstruction the data can be done like this::
+            
+            data = fitsdata[0] + 1j * fitsdata[1]
+            
+        
+        """
+        from astropy.io import fits
+        psd = np.array([np.real(self.psd),np.imag(self.psd)])
+        HDU = fits.PrimaryHDU(psd)
+        self._set_fmts_header_values(HDU)
+        HDU.header['FMTSrate'] = self.rate
+        HDUList = fits.HDUList([HDU])
+        HDUList.writeto(filename,clobber=clobber)
+        
+    def _load_periodogram(self,filename):
+        """Load the periodogram from a fits file.
+        
+        This function loads periodograms which were saved by :meth:`_save_periodogram`.
+        
+        """
+        from astropy.io import fits
+        
+        with fits.open(filename) as FitsFile:
+            self.psd = FitsFile[0].data[0].copy() + 1j * FitsFile[0].data[1].copy()
+            self.rate = np.copy(FitsFile[0].header['FMTSrate'])
+            per_length = self.psd.shape[0]
+            self.hz = np.mgrid[-1*per_length/2:per_length/2] / per_length * self.rate
+            
+        
+    def _save_peaks_to_table(self,filename,clobber=False):
+        """Save found peaks to a table. The fits table is a simple way of storing the results from :func:`peaks_to_table`.
+        """
+        from astropy.io import fits
+        tbl_hdu = fits.new_table(peaks_to_table(self.peaks,np.sum(self.npeaks)))
+        self._set_fmts_header_values(tbl_hdu)
+        tbl_hdu.writeto(filename,clobber=clobber)
+        
+    def _load_peaks_from_table(self, filename):
+        """Loads found peaks from a fits file saved in the format of :meth:`_save_peaks_to_table`."""
+        from astropy.io import fits
+        with fits.open(filename) as FitsFile:
+            self.peaks, self.npeaks = peaks_from_table(FitsFile[1].data,self.psd.shape[1:])
+            
+    def _save_configuration(self, filename, clobber=False):
+        """Save the FMTS configuration values"""
+        if os.path.exists(filename) and not clobber:
+            raise IOError("Cannot overwrite {0:s}, already exists!".format(filename))
+        self.fmts_config.save(filename)
+        
+    def _load_configuration(self, filename):
+        """docstring for _load_configuration"""
+        from pyshell.config import StructuredConfiguration
+        self.fmts_config = StructuredConfiguration.fromfile(filename)
+        
+    def _set_v_metric_headers(self, hdu):
+        """Set the appropriate header values for wind-velocity metric arrays."""
+        self._set_fmts_header_values(hdu)
+        hdu.header["FMTSmaxv"] = (self.fmts_config["metric.maxv"], "Maximum searched velocity")
+        hdu.header["FMTSdelv"] = (self.fmts_config["metric.deltav"], "Velocity Search Increments")
+        hdu.header["FMTSnumv"] = (2.0 * self.fmts_config["metric.maxv"] // self.fmts_config["metric.deltav"] + 1.0, "Number of velocity gridpoints")
+        
+    def _read_v_metric_headers(self, hdu):
+        """Read the appropriate header values for wind-velocity metric arrays."""
+        self._read_fmts_header_values(hdu)
+        maxv = float(hdu.header["FMTSmaxv"])
+        delv = float(hdu.header["FMTSdelv"])
+        numv = int(hdu.header["FMTSnumv"])
+        self.match_info["vv"] = np.linspace(-1*maxv,maxv,numv)
+        
+    def _set_fv_metric_headers(self, hdu):
+        """Set the appropriate header values for wind-velocity metric arrays."""
+        import scipy.fftpack
+        self._set_v_metric_headers(hdu)
+        hdu.header["FMTSnumf"] = (self.psd.shape[1], "Number of spatial frequency modes.")
+        hdu.header["FMTSscaf"] = (self.case.subapd, "Scaling for each spatial mode.")
+        hdu.header["FMTSrecf"] = ("fftshift(fftfreq(FMTSnumf,FMTSscaf))","Code to reconstruct frequency vector.")
+        
+    def _read_fv_metric_headers(self, hdu):
+        """Read the appropriate header values for the frequency-wind-velocity metric arrays."""
+        self._read_v_metric_headers(hdu)
+        import scipy.fftpack
+        d = float(hdu.header["FMTSscaf"])
+        n = int(hdu.header["FMTSnumf"])
+        self.match_info["ff"] = scipy.fftpack.fftshift(scipy.fftpack.fftfreq(n,d))
+        
+    def _save_metric(self, filename, clobber):
+        """Saves the minimum amount of information to reconstruct a given metric."""
+        from astropy.io import fits
+        HDU = fits.PrimaryHDU(self.metric)
+        HDU.header["Data"] = ("Percentage of peaks matched, in velocity space.", "Description of the data.")
+        self._set_v_metric_headers(HDU)
+        HDU.writeto(filename, clobber=clobber)
+        
+    def _load_metric(self, filename):
+        """docstring for _load_metric"""
+        from astropy.io import fits
+        with fits.open(filename) as FitsFile:
+            self.metric = FitsFile[0].data.copy()
+            self._read_v_metric_headers(FitsFile[0])
+            
+    def _save_match_info(self, filename, clobber=False, full_matched=False, peaks_hz=False):
+        """Save all the data in the match info dictionary to a file."""
+        from astropy.io import fits
+        
+        mHDU = fits.PrimaryHDU(self.match_info["v_metric"])
+        mHDU.header["Data"] = ("Percentage of peaks matched, in velocity space.", "Description of the data.")
+        mHDU.header["FMTSkey"] = ("v_metric","Dictionary key for this HDU")
+        self._set_fv_metric_headers(mHDU)
+        
+        HDUs = fits.HDUList([mHDU])
+        
+        
+        pHDU = fits.ImageHDU(self.match_info["v_possible"].astype(np.int))
+        pHDU.header["Data"] = ("Peaks which could possibly be matched, in velocity space.", "Description of the data.")
+        pHDU.header["FMTSkey"] = ("v_possible","Dictionary key for this HDU")
+        self._set_v_metric_headers(pHDU)
+        HDUs.append(pHDU)
+        
+        mmHDU = fits.ImageHDU(self.match_info["v_matched"])
+        mmHDU.header["Data"] = ("Peaks which matched, in velocity space.", "Description of the data.")
+        mmHDU.header["FMTSkey"] = ("v_matched","Dictionary key for this HDU")
+        self._set_v_metric_headers(mmHDU)
+        HDUs.append(mmHDU)
+        
+        fmHDU = fits.ImageHDU(self.match_info["fv_matched"])
+        fmHDU.header["Data"] = ("Peaks which matched, in frequency and velocity space.", "Description of the data.")
+        fmHDU.header["FMTSkey"] = ("fv_matched","Dictionary key for this HDU")
+        self._set_fv_metric_headers(fmHDU)
+        HDUs.append(fmHDU)
+        
+        fpHDU = fits.ImageHDU(self.match_info["fv_possible"].astype(np.int))
+        fpHDU.header["Data"] = ("Peaks which could possibly be matched, in frequency and velocity space.", "Description of the data.")
+        fpHDU.header["FMTSkey"] = ("fv_possible","Dictionary key for this HDU")
+        self._set_fv_metric_headers(fpHDU)
+        HDUs.append(fpHDU)
+        
+        if full_matched:
+            ffHDU = fits.ImageHDU(self.match_info["full_matched"].astype(np.int))
+            ffHDU.header["Data"] = ("The full grid of matching peaks, in frequency, velocity, and peak number space.", "Description of the data.")
+            ffHDU.header["FMTSkey"] = ("full_matched","Dictionary key for this HDU")
+            HDUs.append(ffHDU)
+            
+        if peaks_hz:
+            peaksHDU = fits.ImageHDU(self.match_info["peaks_hz"])
+            peaksHDU.header["Data"] = ("The full grid of peaks.","Description of the data.")
+            peaksHDU.header["FMTSkey"] = ("peaks_hz","Dictionary key for this HDU")
+            HDUs.append(peaksHDU)
+            
+        HDUs.writeto(filename, clobber=clobber)
+        
+    def _load_match_info(self, filename, clobber=False):
+        """Load the massive match info dictionary from a FITS file."""
+        from astropy.io import fits
+        with fits.open(filename) as FitsFile:
+            self._read_fv_metric_headers(FitsFile[0])
+            for HDU in FitsFile:
+                key = HDU.header["FMTSkey"]
+                self.match_info[key] = HDU.data.copy()
+                self.log.info("Loaded '{:s}' from {:s}".format(HDU.header["Data"],filename))
+        if "peaks_hz" not in self.match_info:
+            self.log.info("The key 'peaks_hz' is not loaded.")
+        if 'full_matched' not in self.match_info:
+            self.log.info("The key 'full_matched' is not loaded.")
+            
+    def _save_layer_info(self, filename, clobber=False):
+        """Save the layer info to a FITS file."""
+        from astropy.io import fits
+        table = fits.new_table(layers_to_table(self.layers))
+        self._set_fmts_header_values(table)
+        table.writeto(filename, clobber=clobber)
+        
+    def _load_layer_info(self, filename):
+        """Load layer information."""
+        from astropy.io import fits
+        
+        with fits.open(filename) as FitsFile:
+            self._read_fmts_header_values(FitsFile[1])
+            self.layers = layers_from_table(FitsFile[1].data.copy())
         
     @property
     def omega(self):
@@ -290,14 +559,14 @@ class WCAOFMTSMap(WCAOEstimate):
                 do_cbar = True
                 
             self.log.info("Showing layer %d at v = [%.1f,%.1f]" % (n,layer['vx'],layer['vy']))
-            vx,vy = layer['ivx'],layer['ivy']
+            vx,vy = np.argmin(np.abs(layer['vx']-self.match_info["vv"])),np.argmin(np.abs(layer['vy']-self.match_info["vv"]))
         
             all_peaks = np.copy( self.match_info["peaks_hz"] )
             fit_peaks = all_peaks[...,0,0,0]
             for i in range(all_peaks.shape[-1]):
                 matched_peaks = np.copy(self.match_info["full_matched"][:,:,vx,vy,i])
                 fit_peaks[matched_peaks != 0] = all_peaks[...,0,0,i][matched_peaks != 0]
-            matched_peaks = np.any(self.match_info["full_matched"][:,:,vx,vy,:],axis=-1)
+            matched_peaks = self.match_info["fv_matched"][:,:,vx,vy]
             fit_peaks[~matched_peaks] = np.nan
             possible_peaks = np.copy(self.match_info["fv_layer_hz"][:,:,vx,vy])
             possible = np.copy(self.match_info["fv_possible"][:,:,vx,vy])
@@ -355,8 +624,8 @@ class WCAOFMTSMap(WCAOEstimate):
         ax.set_title("Peak Metric")
         for i,layer in enumerate(self.layers):
             print("Plotting layer at {vx:.2f},{vy:.2f} with match {m:f}".format(**layer))
-            ax.plot(layer['pvx'],layer['pvy'],'ko',alpha=0.2)
-            ax.annotate("{:d}".format(i+1),(layer['pvx'],layer['pvy']),
+            ax.plot(layer['vx'],layer['vy'],'ko',alpha=0.2)
+            ax.annotate("{:d}".format(i+1),(layer['vx'],layer['vy']),
                 color='k',bbox=dict(fc='w'),xytext=(-10,10),textcoords='offset points')
             x = 0.2
             y = 0.05 + 0.02 * len(self.layers) - i * 0.02

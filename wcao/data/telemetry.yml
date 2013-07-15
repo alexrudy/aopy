@@ -1,86 +1,87 @@
 # Telemetry data from the LabFees project
-Keck:
-  system:
-    rate: 1054
-    d: 0.56 # 56 cm Subapertures
-    n: 26
-    tau: 0.89e-3
-    gain: 0.5
-    integrator_c: 0.99
-    scaling_for_nm_phase: 0.47e3
-  data:
-    root: '~/Development/Astronomy/WindPrediction/WindPrediction/telem_analysis_13'
-    cases:
-      '20070730_2':
-        type: 'closed-loop-dm-commands'
-        raw_data: 'data/keck/raw/data_30jul07/dataset2.dat'
-        raw_format: 'trs'
-        raw_remap: 'disp2d'
-        raw_trans: 'disp2d'
-      'sim_x25_y0':
-        type: 'closed-loop-dm-commands'
-        r0: 0.30
-        wind:
-          - [ 0.0, 0.0 ]
-        ntime: 6000
-        raw_time: 500
-        raw_format: 'simulated'
-        raw_remap: '3d_screen'
-        raw_trans: 'disp2d'
-        raw_data: 'data/keck/raw/data_30jul07/dataset2.dat'
-      'sim_x25_y5':
-        type: 'closed-loop-dm-commands'
-        r0: 0.30
-        wind:
-          - [ 2.0, 5.0 ]
-        ntime: 6000
-        raw_time: 500
-        raw_format: 'simulated'
-        raw_remap: '3d_screen'
-        raw_trans: 'disp2d'
-        raw_data: 'data/keck/raw/data_30jul07/dataset2.dat'
-GeMS:
-  FMTS:
-    fitting:
-      min_alpha: 0.85
-    layers:
-      min_layer_threshold: 0.4
-  system:
-    n: 20
-    d: 0.49375
-    rate: 399
-    tau: 0.008
-    gain: 0.5
-    integrator_c: 0.99
-  data:
-    root: '~/Development/Astronomy/WindPrediction/WindPrediction/telem_analysis_13'
-    cases:
-      '11106030531_pol_wfs4':
-        type: 'pseudo-open-loop-slopes'
-        raw_data: 'data/gems/raw/sPOL11106030531_slopes.fits'
-        raw_format: 'fits'
-        raw_remap: 'gems_wfs'
-        raw_trans: 'ones'
-keck_simulated:
-  system:
-    rate: 1054
-    d: 0.56 # 56 cm Subapertures
-    n: 26
-    tau: 0.89e-3
-    gain: 0.5
-    integrator_c: 0.99
-  data:
-    root: '~/Development/Astronomy/WindPrediction/WindPrediction/telem_analysis_13'
-    cases:
-      'sim_1':
-        type: 'closed-loop-dm-commands'
-        r0: 0.30
-        wind:
-          - [ 2.0, 5.0 ]
-        ntime: 6000
-        raw_time: 500
-        raw_format: 'simulated'
-        raw_remap: '3d_screen'
-        raw_trans: 'offset'
-        raw_data: 'data/keck/raw/data_30jul07/dataset2.dat'
+Telemetry:
+  Keck:
+    system:
+      rate: 1054
+      d: 0.56 # 56 cm Subapertures
+      n: 26
+      tau: 0.89e-3
+      gain: 0.5
+      integrator_c: 0.99
+      scaling_for_nm_phase: 0.47e3
+    data:
+      root: '~/Development/Astronomy/WindPrediction/WindPrediction/telem_analysis_13'
+      cases:
+        '20070730_2':
+          type: 'closed-loop-dm-commands'
+          raw_data: 'data/keck/raw/data_30jul07/dataset2.dat'
+          raw_format: 'trs'
+          raw_remap: 'disp2d'
+          raw_trans: 'disp2d'
+        'sim_x25_y0':
+          type: 'closed-loop-dm-commands'
+          r0: 0.30
+          wind:
+            - [ 0.0, 0.0 ]
+          ntime: 6000
+          raw_time: 500
+          raw_format: 'simulated'
+          raw_remap: '3d_screen'
+          raw_trans: 'disp2d'
+          raw_data: 'data/keck/raw/data_30jul07/dataset2.dat'
+        'sim_x25_y5':
+          type: 'closed-loop-dm-commands'
+          r0: 0.30
+          wind:
+            - [ 2.0, 5.0 ]
+          ntime: 6000
+          raw_time: 500
+          raw_format: 'simulated'
+          raw_remap: '3d_screen'
+          raw_trans: 'disp2d'
+          raw_data: 'data/keck/raw/data_30jul07/dataset2.dat'
+  GeMS:
+    FMTS:
+      fitting:
+        min_alpha: 0.85
+      layers:
+        min_layer_threshold: 0.4
+    system:
+      n: 20
+      d: 0.49375
+      rate: 399
+      tau: 0.008
+      gain: 0.5
+      integrator_c: 0.99
+    data:
+      root: '~/Development/Astronomy/WindPrediction/WindPrediction/telem_analysis_13'
+      cases:
+        '11106030531_pol_wfs4':
+          type: 'pseudo-open-loop-slopes'
+          raw_data: 'data/gems/raw/sPOL11106030531_slopes.fits'
+          raw_format: 'fits'
+          raw_remap: 'gems_wfs'
+          raw_trans: 'ones'
+  keck_simulated:
+    system:
+      rate: 1054
+      d: 0.56 # 56 cm Subapertures
+      n: 26
+      tau: 0.89e-3
+      gain: 0.5
+      integrator_c: 0.99
+    data:
+      root: '~/Development/Astronomy/WindPrediction/WindPrediction/telem_analysis_13'
+      cases:
+        'sim_1':
+          type: 'closed-loop-dm-commands'
+          r0: 0.30
+          wind:
+            - [ 2.0, 5.0 ]
+          ntime: 6000
+          raw_time: 500
+          raw_format: 'simulated'
+          raw_remap: '3d_screen'
+          raw_trans: 'offset'
+          raw_data: 'data/keck/raw/data_30jul07/dataset2.dat'
       
