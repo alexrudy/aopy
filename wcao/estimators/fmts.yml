@@ -6,7 +6,7 @@ FMTS:
     frac: 0.25
   fitting:
     float_peak: true
-    initial_alpha: 0.9999
+    ialpha: 0.99
     mask_radius: 0.02
     max_alpha: 1.0
     min_alpha: 0.9
