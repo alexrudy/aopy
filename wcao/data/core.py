@@ -43,6 +43,7 @@ class WCAOCase(ConsoleContext):
     def __init__(self, instrument, casename, configuration):
         super(WCAOCase, self).__init__()
         self._config = StructuredConfiguration.make(configuration)
+        self._config.renest(DottedConfiguration)
         self.instrument = instrument
         self.casename = casename
         self.results = {}
@@ -69,7 +70,7 @@ class WCAOCase(ConsoleContext):
     @property
     def config(self):
         """Instrument specific configuration"""
-        return self._config[self.instrument]
+        return self._config[".".join(["Telemetry",self.instrument])]
         
     @property
     def rate(self):
