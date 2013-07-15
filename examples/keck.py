@@ -57,3 +57,5 @@ pdf.savefig(fig)
 
 pdf.close()
 print("Saved to {:s}".format(Data.name+".pdf"))
+
+Data.results["FT"].save(clobber=True)
