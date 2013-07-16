@@ -35,6 +35,8 @@ from aopy.util.basic import ConsoleContext
 
 from wcao.data.telemetry import WCAOTelemetry
 
+
+
 class WCAOCase(ConsoleContext):
     """A representation of a specific WCAO data case."""
     
@@ -70,22 +72,27 @@ class WCAOCase(ConsoleContext):
     @property
     def config(self):
         """Instrument specific configuration"""
+        return self._config
+        
+    @property
+    def inst_config(self):
+        """Instrument specific configuration."""
         return self._config[".".join(["Telemetry",self.instrument])]
         
     @property
     def rate(self):
         """AO system control rate"""
-        return self.config["system.rate"]
+        return self.inst_config["system.rate"]
     
     @property
     def subapd(self):
         """Subaperture Diameter"""
-        return self.config["system.d"]
+        return self.inst_config["system.d"]
     
     @property
     def data_format(self):
         """Data format specifier"""
-        return self.config["data.format"]
+        return self.inst_config["data.format"]
     
     def addresult(self,data,klass,dtype):
         """Add a result for this case. The data type is used to identify this specific result, and trace its origins to an estimator."""

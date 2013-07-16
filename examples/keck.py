@@ -59,3 +59,4 @@ pdf.close()
 print("Saved to {:s}".format(Data.name+".pdf"))
 
 Data.results["FT"].save(clobber=True)
+Data.results["FT"].save(single=False,clobber=True)

@@ -36,8 +36,8 @@ class WCAOTelemetry(ConsoleContext):
         self.phase_path = self.filepath("proc","phase","fits")
         self._fmode = None
         self.fmode_path = self.filepath("proc","fmodes","fits")
-        self.raw_path = os.path.expanduser(os.path.join(self.config["data.root"],self.config["data.cases.{0.casename:s}.raw_data".format(self.case)]))
-        self.data_config = self.config["data.cases.{0.casename:s}".format(self.case)]
+        self.raw_path = os.path.expanduser(os.path.join(self.case.inst_config["data.root"],self.case.inst_config["data.cases.{0.casename:s}.raw_data".format(self.case)]))
+        self.data_config = self.case.inst_config["data.cases.{0.casename:s}".format(self.case)]
         self.log = pyshell.getLogger(__name__)
         
     def __str__(self):
@@ -88,17 +88,17 @@ class WCAOTelemetry(ConsoleContext):
     
     def filepath(self,kind,prepend="data",ext="fits"):
         """Make a filepath for this case"""
-        return os.path.expanduser(os.path.join(self.config["data.root"],"data",self.case.instrument,kind,self.filename(prepend,ext)))
+        return os.path.expanduser(os.path.join(self.case.inst_config["data.root"],"data",self.case.instrument,kind,self.filename(prepend,ext)))
         
     def _load_simulated(self):
         """Generate simulated data"""
         from aopy.atmosphere.wind import ManyLayerScreen
         self.log.debug("Loading Simulated Data")
-        self.aperture = Aperture(circle(self.config["system.n"]//2.0,self.config["system.n"]//2.0))
+        self.aperture = Aperture(circle(self.case.inst_config["system.n"]//2.0,self.case.inst_config["system.n"]//2.0))
         wind = np.array(self.data_config["wind"],dtype=np.float)
         self.log.debug("Generated Aperture adn Wind")
         Screen = ManyLayerScreen(self.aperture.shape,
-            self.data_config["r0"],du=self.config["system.d"],
+            self.data_config["r0"],du=self.case.inst_config["system.d"],
             vel=wind,tmax=self.data_config["raw_time"],delay=True)
         self.log.debug("Generating Screen of size %g %g" % Screen.shape)
         Screen.setup()
@@ -160,9 +160,9 @@ class WCAOTelemetry(ConsoleContext):
         
     def load_raw(self):
         """Load raw data from files."""
-        rawdata = getattr(self,'_load_'+self.config["data.cases.{0.casename:s}.raw_format".format(self.case)])()
-        getattr(self,'_remap_'+self.config["data.cases.{0.casename:s}.raw_remap".format(self.case)])(rawdata)
-        getattr(self,'_trans_'+self.config.get("data.cases.{0.casename:s}.raw_trans".format(self.case),"ones"))
+        rawdata = getattr(self,'_load_'+self.data_config["raw_format"])()
+        getattr(self,'_remap_'+self.data_config["raw_remap"])(rawdata)
+        getattr(self,'_trans_'+self.data_config.get("raw_trans","ones"))
     
     def load_phase(self):
         """Load phase data from files."""
@@ -186,7 +186,7 @@ class WCAOTelemetry(ConsoleContext):
         if self.aperture is None:
             import scipy.fftpack
             self.aperture = Aperture(scipy.fftpack.ifft2(self._fmode[0,...]) != 0)
-        getattr(self,'_trans_'+self.config.get("data.cases.{0.casename:s}.raw_trans".format(self.case),"ones"))
+        getattr(self,'_trans_'+self.data_config.get("raw_trans","ones"))
         
     
     def save_fmode(self):

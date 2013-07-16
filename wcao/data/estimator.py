@@ -13,6 +13,7 @@ from __future__ import (absolute_import, unicode_literals, division,
 
 import abc, collections
 import os, os.path
+import warnings
 
 import numpy as np
 
@@ -22,6 +23,53 @@ import pyshell
 from pyshell.config import DottedConfiguration
 
 from wcao.analysis.visualize import make_circles
+
+def set_result_header_values(hdu, case, config):
+    """Set the appropriate header values for an FMTS results file."""
+    if case is not None:
+        hdu.header['WCAOinst'] = (case.instrument, 'WCAO Instrument name')
+        hdu.header['WCAOcase'] = (case.casename, 'WCAO Case Name')
+    if config is not None:
+        hdu.header['WCAOhash'] = (config.hash, 'Configuration File Hash')
+        hdu.header['WCAOconf'] = (config.filename, 'Configuration File Name')
+    return set_wcao_header_values(hdu)
+    
+def read_result_header_values(hdu, case, config):
+    """Extract appropriate header values from the FMTS header."""
+    verify_wcao_header_values(hdu, wcaotype=None)
+    if config is not None:
+        confighash = hdu.header["WCAOHASH"]
+        if confighash != config.hash:
+            warnings.warn("Configuration Hash Mismatch: got '{:s}', expected '{:s}'".format(confighash,config.hash))
+    if case is not None:
+        instrument = hdu.header['WCAOINST']
+        if instrument != case.instrument:
+            warnings.warn("Instrument Name Mismatch: got '{:s}', expected '{:s}'".format(instrument,case.instrument))
+        casename = hdu.header["WCAOCASE"]
+        if casename != case.casename:
+            warnings.warn("Casename Mismatch: got '{:s}', expected '{:s}'".format(casename,case.casename))
+            
+
+def set_wcao_header_values(hdu, wcaotype='none'):
+    """Set the FMTS header keywords."""
+    hdu.header['WCAOvers'] = (1.0, 'WCAO file version')
+    if not (wcaotype == 'none' and "WCAOTYPE" in hdu.header):
+        hdu.header['WCAOtype'] = (wcaotype, 'data type for this HDU')
+    else:
+        wcaotype = None
+    verify_wcao_header_values(hdu,wcaotype)
+    return hdu
+    
+
+def verify_wcao_header_values(hdu, wcaotype='none'):
+    """Verify WCAO header values."""
+    if not hdu.header['WCAOvers'] >= 1.0:
+        raise ValueError("WCAO version number invalid: {:s}".format(hdu.header['WCAOvers']))
+    if 'WCAOtype' not in hdu.header:
+        raise KeyError("WCAO header missing 'WCAOtype' keyword.")
+    if wcaotype is not None and hdu.header['WCAOtype'] != wcaotype:
+        raise ValueError("WCAO type mismatch: got '{:s}', expected '{:s}'".format(hdu.header['WCAOtype'], wcaotype))
+    return hdu
 
 class WCAOEstimate(object):
     """A reperesentation of any WCAO data"""
@@ -61,8 +109,8 @@ class WCAOEstimate(object):
             self.config.get("data.figure.template","{datatype:s}_{figtype:s}_{instrument:s}_{name:s}.{ext:s}"),
             )
         self._dataname = os.path.join(
-            self.config.get("WCAOEstimate.Data.directory",""),
-            self.config.get("WCAOEstimate.Data.template","{datatype:s}_{arraytype:s}_{instrument:s}_{name:s}.{ext:s}")
+            self.config.get("{:s}.Data.directory".format(self.__class__.__name__),""),
+            self.config.get("{:s}.Data.template".format(self.__class__.__name__),"{datatype:s}_{arraytype:s}_{instrument:s}_{name:s}.{ext:s}")
         )
         self._init_data(data)
         
@@ -84,6 +132,16 @@ class WCAOEstimate(object):
     def data(self):
         """Get the actual data!"""
         return self._data
+        
+    def dataname(self,ext):
+        """The fits-file name for this object"""
+        return self._dataname.format(
+            instrument = self.case.instrument,
+            name = self.case.casename,
+            ext = ext,
+            datatype = self._datatype,
+            arraytype = self._arraytype,
+        )
         
     @property
     def fitsname(self):

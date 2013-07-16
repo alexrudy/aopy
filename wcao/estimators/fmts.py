@@ -90,7 +90,7 @@ from pyshell.core import Struct
 from pyshell.config import DottedConfiguration
 from pyshell import getLogger
 
-from .fmtsutil import peaks_to_table, peaks_array_from_grid, peaks_from_table, layers_to_table
+from ..data.fmtsutil import peaks_to_table, peaks_array_from_grid, peaks_from_table, layers_to_table
 
 def periodogram(data, periodogram_length, window=None, half_overlap=True):
     """Make a periodogram from N-dimensional data. The periodogram will be made across axis 0 of the data, and returned in axis 0 of the result. The periodogram is windowed by default. A custom window (which should be the same size as the expected output data) can be passed in at the window parameter.
@@ -364,8 +364,8 @@ def create_layer_metric(peaks,npeaks,omega,klshape,rate,maxv=100,deltav=5,frac=0
     log.debug("Calculated Layer Hz")
     
     # Possible Match Peaks
-    possible = np.abs(layer_peak_hz) >= lowest_hz
-    possible &= (min_layer_hz_npeaks <= np.sum(possible, axis=(0,1)))
+    possible = np.abs(layer_peak_hz) > lowest_hz
+    possible &= (min_layer_hz_npeaks < np.sum(possible, axis=(0,1)))
     valid = (np.abs(peaks_hz) >= lowest_hz)
     log.debug("Calculated Possible Peaks")
     
@@ -375,25 +375,19 @@ def create_layer_metric(peaks,npeaks,omega,klshape,rate,maxv=100,deltav=5,frac=0
     # Calculation of the Metric
     
     # Collapsing along N peaks.
-    matched_filtered = np.any(matched,axis=-1).astype(np.int)
+    matched_filtered = np.any(matched,axis=-1)
     no_possible = (possible == 0.0)
     log.debug("Collapsed along N peaks")
     
-    # Calculating metric at every spatial frequency
-    possible[no_possible] = 1.0
-    metric_filtered = matched_filtered/possible
-    possible[no_possible] = 0.0
-    log.debug("Calculated full metric")
-    
     # Collapsing along spatial frequencies
-    matched_collapsed = np.sum(matched_filtered,axis=(0,1)).astype(np.float)
-    possible_collapsed = np.sum(possible,axis=(0,1)).astype(np.float)
+    matched_collapsed = np.sum(matched_filtered,axis=(0,1))
+    possible_collapsed = np.sum(possible,axis=(0,1))
     no_possible_collapsed = (possible_collapsed == 0)
     log.debug("Collapsed along Spatial Frequencies")
     
     # Caclulating the summed metric for each velocity
     possible_collapsed[no_possible_collapsed] = 1.0
-    collapse_metric = matched_collapsed/possible_collapsed
+    collapse_metric = matched_collapsed.astype(np.float)/possible_collapsed.astype(np.float)
     possible_collapsed[no_possible_collapsed] = 0.0
     log.debug("Calculated Metric")
     
@@ -401,9 +395,7 @@ def create_layer_metric(peaks,npeaks,omega,klshape,rate,maxv=100,deltav=5,frac=0
         'ff' : ff,
         'vv' : vv,
         'peaks_hz' : peaks_hz,
-        'full_matched' : matched,
         'fv_matched' : matched_filtered,
-        'fv_layer_hz' : layer_peak_hz,
         'fv_possible' : possible,
         'v_matched' : matched_collapsed,
         'v_possible' : possible_collapsed,
@@ -460,13 +452,15 @@ def find_layers(metric,vv,spacing=10,min_layer_threshold=0.75,centroid=None):
     log.debug("Recentering %d Peaks" % result.shape[0])
     for peak_x,peak_y in result:
         if np.array(layer_pos).ndim != 2 or (np.sum(np.power(np.array(layer_pos) - np.array([peak_y,peak_x]),2),axis=1) >= np.power(spacing,2)).all():            
-            com_y, com_x = recenter(peak_x,peak_y,metric,centroid)
+            com_x, com_y = recenter(peak_x,peak_y,metric,centroid)
             vx = np.interp(com_x,np.arange(vv.shape[0]),vv)
-            vy = -1*np.interp(com_y,np.arange(vv.shape[0]),vv)
+            vy = np.interp(com_y,np.arange(vv.shape[0]),vv)
             layers.append({
                 'vx' : vx,
                 'vy' : vy,
                 'm' : metric[peak_x,peak_y],
+                'ix' : peak_x,
+                'iy' : peak_y
             })
             layer_pos.append([peak_x,peak_y])
     return layers
@@ -496,7 +490,7 @@ class FourierModeEstimator(BaseEstimator):
         """
         self.case = case
         self.rate = self.case.rate
-        self.config = self.case.config
+        self.config = self.case.inst_config
         self.config.imerge(self._config)
         
         self._fmode = self.case.telemetry.fmode

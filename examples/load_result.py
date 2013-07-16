@@ -28,6 +28,8 @@ ipydb()
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_pdf import PdfPages
 
+configure_logging(pyshell.PYSHELL_LOGGING)
+
 Data = WCAOCase("Keck","20070730_2",(WCAOCase.__module__,'telemetry.yml'))
 Data.addresult(None,WCAOFMTSMap,"FT")
 Data.results["FT"].load()

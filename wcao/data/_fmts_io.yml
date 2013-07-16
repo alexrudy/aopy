@@ -1,0 +1,30 @@
+v_metric:
+  description: "Percentage of peaks matched, in velocity space."
+  name: VM
+  builder: mi_save_metric
+  type: metric
+v_possible:
+  description: "Peaks which could possibly be matched, in velocity space."
+  name: VP
+  builder: mi_save_metric
+  type: possible
+v_matched:
+  description: "Peaks which matched, in velocity space."
+  name: VC
+  builder: mi_save_metric
+  type: matched
+fv_matched:
+  description: "Peaks which matched, in frequency and velocity space."
+  name: FVM
+  builder: mi_save_fv_metric
+  type: matched_f
+fv_possible:
+  description: "Peaks which could possibly be matched, in frequency and velocity space."
+  name: FVP
+  builder: mi_save_fv_metric
+  type: possible_f
+peaks_hz:
+  description: "Peak frequencies in velocity and peak number space."
+  name: VNH
+  builder: mi_save_fv_metric
+  type: peaks_hz
