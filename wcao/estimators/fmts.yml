@@ -22,9 +22,9 @@ FMTS:
     maxv: 40.0
     deltav: 0.5
     lowest_hz: 2.0
-    dist_hz: 1.0
+    dist_hz: 1.4
     frac: 0.4
   layers:
-    spacing: 4
-    min_layer_threshold: 0.5
+    spacing: 2
+    min_layer_threshold: 0.4
     centroid: 10
