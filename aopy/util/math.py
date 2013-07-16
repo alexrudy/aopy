@@ -162,9 +162,9 @@ def lodtorec(listofdicts,order=None,dtypes=None):
         rowcols = dict.fromkeys(columns.keys(),False)
         for key in row.keys():
             try:
-                columns[col][i] = row[key]
+                columns[key][i] = row[key]
             except KeyError:
-                raise KeyError("All rows must contain the '{:s}' key!".format(key))
+                raise KeyError("Column '{:s}' was not in the master!".format(key))
             rowcols[key] = True
         if not all(rowcols.values()):
             missing_cols = [ key for key in columns.keys() if rowcols[key] ]
