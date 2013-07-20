@@ -18,8 +18,11 @@ setup(
     version = version,
     packages = find_packages(exclude=['']),
     package_data = {'aopy': ['aopy/data/*'],
-    'wcao' : ['wcao/estimators/pidly/idl/*.pro']},
-    install_requires = ['distribute','numpy>=1.7','scipy>=0.11','pyshell','scikit-image'],
+    'wcao.estimators.pidly' : ['idl/*.pro'],
+    'wcao.data' : ['*.txt','*.yml'],
+    'wcao.estimators' : ['*.yml']
+    },
+    install_requires = ['distribute','numpy>=1.7','scipy>=0.11','pyshell','scikit-image','astropy'],
     test_requires = ['pIDLy','nosetests'],
     author = "Alexander Rudy",
     author_email = "alex.rudy@gmail.com",
