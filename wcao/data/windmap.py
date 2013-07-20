@@ -60,9 +60,77 @@ def load_map(hdu,wcaotype=None,scale=True):
         return wmap
 
 
-class WCAOmap(WCAOEstimate):
+class WCAOMap(WCAOEstimate):
     """A generic WCAO estimate as a map."""
-    def __init__(self, arg):
-        super(WCAOmap, self).__init__()
-        self.arg = arg
+    
+    def _init_data(self,data):
+        """Data initialization."""
+        if isinstance(data, np.ndarray):
+            if data.ndim == 2:
+                self.map = data
+        elif isinstance(data, tuple):
+            if len(data) == 3:
+                self.map, self.vx, self.vy = data
+                
+    @property
+    def extent(self):
+        """The extent array for this map."""
+        return [np.min(self.vx),np.max(self.vx),np.min(self.vy),np.max(self.vy)]
+        
+    def _map_circles(self, ax, dist=10, origin=[0,0], color='w', crosshair=True, zorder=0.1, ls='dashed'):
+        """Show map circles in a crosshair pattern."""
+        from matplotlib.patches import Circle
+        from matplotlib.lines import Line2D
+        xm,xp = ax.get_xlim()
+        ym,yp = ax.get_ylim()
+        rm = np.max(np.abs([xm, xp, ym, yp]))
+        nc = rm//dist
+        Rs = [ (n+1)*dist for n in range(int(nc)) ]
+        circles = [ Circle(origin, R, fc='none', ec=color, ls=ls, zorder=zorder) for R in Rs]
+        if crosshair:
+            Rmax = max(Rs)
+            major = [ -Rmax, Rmax ]
+            minor = [ 0 , 0 ]
+            coords = [ (major, minor), (minor, major)]
+            for xdata,ydata in coords:
+                circles.append(
+                    Line2D(xdata,ydata, ls=ls, color=color, marker='None', zorder=zorder)
+                )
+        [ ax.add_artist(a) for a in circles ]
+        return circles
+        
+    def _map_format(self,ax,data,**kwargs):
+        """Formats a map with velocity information."""
+        kwargs.setdefault('extent',self.extent)
+        kwargs.setdefault('interpolation','nearest')
+        kwargs.setdefault('origin','lower')
+        
+        xlabel = kwargs.pop('xlabel',r"$v_x\; \mathrm{(m/s)}$")
+        ylabel = kwargs.pop('ylabel',r"$v_y\; \mathrm{(m/s)}$")
+        
+        colorbar = kwargs.pop('colorbar',True)
+        colorbar_kw = kwargs.pop('colorbar_kw',{})
+        colorbar_label = kwargs.pop('colorbar_label',False)
+        
+        image = ax.imshow(data,**kwargs)
+        if colorbar:
+            cbar = ax.figure.colorbar(image,**colorbar_kw)
+            if colorbar_label:
+                cbar.set_label(colorbar_label)
+        else:
+            cbar = None
+        
+        if xlabel:
+            ax.set_xlabel(xlabel)
+        if ylabel:
+            ax.set_ylabel(ylabel)
+        
+        return cbar
+        
+    def show_map(self,ax):
+        """Show this wind map."""
+        self._map_format(ax, self.map, colorbar_label=r"Wind Strength")
+        self._map_circles(ax)
+        ax.set_title("Wind Map")
+        self._header(ax.figure)
         
