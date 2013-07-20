@@ -57,13 +57,13 @@ class WCAOTimeseries(WCAOEstimate):
         return np.arange(self.ntime) * self._timestep
         
     def load(self,filename=None):
-        """Load the data from a file."""
+        """Load the data from a numpy file."""
         if filename is None:
             filename = self.npyname
         self._init_data(np.load(filename))
             
     def save(self,filename=None):
-        """Save the data to a fits file."""
+        """Save the data to a numpy file."""
         if filename is None:
             filename = self.npyname
         np.save(filename,self._data)

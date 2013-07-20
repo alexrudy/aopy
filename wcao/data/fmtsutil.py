@@ -112,7 +112,7 @@ def layers_from_table(layers):
 def set_fmts_header_values(hdu,fmtstype,wcaotype=None):
     """Set the FMTS header values"""
     if wcaotype is None:
-        wcaotype = "FMTS" + fmtstype
+        wcaotype = "FMTSMap"
     hdu = set_wcao_header_values(hdu, wcaotype)
     hdu.header["FMTStype"] = (fmtstype, "FMTS File Type")
     hdu.header["FMTSvers"] = (1.0, "FMTS File Version")
@@ -121,7 +121,7 @@ def set_fmts_header_values(hdu,fmtstype,wcaotype=None):
 def verify_fmts_header_values(hdu,fmtstype,wcaotype=None):
     """Verify the FMTS header values."""
     if wcaotype is None:
-        wcaotype = "FMTS" + fmtstype
+        wcaotype = "FMTSMap"
     verify_wcao_header_values(hdu, wcaotype)
     if hdu.header["FMTStype"] != fmtstype:
         raise ValueError("Mismatch FMTS type: got {:s}, expected {:s}".format(hdu.header["FMTStype"], fmtstype))

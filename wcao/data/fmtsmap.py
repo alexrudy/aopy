@@ -296,16 +296,6 @@ class WCAOFMTSMap(WCAOEstimate):
             ax.autoscale(axis='y')
             ax.grid(True)
     
-    def _header(self,fig):
-        """Add this object's header"""
-        inst = self.case.instrument.replace("_"," ")
-        ltext = r"{instrument:s} during \verb|{casename:s}|".format(instrument=inst,casename=self.case.casename)
-        fig.text(0.02,0.98,ltext,ha='left')
-        
-        today = datetime.date.today().isoformat()
-        rtext = r"Analysis on {date:s} with {config:s}".format(date=today,config=self.case.config.hash)
-        fig.text(0.98,0.98,rtext,ha='right')
-        
     
     def _spf_format(self,ax,data,do_label=True,do_scale=True,do_cbar=True,do_kl=False,**kwargs):
         """docstring for _spf_format"""
