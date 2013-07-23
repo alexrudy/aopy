@@ -28,7 +28,8 @@ import numpy as np
 from astropy.io import fits
 
 import pyshell
-from pyshell.config import StructuredConfiguration, DottedConfiguration
+import pyshell.loggers
+from pyshell.config import StructuredConfiguration
 
 from aopy.aperture import Aperture
 from aopy.util.basic import ConsoleContext
@@ -42,10 +43,15 @@ class WCAOCase(ConsoleContext):
     
     __metaclass__ = abc.ABCMeta
     
-    def __init__(self, instrument, casename, configuration):
+    def __init__(self, instrument, casename, configuration=None):
         super(WCAOCase, self).__init__()
-        self._config = StructuredConfiguration.make(configuration)
-        self._config.renest(DottedConfiguration)
+        self.log = pyshell.getLogger('wcao')
+        self._config = StructuredConfiguration.create(
+            module=__name__,
+            cfg=configuration,
+            defaultcfg="telemetry.yml",
+            supercfg=[('wcao','logging.yml')])
+        pyshell.loggers.configure_logging(self._config)
         self.instrument = instrument
         self.casename = casename
         self.results = {}
