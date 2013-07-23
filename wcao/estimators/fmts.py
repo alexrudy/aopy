@@ -476,9 +476,9 @@ class FourierModeEstimator(BaseEstimator):
     To reset this object to its original state (state before :meth:`setup`), call :meth:`initialize`.
     
     """
-    def __init__(self,config=(__name__,"fmts.yml")):
+    def __init__(self,config=None):
         super(FourierModeEstimator, self).__init__()
-        self._config = DottedConfiguration.make(config)
+        self._base_config = DottedConfiguration.create(module=__name__,defaultcfg="fmts.yml",cfg=config)
         self.initialze()
     
     def setup(self,case):
@@ -491,7 +491,7 @@ class FourierModeEstimator(BaseEstimator):
         self.case = case
         self.rate = self.case.rate
         self.config = self.case.inst_config
-        self.config.imerge(self._config)
+        self.config.imerge(self._base_config)
         
         self._fmode = self.case.telemetry.fmode
         if hasattr(self.case.telemetry,'_fmode_dmtransfer'):
