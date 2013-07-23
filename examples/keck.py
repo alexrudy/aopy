@@ -26,37 +26,14 @@ ipydb()
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_pdf import PdfPages
 
-Data = WCAOCase("Keck","20070730_2",(WCAOCase.__module__,'telemetry.yml'))
+Data = WCAOCase("Keck","20070730_2")
 Plan = FourierModeEstimator().setup(Data)
 Plan.estimate()
 Plan.finish()
 
 print(Data)
-configure_logging(pyshell.PYSHELL_LOGGING)
 
-pdf = PdfPages(Data.name+".pdf")
-
-fig = plt.figure()
-ax = fig.add_subplot(1,1,1)
-Data.results["FT"].show_metric(ax)
-pdf.savefig(fig)
-
-fig = plt.figure()
-ax = fig.add_subplot(1,1,1)
-Data.results["FT"].show_peak_fit(ax,0,5)
-pdf.savefig(fig)
-
-fig = plt.figure()
-Data.results["FT"].show_fit(fig)
-pdf.savefig(fig)
-
-fig = plt.figure()
-ax = fig.add_subplot(1,1,1)
-Data.results["FT"].show_peaks(ax)
-pdf.savefig(fig)
-
-pdf.close()
-print("Saved to {:s}".format(Data.name+".pdf"))
+Data.results["FT"].make_pdf()
 
 Data.results["FT"].save(clobber=True)
 Data.results["FT"].save(single=False,clobber=True)

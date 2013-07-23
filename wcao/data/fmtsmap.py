@@ -258,7 +258,7 @@ class WCAOFMTSMap(WCAOEstimate):
         with fits.open(filename) as HDUs:
             self._load_by_type(HDUs[1])
             
-        
+    
     @property
     def omega(self):
         """Angular Frequency :math:`\Omgea`"""
@@ -571,6 +571,33 @@ class WCAOFMTSMap(WCAOEstimate):
         cbar = self._metric_format(ax,self.possible)
         cbar.set_label("N")
         self._header(ax.figure)
-    
+        
+    def make_pdf(self):
+        """docstring for make_pdf"""
+        import matplotlib.pyplot as plt
+        from matplotlib.backends.backend_pdf import PdfPages
+        
+        pdf = PdfPages(self.figname("pdf",figtype="all"))
 
+        fig = plt.figure()
+        ax = fig.add_subplot(1,1,1)
+        self.show_metric(ax)
+        pdf.savefig(fig)
+
+        fig = plt.figure()
+        ax = fig.add_subplot(1,1,1)
+        self.show_peak_fit(ax,0,5)
+        pdf.savefig(fig)
+
+        fig = plt.figure()
+        self.show_fit(fig)
+        pdf.savefig(fig)
+
+        fig = plt.figure()
+        ax = fig.add_subplot(1,1,1)
+        self.show_peaks(ax)
+        pdf.savefig(fig)
+
+        pdf.close()
+        self.log.info("Saved to {:s}".format(self.figname("pdf",figtype="all")))
         
