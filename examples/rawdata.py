@@ -15,7 +15,7 @@ import os, os.path
 import numpy as np
 
 from wcao.estimators.fmts import FourierModeEstimator,FMTSVisualizer
-from wcao.data.core import WCAOCase
+from wcao.data.case import WCAOCase
 from pyshell.loggers import getSimpleLogger
 from pyshell.util import ipydb
 

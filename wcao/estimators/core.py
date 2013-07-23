@@ -46,7 +46,7 @@ class BaseEstimator(Base):
     
     @abc.abstractmethod
     def setup(self,data):
-        """Setup from an instance of :class:`wcao.data.core.case`. The :class:`~wcao.data.core.case` can be held as a member object and used throughout :meth:`estimate`.
+        """Setup from an instance of :class:`wcao.data.case.case`. The :class:`~wcao.data.case.case` can be held as a member object and used throughout :meth:`estimate`.
         
         """
         pass
@@ -54,11 +54,11 @@ class BaseEstimator(Base):
     @abc.abstractmethod
     def estimate(self):
         """
-        Do the estimation of the wind magnitude and direction. This method is the method which will be profiled, so it should be fast. It can refer to the :class:`wcao.data.core.case` initialized in :meth:`setup`. It should do **only** the estimation.
+        Do the estimation of the wind magnitude and direction. This method is the method which will be profiled, so it should be fast. It can refer to the :class:`wcao.data.case.case` initialized in :meth:`setup`. It should do **only** the estimation.
         """
         pass
         
     @abc.abstractmethod
     def finish(self):
-        """Return the estimate to the original :class:`wcao.data.core.case` object. This method should clean up and record data, such that the :meth:`estimate` method could be called again."""
+        """Return the estimate to the original :class:`wcao.data.case.case` object. This method should clean up and record data, such that the :meth:`estimate` method could be called again."""
         pass

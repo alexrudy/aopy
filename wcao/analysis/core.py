@@ -39,7 +39,7 @@ class WCAOPipeline(Pipeline):
         
     def load_case(self):
         """Loading case."""
-        from wcao.data.core import WCAOCase
+        from wcao.data.case import WCAOCase
         self.data = WCAOCase(self.config["Instrument.name"],self.config["Instrument.case"])
 
         

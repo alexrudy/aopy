@@ -16,7 +16,7 @@ import os, os.path
 
 import numpy as np
 
-from wcao.data.core import WCAOCase
+from wcao.data.case import WCAOCase
 from wcao.data.fmtsmap import WCAOFMTSMap
 from pyshell.loggers import getSimpleLogger, configure_logging
 from pyshell.util import ipydb

@@ -7,7 +7,7 @@
 #  Copyright 2013 Alexander Rudy. All rights reserved.
 # 
 """
-:mod:`wcao.data.core` – WCAO Data Structures
+:mod:`wcao.data.case` – WCAO Data Structures
 ============================================
 
 .. autoclass::
