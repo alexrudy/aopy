@@ -45,6 +45,8 @@ tests/pkg
 *.mp4
 *.pdf
 *.txt
+/*.yml
+*.dat
 
 *.profile
 profile/*
