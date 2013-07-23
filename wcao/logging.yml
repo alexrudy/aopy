@@ -1,0 +1,56 @@
+logging:
+  version: 1
+  disable_existing_loggers: false
+  formatters:
+    stdout:
+      (): pyshell.loggers.ColorStreamFormatter
+      format: "%(color)s%(levelname)-8s%(nocolor)s --> %(message)s [%(name)s]"
+    file:
+      format: "%(asctime)s : %(levelname)s : %(processName)s %(message)s"
+  handlers:
+    console:
+      class: logging.StreamHandler
+      formatter: stdout
+      level: INFO
+    file:
+      class : logging.handlers.TimedRotatingFileHandler
+      formatter: file
+      when: 'H'
+      interval: 2
+      filename: wcao.log
+      backupCount: 2
+      encoding: utf-8
+    warnings:
+      class : logging.handlers.TimedRotatingFileHandler
+      formatter: file
+      when: 'H'
+      interval: 2
+      filename: wcao.warnings.log
+      backupCount: 2
+      encoding: utf-8
+      level: WARNING
+  loggers:
+    py.warnings:
+      handlers:
+        - warnings
+        - console
+    wcao:
+      handlers:
+        - file
+        - console
+      level: DEBUG
+    wcao.estimators.fmts.create_layer_metric:
+      handlers:
+        - file
+      level: DEBUG
+      propagate: false
+    wcao.estimators.fmts.find_and_fit_peak:
+      handlers:
+        - file
+      level: DEBUG
+      propagate: false
+    wcao.estimators.fmts.find_layers:
+      handlers:
+        - file
+      level: DEBUG
+      propagate: false
