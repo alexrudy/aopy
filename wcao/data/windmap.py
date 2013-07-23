@@ -72,6 +72,44 @@ class WCAOMap(WCAOEstimate):
             if len(data) == 3:
                 self.map, self.vx, self.vy = data
                 
+    
+    def _load_IDL_format_fits(self,filename):
+        """Load wind map information from IDL"""
+        from astropy.io import fits
+        
+        with fits.open(filename) as HDUs:
+            for HDU in HDUs:
+                if HDU.header["DTYPE"] == 'Wind Map':
+                    self.map = HDU.data.copy()
+                elif HDU.header["DTYPE"] == 'Wind vx scale':
+                    self.vx = HDU.data.copy()
+                elif HDU.header["DTYPE"] == 'Wind vy scale':
+                    self.vy = HDU.data.copy()
+                elif HDU.header["DTYPE"] == 'Wind Layer List':
+                    layer_list = np.atleast_2d(HDU.data.copy())
+                    layers = []
+                    for row in layer_list:
+                        layers.append({
+                            "vx" : row[0],
+                            "vy" : row[1],
+                            "m"  : row[2],
+                        })
+                    self.layers = layers
+        
+    
+    def save(self):
+        """Save a file"""
+        HDU = save_map(self.map, self.vx, self.vy, "WCAOWLLM")
+        HDU.writeto(self.fitsname, clobber=True)
+    
+    def load(self):
+        """Load a file"""
+        from astropy.io import fits
+        
+        with fits.open(self.fitsname) as HDUs:
+            self._init_data(load_map("WCAOWLLM",scale=True))
+    
+    
     @property
     def extent(self):
         """The extent array for this map."""
