@@ -27,9 +27,9 @@ class WCAOTimeseries(WCAOEstimate):
             return
         data = np.array(data)
         if data.ndim != 3:
-            raise ValueError("{0:s}-type data should have 3 dimensions: (time,layer,coord). data.ndim={1.ndim:d}".format(self._arraytype,data))
+            raise ValueError("{0:s}-type data should have 3 dimensions: (time,layer,x/y). data.ndim={1.ndim:d}".format(self._arraytype,data))
         if data.shape[2] != 2:
-            raise ValueError("{0:s}-type data should have shape (time,nlayers,2). data.shape={1.shape!r}".format(self._arraytype,data))
+            raise ValueError("{0:s}-type data should have shape (1(time),nlayers,2(x/y)). data.shape={1.shape!r}".format(self._arraytype,data))
         self._data = data
         
         
@@ -116,6 +116,7 @@ class WCAOTimeseries(WCAOEstimate):
             circle_patch = make_circles(circles,color='w')
             [ ax.add_artist(a) for a in circle_patch ]
             rv += circle_patch
+        
         for layer in range(self.nlayers):
             (counts, xedges, yedges, Image) = ax.hist2d(data[:,layer,0],data[:,layer,1],**kwargs)
             rv.append(Image)
