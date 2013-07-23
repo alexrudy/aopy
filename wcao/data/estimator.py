@@ -217,15 +217,14 @@ class WCAOEstimate(object):
             arraytype = self._arraytype,
         )
     
-    @property
-    def figname(self):
+    def figname(self, ext, figtype):
         """Figure name"""
         return self._figurename.format(
             instrument = self.case.instrument,
             name = self.case.casename,
-            ext = self.config.get("WCAOEstimate.Data.npy.ext","npy"),
+            ext = ext,
             datatype = self._datatype,
-            figtype = "{figtype:s}",
+            figtype = figtype,
         )
         
     @abc.abstractmethod

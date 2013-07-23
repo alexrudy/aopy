@@ -88,7 +88,12 @@ class WCAOTelemetry(ConsoleContext):
     
     def filepath(self,kind,prepend="data",ext="fits"):
         """Make a filepath for this case"""
-        return os.path.expanduser(os.path.join(self.case.inst_config["data.root"],"data",self.case.instrument,kind,self.filename(prepend,ext)))
+        return os.path.expanduser(os.path.join(
+            self.case.inst_config["data.root"],
+            "data",
+            self.case.instrument,
+            kind,
+            self.filename(prepend,ext)))
         
     def _load_simulated(self):
         """Generate simulated data"""
