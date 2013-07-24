@@ -49,6 +49,11 @@ logging:
         - file
       level: DEBUG
       propagate: false
+    wcao.estimators.fmts.joint_fit_peaks:
+      handlers:
+        - file
+      level: DEBUG
+      propagate: false
     wcao.estimators.fmts.find_layers:
       handlers:
         - file
