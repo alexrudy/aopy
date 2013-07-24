@@ -41,13 +41,16 @@ distribute-*.tar.gz
 
 tests/pkg
 
+# Data file formats.
 *.fits
 *.mp4
 *.pdf
 *.txt
 /*.yml
 *.dat
+/data/*
 
+# Logging etc.
 *.profile
 profile/*
 *.log*

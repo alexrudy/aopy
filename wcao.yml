@@ -27,3 +27,9 @@ Telemetry:
           raw_format: 'fits'
           raw_remap: 'gems_wfs'
           raw_trans: 'ones'
+        '11360204434_pol_wfs2':
+          type: 'pseudo-open-loop-slopes'
+          raw_data: 'data/gems/raw/sPOL11109092452_slopes.fits'
+          raw_format: 'fits'
+          raw_remap: 'gems_wfs'
+          raw_trans: 'ones'

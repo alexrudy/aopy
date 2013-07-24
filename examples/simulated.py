@@ -20,31 +20,17 @@ from pyshell.loggers import getSimpleLogger, configure_logging
 from pyshell.util import ipydb
 import pyshell
 
-# configure_logging(pyshell.PYSHELL_LOGGING)
-
 ipydb()
 
 import matplotlib.pyplot as plt
 
-Data = WCAOCase("keck_simulated","sim_1",(WCAOCase.__module__,'telemetry.yml'))
+Data = WCAOCase("keck_simulated","sim_0")
 Plan = FourierModeEstimator().setup(Data)
 Plan.estimate()
 Plan.finish()
-fig = plt.figure()
-ax = fig.add_subplot(1,1,1)
-Data.results["FT"].show_metric(ax)
+print(Data)
 
-fig = plt.figure()
-ax = fig.add_subplot(1,1,1)
-Data.results["FT"].show_peak_fit(ax,0,12)
-fig = plt.figure()
-ax = fig.add_subplot(1,1,1)
-Data.results["FT"].show_mask(ax)
-fig = plt.figure()
-Data.results["FT"].show_fit(fig)
-fig = plt.figure()
-ax = fig.add_subplot(1,1,1)
-Data.results["FT"].show_peaks(ax)
+Data.results["FT"].make_pdf()
 
-plt.show()
-
+Data.results["FT"].save(clobber=True)
+Data.results["FT"].save(single=False,clobber=True)
