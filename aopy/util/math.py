@@ -145,16 +145,20 @@ def lodtorec(listofdicts,order=None,dtypes=None):
     The first item in `listofdicts` is used as the master list of keys, and is used to type the resulting numpy arrays, unless both order and dtypes are provided.
     
     """
-    
     nrows = len(listofdicts)
     columns = {}
     
+    keys = set(order)
+    for row in listofdicts:
+        keys += set(row.keys())
+    
+    keys = list(keys)
     # Set up the datatypes
     if order is not None and dtypes is not None:
         for key,dtype in zip(order,dtypes):
             columns[key] = np.empty(nrows, dtype=dtype)
     else:
-        for col in listofdicts[0].keys():
+        for col in key:
             columns[col] = np.empty(nrows, dtype=type(listofdicts[0][col]))
     
     # Convert to a recrod array, with proper error catching.
