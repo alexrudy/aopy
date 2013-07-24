@@ -30,7 +30,7 @@ def set_v_metric_headers(hdu,vx,vy):
     hdu.header["WCAOmayv"] = (np.max(vy), "Maximum searched y velocity")
     hdu.header["WCAOmiyv"] = (np.min(vy), "Minimum searched y velocity")
     hdu.header["WCAOnuyv"] = (len(vy), "Number of y velocity gridpoints")
-    hdu.header["WCAOrecv"] = ("np.linspace(WCAOMI?V,WCAOMA?V,WCAONU?V)","Psuedocode to reconstruct velocity grids.")
+    hdu.header["WCAOrecv"] = ("np.linspace(WCAOMI?V,WCAOMA?V,WCAONU?V)","Reconstruct velocity grids.")
     return hdu
     
     

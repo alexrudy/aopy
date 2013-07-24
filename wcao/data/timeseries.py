@@ -29,17 +29,21 @@ class WCAOTimeseries(WCAOEstimate):
         if data.ndim != 3:
             raise ValueError("{0:s}-type data should have 3 dimensions: (time,layer,x/y). data.ndim={1.ndim:d}".format(self._arraytype,data))
         if data.shape[2] != 2:
-            raise ValueError("{0:s}-type data should have shape (1(time),nlayers,2(x/y)). data.shape={1.shape!r}".format(self._arraytype,data))
+            raise ValueError("{0:s}-type data should have shape (ntime,nlayers,2(x/y)). data.shape={1.shape!r}".format(self._arraytype,data))
         self._data = data
         
-        
+    
+    def apply_clip(self,data):
+        """docstring for apply_clip"""
+        if isinstance(self.clip,slice):
+            return data[self.clip,...]
+        else:
+            return data
+    
     @property
     def data(self):
         """docstring for data"""
-        if isinstance(self.clip,slice):
-            return self._data[self.clip,...]
-        else:
-            return self._data
+        return self.apply_clip(self._data)
         
     @property
     def nlayers(self):
@@ -61,6 +65,16 @@ class WCAOTimeseries(WCAOEstimate):
         if filename is None:
             filename = self.npyname
         self._init_data(np.load(filename))
+        
+    def load_IDL(self,filename,method_index=0):
+        """Load the IDL format of this data."""
+        from astropy.io import fits
+        
+        with fits.open(filename) as HDUs:
+            data = HDUs[0].data.copy()[:,:2,method_index]
+            data = data[:,np.newaxis,:]
+        self._init_data(data)
+            
             
     def save(self,filename=None):
         """Save the data to a numpy file."""
@@ -75,10 +89,10 @@ class WCAOTimeseries(WCAOEstimate):
         rv = np.zeros_like(self.data)
         for layer in range(self.nlayers):
             for i in [0,1]:
-                rv[:,layer,i] = smooth(self.data[:,layer,i],window,mode)
+                rv[:,layer,i] = self.apply_clip(smooth(self._data[:,layer,i],window,mode))
         return rv
     
-    def timeseries(self,ax,coord=0,smooth=dict(window=100,mode='flat'),**kwargs):
+    def timeseries(self,ax,coord=0,smooth=dict(window=100,mode='flat'),rasterize=True,**kwargs):
         """Plot a timeseries on the given axis."""
         rv = []
         if smooth:                
@@ -94,7 +108,7 @@ class WCAOTimeseries(WCAOEstimate):
             mdata = np.sqrt(np.sum(data**2.0,axis=2))
             for layer in range(self.nlayers):
                 rv += list(ax.plot(self.time,mdata[:,layer],**kwargs))
-        if len(data) > 1e3:
+        if rasterize and len(data) > 1e3:
             [ patch.set_rasterized(True) for patch in rv ]
         return rv
         
@@ -108,7 +122,7 @@ class WCAOTimeseries(WCAOEstimate):
         size = kwargs.pop("size",False)
         if size:
             kwargs["range"] = [[-size,size],[-size,size]]
-        title = kwargs.pop("label",r"{:s} \verb+{:s}+ {:s}".format(self.longname,self.case.casename,self.case.instrument))
+        title = kwargs.pop("label",r"{:s} \verb+{:s}+ {:s}".format(self.longname,self.case.casename,self.case.instrument.replace("_"," ")))
         ax.set_title(title)
         circles = kwargs.pop("circles",[10,20,30,40])
         rv = []
@@ -126,15 +140,18 @@ class WCAOTimeseries(WCAOEstimate):
         """Do the basic threepanel plot"""
         if len(fig.axes) != 3:
             axes = [ fig.add_subplot(3,1,i+1) for i in range(3) ]
-            title = kwargs.pop("label",r"{:s} \verb+{:s}+ {:s}".format(self.longname,self.case.casename,self.case.instrument))
+            title = kwargs.pop("label",r"{:s} \verb+{:s}+ {:s}".format(self.longname,self.case.casename,self.case.instrument.replace("_"," ")))
             fig.suptitle(title)
         else:
             axes = fig.axes
         labels = ["$w_x$","$w_y$","$|w|$"]
         for i in range(3):
             label = labels[i]
-            self.timeseries(axes[i],coord=i,label="Wind {:s}".format(label),marker='.',alpha=0.2,**kwargs)
+            self.timeseries(axes[i],coord=i,smooth=False,label="Wind {:s}".format(label),marker='.',alpha=0.2,**kwargs)
             self.timeseries(axes[i],coord=i,smooth=smooth,label="Wind {:s}".format(label),marker='None',ls='-',alpha=1.0,**kwargs)
             axes[i].set_title("Wind {:s}".format(label))
             axes[i].set_ylabel("Speed (m/s)")
+            if i == 2:
+                ym, yp = axes[i].get_ylim()
+                axes[i].set_ylim(0,yp)
         return fig

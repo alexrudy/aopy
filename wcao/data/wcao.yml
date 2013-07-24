@@ -1,0 +1,8 @@
+Data:
+  figure:
+    directory: figures
+    template: "{datatype:s}_{figtype:s}_{instrument:s}_{name:s}.{ext:s}"
+  output:
+    directory: data
+    template: "{datatype:s}_{arraytype:s}_{instrument:s}_{name:s}.{ext:s}"
+    

@@ -50,7 +50,7 @@ class WCAOCase(ConsoleContext):
             module=__name__,
             cfg=configuration,
             defaultcfg="wcao.yml",
-            supercfg=[('wcao','telemetry.yml'),('wcao','logging.yml')])
+            supercfg=[('wcao.data','telemetry.yml'),('wcao','logging.yml')])
         pyshell.loggers.configure_logging(self._config)
         self.instrument = instrument
         self.casename = casename

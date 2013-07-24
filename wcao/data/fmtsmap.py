@@ -104,7 +104,8 @@ class WCAOFMTSMap(WCAOEstimate):
         self._save_peaks(filename+"_peaks.fits", clobber)
         self._save_metric(filename+'_metric.fits', clobber)
         self._save_match_info(filename+"_match.fits", clobber)
-        self._save_layer_info(filename+"_layers.fits", clobber)
+        if self.layers:
+            self._save_layer_info(filename+"_layers.fits", clobber)
         
     def _save_single(self, filename, clobber=False):
         """docstring for _save_single"""
@@ -114,7 +115,8 @@ class WCAOFMTSMap(WCAOEstimate):
         HDUs.append(save_periodogram(self.psd,self.rate))
         HDUs.append(save_peaks(self.peaks,self.npeaks))
         HDUs += save_match_info(self.match_info)
-        HDUs.append(save_layer_info(self.layers))
+        if self.layers:
+            HDUs.append(save_layer_info(self.layers))
         for HDU in HDUs:
             set_result_header_values(HDU, self.case, self.config)
         HDUs.writeto(self.fitsname, clobber=clobber)
@@ -554,7 +556,7 @@ class WCAOFMTSMap(WCAOEstimate):
         self._metric_circles(ax)
         ax.set_title("Peak Metric")
         for i,layer in enumerate(self.layers):
-            print("Plotting layer at {vx:.2f},{vy:.2f} with match {m:f}".format(**layer))
+            self.log.info("Plotting layer at {vx:.2f},{vy:.2f} with match {m:f}".format(**layer))
             ax.plot(layer['vx'],layer['vy'],'ko',alpha=0.2)
             ax.annotate("{:d}".format(i+1),(layer['vx'],layer['vy']),
                 color='k',bbox=dict(fc='w'),xytext=(-10,10),textcoords='offset points')

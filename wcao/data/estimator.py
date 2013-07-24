@@ -133,6 +133,7 @@ class WCAOEstimate(object):
         'XY' : "Split 2D Binary Search",
         'FT' : "Time-Domain Fourier Transform",
         '2L' : "2-Layer Gauss Newton",
+        'FS' : "Time-Domain Fourier Transform Series"
     }
     
     ARRAYTYPE = {
@@ -142,6 +143,7 @@ class WCAOEstimate(object):
     'XY' : "NLTS",
     'FT' : "WLLM",
     '2L' : "NLTS",
+    'FS' : "NLTS",
     }
     
     __metaclass__ = abc.ABCMeta
@@ -157,12 +159,12 @@ class WCAOEstimate(object):
         self._data = data
         self._config = self.case.config
         self._figurename = os.path.join(
-            self.config.get("data.figure.directory","figures"),
-            self.config.get("data.figure.template","{datatype:s}_{figtype:s}_{instrument:s}_{name:s}.{ext:s}"),
+            self.config.get("Data.figure.directory",""),
+            self.config["Data.figure.template"],
             )
         self._dataname = os.path.join(
-            self.config.get("{:s}.Data.directory".format(self.__class__.__name__),""),
-            self.config.get("{:s}.Data.template".format(self.__class__.__name__),"{datatype:s}_{arraytype:s}_{instrument:s}_{name:s}.{ext:s}")
+            self.config.get("Data.output.directory",""),
+            self.config["Data.output.template"]
         )
         self._init_data(data)
         
@@ -248,9 +250,9 @@ class WCAOEstimate(object):
         """Add this object's header"""
         inst = self.case.instrument.replace("_"," ")
         ltext = r"{instrument:s} during \verb|{casename:s}|".format(instrument=inst,casename=self.case.casename)
-        fig.text(0.02,0.98,ltext,ha='left')
+        fig.text(0.02,0.98,ltext,ha='left',va='top')
         
         today = datetime.date.today().isoformat()
         rtext = r"Analysis on {date:s} with {config:s}".format(date=today,config=self.case.config.hash)
-        fig.text(0.98,0.98,rtext,ha='right')
+        fig.text(0.98,0.98,rtext,ha='right',va='top')
         
