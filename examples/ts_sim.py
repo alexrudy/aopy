@@ -58,8 +58,8 @@ print("FS: {mean:5.2f} ±{std:5.2f}".format(
     std=np.std(mag(Data.results["TS"].data[:,0,:])),
 ))
 print("GN: {mean:5.2f} ±{std:5.2f}".format(
-    mean=np.mean(mag(Data.results["GN"].smoothed(1024,'flat')[:,0,:])),
-    std=np.std(mag(Data.results["GN"].smoothed(1024,'flat')[:,0,:])),
+    mean=np.mean(mag(Data.results["GN"].smoothed(1024,'flat')[100:,0,:])),
+    std=np.std(mag(Data.results["GN"].smoothed(1024,'flat')[100:,0,:])),
 ))
 # Figures
 
@@ -70,7 +70,7 @@ Data.results["TS"].threepanelts(fig,smooth=False)
 fig.savefig(Data.results["TS"].figname("pdf","FS3p"))
 ax = plt.figure(figsize=(10,4)).add_subplot(111)
 Data.results["GN"].timeseries(ax,2,smooth=dict(window=1024,mode='flat'))
-Data.results["TS"].timeseries(ax,2,smooth=False)
+Data.results["TS"].timeseries(ax,2,smooth=False,marker='.')
 ax.set_ylim(0,ax.get_ylim()[1])
 ax.set_ylabel(r"Wind $(m/s)$")
 ax.set_xlabel(r"Time $(s)$")
