@@ -163,7 +163,8 @@ class ManyLayerScreen(BlowingScreen):
         
         if strength is None:
             strength = np.ones((vel.shape[0],))
-        
+        else:
+            strength = np.array(strength)
         if vel.shape[0] != strength.shape[0]:
             raise ValueError("Must provide same number of layer strengths as layer velocities!")
         
