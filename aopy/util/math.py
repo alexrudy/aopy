@@ -150,7 +150,7 @@ def lodtorec(listofdicts,order=None,dtypes=None):
     
     keys = set(order)
     for row in listofdicts:
-        keys += set(row.keys())
+        keys.update(row.keys())
     
     keys = list(keys)
     # Set up the datatypes
@@ -158,7 +158,7 @@ def lodtorec(listofdicts,order=None,dtypes=None):
         for key,dtype in zip(order,dtypes):
             columns[key] = np.empty(nrows, dtype=dtype)
     else:
-        for col in key:
+        for col in keys:
             columns[col] = np.empty(nrows, dtype=type(listofdicts[0][col]))
     
     # Convert to a recrod array, with proper error catching.
