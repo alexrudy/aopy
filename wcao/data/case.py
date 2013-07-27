@@ -52,10 +52,14 @@ class WCAOCase(ConsoleContext):
             defaultcfg="wcao.yml",
             supercfg=[('wcao.data','telemetry.yml'),('wcao','logging.yml')])
         pyshell.loggers.configure_logging(self._config)
+        
+        
         self.instrument = instrument
         self.casename = casename
         self.results = {}
         self.telemetry = WCAOTelemetry(self)
+        
+        
         
     def __str__(self):
         """Make a pretty string format of the contents of this WCAO case."""
