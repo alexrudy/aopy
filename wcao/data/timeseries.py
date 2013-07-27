@@ -11,6 +11,8 @@ from __future__ import (absolute_import, unicode_literals, division,
 
 import numpy as np
 
+import collections
+
 from .estimator import WCAOEstimate
 
 
@@ -118,22 +120,27 @@ class WCAOTimeseries(WCAOEstimate):
             data = self.smoothed(**smooth)
         else:
             data = self.data
+        xlabel = kwargs.pop("xlabel",r"$v_x\; \mathrm{(m/s)}$")
+        ylabel = kwargs.pop("ylabel",r"$v_y\; \mathrm{(m/s)}$")
         kwargs.setdefault("bins",51)
         size = kwargs.pop("size",False)
         if size:
             kwargs["range"] = [[-size,size],[-size,size]]
         title = kwargs.pop("label",r"{:s} \verb+{:s}+ {:s}".format(self.longname,self.case.casename,self.case.instrument.replace("_"," ")))
         ax.set_title(title)
+        if xlabel:
+            ax.set_xlabel(xlabel)
+        if ylabel:
+            ax.set_ylabel(ylabel)
         circles = kwargs.pop("circles",[10,20,30,40])
         rv = []
-        if isinstance(circles,collections.Sequence):
-            circle_patch = make_circles(circles,color='w')
-            [ ax.add_artist(a) for a in circle_patch ]
-            rv += circle_patch
-        
+        counting = []
         for layer in range(self.nlayers):
             (counts, xedges, yedges, Image) = ax.hist2d(data[:,layer,0],data[:,layer,1],**kwargs)
             rv.append(Image)
+        
+        if isinstance(circles,collections.Sequence):
+            rv += self._circles(ax,dist=circles)
         return rv
         
     def threepanelts(self,fig,smooth=dict(window=100,mode='flat'),**kwargs):
@@ -147,11 +154,38 @@ class WCAOTimeseries(WCAOEstimate):
         labels = ["$w_x$","$w_y$","$|w|$"]
         for i in range(3):
             label = labels[i]
-            self.timeseries(axes[i],coord=i,smooth=False,label="Wind {:s}".format(label),marker='.',alpha=0.2,**kwargs)
-            self.timeseries(axes[i],coord=i,smooth=smooth,label="Wind {:s}".format(label),marker='None',ls='-',alpha=1.0,**kwargs)
+            self.timeseries(axes[i],coord=i,smooth=False,label="Wind {:s}".format(label),marker='.',alpha=0.1,ls='None',**kwargs)
+            self.timeseries(axes[i],coord=i,smooth=smooth,label="Wind {:s}".format(label),marker='None',ls='-',alpha=1.0,lw=2.0,**kwargs)
             axes[i].set_title("Wind {:s}".format(label))
             axes[i].set_ylabel("Speed (m/s)")
+            
+        lims = []
+        for i in range(2):
+            lims += list(axes[i].get_ylim())
+        
+        for i in range(3):
             if i == 2:
-                ym, yp = axes[i].get_ylim()
-                axes[i].set_ylim(0,yp)
+                ym,yp = axes[i].get_ylim()
+                axes[i].set_ylim(0.0,yp)
+                axes[i].set_xlabel("Time (s)")
+            else:
+                axes[i].set_ylim(min(lims),max(lims))
+        
         return fig
+        
+    def _circles(self,ax,dist=10,origin=[0,0],color='w',crosshair=True):
+        """Show circles"""
+        from matplotlib.patches import Circle
+        from matplotlib.lines import Line2D
+        circles = [Circle(origin,R,fc='none',ec=color,ls='dashed',zorder=0.1) for R in dist]
+        if crosshair:
+            Rmax = max(dist)
+            major = [ -Rmax, Rmax ]
+            minor = [ 0 , 0 ]
+            coords = [ (major,minor), (minor,major)]
+            for xdata,ydata in coords:
+                circles.append(
+                    Line2D(xdata,ydata,ls='dashed',color=color,marker='None',zorder=0.1)
+                )
+        [ ax.add_artist(a) for a in circles ]
+        return circles
