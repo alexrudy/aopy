@@ -61,7 +61,7 @@ class BlowingScreen(Screen):
         screen = BlowingScreen((10,10),r0=2,vel=[1.0,0.0]).setup()
     
     """ 
-    def __init__(self, shape, r0, seed=None, vel=None, tmax=100, delay=False, **kwargs):
+    def __init__(self, shape, r0, seed=None, vel=None, tmax=100, delay=False, order=3, **kwargs):
         super(BlowingScreen, self).__init__(shape, r0, seed, delay=True, **kwargs)
         if vel is None:
             vel = [1.0,0.0]
@@ -71,6 +71,7 @@ class BlowingScreen(Screen):
         self._outshape = tuple(np.copy(self.shape).astype(np.int))
         self._shape = tuple((np.array(self.shape) + np.abs(self._vel) * np.ceil(self._tmax / self._du)).astype(np.int))
         self._all = None
+        self._order = order
         
         if not delay:
             self.setup()
@@ -101,7 +102,7 @@ class BlowingScreen(Screen):
         shifted = scipy.ndimage.interpolation.shift(
             input = self.screen,
             shift = shift,
-            order = 1, #Linear interpolation!
+            order = self._order,
             mode = 'wrap', #So we go in circles!
         )
         n,m = self._outshape
@@ -203,7 +204,7 @@ class ManyLayerScreen(BlowingScreen):
             shifted[i,...] = scipy.ndimage.interpolation.shift(
                 input = screen,
                 shift = shift,
-                order = 1, #Linear interpolation!
+                order = self._order,
                 mode = 'wrap', #So we go in circles!
             )
         n,m = self._outshape
