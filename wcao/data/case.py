@@ -59,6 +59,10 @@ class WCAOCase(ConsoleContext):
         self.results = {}
         self.telemetry = WCAOTelemetry(self)
         
+        if ".".join(["Telemetry",self.instrument]) not in self.config:
+            raise Exception("Unknown instrument '{:s}'".format(self.instrument))
+        if ".".join(["Telemetry",self.instrument,"data","cases",self.casename]) not in self.config:
+            raise Exception("Unknown casename '{:s}' for instrument '{:s}'".format(self.casename,self.instrument))
         
         
     def __str__(self):
