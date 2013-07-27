@@ -37,7 +37,6 @@ class WCAOTelemetry(ConsoleContext):
         self._fmode = None
         self.fmode_path = self.filepath("proc","fmodes","fits")
         self.raw_path = os.path.expanduser(os.path.join(self.case.inst_config["data.root"],self.case.inst_config["data.cases.{0.casename:s}.raw_data".format(self.case)]))
-        self.data_config = self.case.inst_config["data.cases.{0.casename:s}".format(self.case)]
         self.log = pyshell.getLogger(__name__)
         
     def __str__(self):
@@ -50,6 +49,12 @@ class WCAOTelemetry(ConsoleContext):
             rate = self.case.rate,
         )
         
+    @property
+    def data_config(self):
+        """Access for the data configuration."""
+        return self.case.inst_config["data.cases.{0.casename:s}".format(self.case)]
+    
+    
     @property
     def phase(self):
         """A phase property that properly falls through to loading functions."""
