@@ -41,7 +41,7 @@ class PhasePlayer(pyshell.CLIEngine):
         self.I = self.ax.imshow(self.ffile[0].data[0,...],interpolation='nearest',vmin=self.vlim[0],vmax=self.vlim[1])
         self.fig.colorbar(self.I)
         self.ax.set_title("Phase at t=%5d/%5d" % (0,self.ntime))
-        self.anim = animation.FuncAnimation(self.fig, self.animate, frames=500, interval=20)
+        self.anim = animation.FuncAnimation(self.fig, self.animate, frames=self.ntime, interval=20)
         self.anim.save(self.opts.movie, fps=30, extra_args=['-vcodec', 'libx264'],
         writer='ffmpeg_file',)
         # plt.show()
