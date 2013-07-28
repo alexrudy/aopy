@@ -41,6 +41,9 @@ import warnings, logging
 # Numpy
 import numpy as np
 
+import astropy.units as u
+from ..util.units import ensure_quantity
+
 from .screen import Screen, _generate_screen
 
 class BlowingScreen(Screen):
@@ -53,6 +56,7 @@ class BlowingScreen(Screen):
     :param list vel: The velocity, ``[v_x,v_y]``, in meters/second
     :param float tmax: The amount of time to generate phase for, in seconds. Timesteps 
         beyond this value will see the screen wrapped around and started from the beginning.
+    :param float dt: Timestep size, in seconds.
     :param float du: pixel size, in meters
     :param int nsh: Number of subharmonics. (default``=0`` for no subharmonics)
     
@@ -61,17 +65,21 @@ class BlowingScreen(Screen):
         screen = BlowingScreen((10,10),r0=2,vel=[1.0,0.0]).setup()
     
     """ 
-    def __init__(self, shape, r0, seed=None, vel=None, tmax=100, delay=False, order=3, **kwargs):
+    def __init__(self, shape, r0, seed=None, vel=None, tmax=100, dt=1, delay=False, order=3, **kwargs):
         super(BlowingScreen, self).__init__(shape, r0, seed, delay=True, **kwargs)
         if vel is None:
             vel = [1.0,0.0]
-        self._vel = np.array(vel)
-        self._vel.flags.writeable = False
-        self._tmax = tmax
+        vel = np.array(vel)
+        if vel.shape != (2,):
+            raise ValueError("Velocity must have shape (2,), not {}".format(vel.shape))
+        self._vel = ensure_quantity(vel,unit=u.meter/u.second)
+        self._tmax = ensure_quantity(tmax, unit=u.second)
+        self._dt = ensure_quantity(dt, unit=u.second)
         self._outshape = tuple(np.copy(self.shape).astype(np.int))
-        self._shape = tuple((np.array(self.shape) + np.abs(self._vel) * np.ceil(self._tmax / self._du)).astype(np.int))
+        self._shape = tuple((np.array(self.shape) + np.abs(self._vel) * np.ceil(self._tmax / self._du)).to(1).value.astype(np.int))
         self._all = None
         self._order = order
+        self._ti = 0
         
         if not delay:
             self.setup()
@@ -81,6 +89,23 @@ class BlowingScreen(Screen):
     def velocity(self):
         """The wind velocity vector for this screen. A 1-dimensional array with ``[v_x,v_y]``. **Read-Only**"""
         return self._vel
+        
+    @property
+    def dt(self):
+        """Timestep"""
+        return self._dt
+        
+    @property
+    def counter(self):
+        """The current counter value"""
+        return self._ti
+        
+    @counter.setter
+    def counter(self,value):
+        if value < 2*len(self):
+            self._ti = value % len(self)
+        else:
+            raise ValueError("Cannot set loop counter greater than length {}".format(len(self)))
     
     def setup(self):
         """Generates the filter and the screen over which the system will interpolate.
@@ -98,9 +123,9 @@ class BlowingScreen(Screen):
         :returns: The screen for this timestep.
         """
         import scipy.ndimage.interpolation
-        shift = t * self._vel / self._du
+        shift = (ensure_quantity(t,u.second) * self._vel / self._du).to(1).value
         shifted = scipy.ndimage.interpolation.shift(
-            input = self.screen,
+            input = self._screen,
             shift = shift,
             order = self._order,
             mode = 'wrap', #So we go in circles!
@@ -108,9 +133,15 @@ class BlowingScreen(Screen):
         n,m = self._outshape
         return shifted[:n,:m]
         
+    @property
+    def screen(self):
+        """Counter movement screen"""
+        self.counter += 1
+        return self.get_screen(self._ti * self._dt)
+        
     def __len__(self):
         """Length"""
-        return self._tmax
+        return self._tmax//self._dt
         
     @property
     def screens(self):
@@ -123,8 +154,8 @@ class BlowingScreen(Screen):
             
         
         """
-        for _t in range(self._tmax):
-            yield self.get_screen(_t)
+        for _i in range(len(self)):
+            yield self.screen
             
     @property
     def all(self):
@@ -132,9 +163,9 @@ class BlowingScreen(Screen):
         if self._all is not None:
             return self._all
         else:
-            self._all = np.zeros((self._tmax,)+self._outshape)
-            for t in self.looper(range(self._tmax)):
-                self._all[t,...] = self.get_screen(t)
+            self._all = np.zeros((len(self),)+self._outshape)
+            for ti in self.looper(range(len(self))):
+                self._all[ti,...] = self.get_screen(ti * self._dt)
             self._all.flags.writeable = False
             return self._all
 
@@ -149,6 +180,7 @@ class ManyLayerScreen(BlowingScreen):
     :param array strength: The relative strengths of each layer. (by default, all layers have the same strength.)
     :param float tmax: The amount of time to generate phase for, in seconds. Timesteps 
         beyond this value will see the screen wrapped around and started from the beginning.
+    :param float dt: Timestep size, in seconds.
     :param float du: Pixel size, in meters.
     :param int nsh: Number of subharmonics. (default``=0`` for no subharmonics)
     
@@ -160,7 +192,7 @@ class ManyLayerScreen(BlowingScreen):
     def __init__(self, shape, r0, seed=None, vel=None, strength=None, delay=False, **kwargs):
         if vel is None:
             vel = np.array([[1.0,0.0]])
-        vel = np.atleast_2d(vel)
+        vel = ensure_quantity(np.atleast_2d(vel),unit=u.meter/u.second)
         
         if strength is None:
             strength = np.ones((vel.shape[0],))
@@ -174,7 +206,7 @@ class ManyLayerScreen(BlowingScreen):
         super(ManyLayerScreen, self).__init__(shape, r0, seed, vel=None, delay=True, **kwargs)
         
         self._vel = vel
-        self._shape = tuple((np.array(self.shape) + np.abs(np.max(self._vel,axis=0)) * np.ceil(self._tmax / self._du)).astype(np.int))
+        self._shape = tuple((np.array(self.shape) + np.abs(np.max(self._vel,axis=0)) * np.ceil(self._tmax / self._du)).to(1).value.astype(np.int))
         
         self._screens = np.zeros((self._vel.shape[0],)+self._shape)
         
@@ -190,7 +222,7 @@ class ManyLayerScreen(BlowingScreen):
         """
         norm = np.sum(self._strength)
         for i, strength in enumerate(self._strength):
-            self._screens[i,...] = _generate_screen(self._filter,self.seed,self._shf,self.du) * (strength/norm)
+            self._screens[i,...] = _generate_screen(self._filter,self.seed,self._shf,self.du.value) * (strength/norm)
         
     def get_screen(self,t):
         """Get a screen at time `t`.
@@ -199,7 +231,7 @@ class ManyLayerScreen(BlowingScreen):
         :returns: The screen for this timestep.
         """
         import scipy.ndimage.interpolation
-        shifts = t * self._vel / self._du
+        shifts = (ensure_quantity(t,u.second) * self._vel / self._du).to(1).value
         shifted = np.zeros_like(self._screens)
         for i,(shift,screen) in enumerate(zip(shifts,self._screens)):
             shifted[i,...] = scipy.ndimage.interpolation.shift(
