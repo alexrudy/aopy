@@ -22,6 +22,7 @@ from __future__ import (absolute_import, unicode_literals, division,
 import abc
 import os, os.path
 import warnings
+import collections
 
 import numpy as np
 
@@ -56,7 +57,8 @@ class WCAOCase(ConsoleContext):
         
         self.instrument = instrument
         self.casename = casename
-        self.results = {}
+        self.results = collections.OrderedDict()
+        self.telemetries = collections.OrderedDict()
         self.telemetry = WCAOTelemetry(self)
         
         if ".".join(["Telemetry",self.instrument]) not in self.config:
@@ -92,21 +94,6 @@ class WCAOCase(ConsoleContext):
     def inst_config(self):
         """Instrument specific configuration."""
         return self._config[".".join(["Telemetry",self.instrument])]
-        
-    @property
-    def rate(self):
-        """AO system control rate"""
-        return self.inst_config["system.rate"]
-    
-    @property
-    def subapd(self):
-        """Subaperture Diameter"""
-        return self.inst_config["system.d"]
-    
-    @property
-    def data_format(self):
-        """Data format specifier"""
-        return self.inst_config["data.format"]
     
     def addresult(self,data,klass,dtype):
         """Add a result for this case. The data type is used to identify this specific result, and trace its origins to an estimator."""

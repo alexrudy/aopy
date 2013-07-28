@@ -23,107 +23,9 @@ from astropy.io import fits
 import pyshell
 from pyshell.config import DottedConfiguration
 
-from wcao.analysis.visualize import make_circles
+from .. import WCAOData
 
-
-class WCAOVerifyError(Exception):
-    """An error class indicating that the header failed validation by the WCAO Module."""
-    pass
-
-class WCAOVerifyWarning(UserWarning):
-    """A warning class indicating that the header failed validation by the WCAO Module"""
-    
-    def __repr__(self):
-        return "{:s}".format(self.__class__.__name__)
-
-def set_result_header_values(hdu, case=None, config=None):
-    """Set the appropriate header values for a WCAO results file.
-    
-    :param hdu: The :mod:`astropy.io.fits` HDU
-    :param case: The WCAOCase object. May be ``None``
-    :param config: The Configuration Object. May be ``None``
-    :return: The :mod:`astropy.io.fits` HDU
-    
-    Sets the following keywords:
-    * `WCAOINST` - WCAO Instrument Name
-    * `WCAOCASE` - WCAO Case Name
-    * `WCAOHASH` - WCAO Configuration File Hash
-    * `WCAOCONF` - WCAO Configuration File Name
-    * `WCAOVERS` - WCAO File Version (1.0)
-    * `WCAOTYPE` - WCAO File Type (data descriptor)
-    
-    """
-    if case is not None:
-        hdu.header['WCAOinst'] = (case.instrument, 'WCAO Instrument name')
-        hdu.header['WCAOcase'] = (case.casename, 'WCAO Case Name')
-    if config is not None:
-        hdu.header['WCAOhash'] = (config.hash, 'Configuration File Hash')
-        hdu.header['WCAOconf'] = (config.filename, 'Configuration File Name')
-    return set_wcao_header_values(hdu)
-    
-def read_result_header_values(hdu, case, config):
-    """Extract appropriate header values from the FMTS header, and check consistency.
-    
-    :param hdu: The :mod:`astropy.io.fits` HDU
-    :param case: The WCAOCase object. May be ``None``
-    :param config: The Configuration Object. May be ``None``
-    :return: The :mod:`astropy.io.fits` HDU
-    
-    Verifies the following keywords:
-    * `WCAOINST` - WCAO Instrument Name `Warning`
-    * `WCAOCASE` - WCAO Case Name `Warning`
-    * `WCAOHASH` - WCAO Configuration File Hash `Warning`
-    * `WCAOCONF` - WCAO Configuration File Name `Ignored`
-    * `WCAOVERS` - WCAO File Version (1.0) :exc:`ValueError`
-    * `WCAOTYPE` - WCAO File Type (data descriptor) :exc:`Key Error` if it is missing.
-    
-    """
-    verify_wcao_header_values(hdu, wcaotype=None)
-    if config is not None:
-        confighash = hdu.header["WCAOHASH"]
-        if confighash != config.hash:
-            warnings.warn("Configuration Hash Mismatch: got '{:s}', expected '{:s}'".format(confighash,config.hash),WCAOVerifyWarning)
-    if case is not None:
-        instrument = hdu.header['WCAOINST']
-        if instrument != case.instrument:
-            warnings.warn("Instrument Name Mismatch: got '{:s}', expected '{:s}'".format(instrument,case.instrument),WCAOVerifyWarning)
-        casename = hdu.header["WCAOCASE"]
-        if casename != case.casename:
-            warnings.warn("Casename Mismatch: got '{:s}', expected '{:s}'".format(casename,case.casename),WCAOVerifyWarning)
-    return hdu
-            
-
-def set_wcao_header_values(hdu, wcaotype='none'):
-    """Set the WCAO header keywords.
-    
-    :param hdu: The :mod:`astropy.io.fits` HDU
-    :param string wcaotype: The File Type value for this object.
-    
-    Sets:
-    * `WCAOVERS` - WCAO File Version (1.0)
-    * `WCAOTYPE` - WCAO File Type
-    
-    """
-    hdu.header['WCAOvers'] = (1.0, 'WCAO file version')
-    if not (wcaotype == 'none' and "WCAOTYPE" in hdu.header):
-        hdu.header['WCAOtype'] = (wcaotype, 'data type for this HDU')
-    else:
-        wcaotype = None
-    verify_wcao_header_values(hdu,wcaotype)
-    return hdu
-    
-
-def verify_wcao_header_values(hdu, wcaotype='none'):
-    """Verify WCAO header values."""
-    if not hdu.header['WCAOvers'] >= 1.0:
-        raise WCAOVerifyError("WCAO version number invalid: {:s}".format(hdu.header['WCAOvers']))
-    if 'WCAOtype' not in hdu.header:
-        raise WCAOVerifyError("WCAO header missing 'WCAOtype' keyword.")
-    if wcaotype is not None and hdu.header['WCAOtype'] != wcaotype:
-        raise WCAOVerifyError("WCAO type mismatch: got '{:s}', expected '{:s}'".format(hdu.header['WCAOtype'], wcaotype))
-    return hdu
-
-class WCAOEstimate(object):
+class WCAOEstimate(WCAOData):
     """A reperesentation of any WCAO data"""
     
     LONGNAMES = {
@@ -149,11 +51,9 @@ class WCAOEstimate(object):
     __metaclass__ = abc.ABCMeta
     
     def __init__(self, case, data=None, datatype=""):
-        super(WCAOEstimate, self).__init__()
-        self.log = pyshell.getLogger(__name__)
+        super(WCAOEstimate, self).__init__(case=case)
         if datatype not in self.ARRAYTYPE or datatype not in self.LONGNAMES:
             raise ValueError("Unknown data type {:s}. Options: {!r}".format(name,self.DATATYPE.keys()))
-        self.case = case
         self._datatype = datatype
         self._arraytype = self.ARRAYTYPE[self._datatype]
         self._data = data

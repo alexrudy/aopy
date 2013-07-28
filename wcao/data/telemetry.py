@@ -45,9 +45,24 @@ class WCAOTelemetry(ConsoleContext):
             self = self,
             shape = self.aperture.__shape_str__(),
             ntime = self.nt,
-            time = self.nt / self.case.rate,
-            rate = self.case.rate,
+            time = self.nt / self.rate,
+            rate = self.rate,
         )
+        
+    @property
+    def rate(self):
+        """AO system control rate"""
+        return self.data_config.get("rate",self.case.inst_config["system.rate"])
+    
+    @property
+    def subapd(self):
+        """Subaperture Diameter"""
+        return self.case.inst_config["system.d"]
+    
+    @property
+    def data_format(self):
+        """Data format specifier"""
+        return self.case.inst_config["data.format"]
         
     @property
     def data_config(self):
