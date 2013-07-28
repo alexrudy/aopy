@@ -50,7 +50,7 @@ class Aperture(object):
         self.response = response
         if self.response.ndim != 2:
             raise ValueError, "{0!r} response dimesnions should be 2, not {0.response.ndim:d}".format(
-                self, self.response.ndim
+                self
             )
         
     def __shape_str__(self):
