@@ -33,9 +33,24 @@ class WCAOMap(WCAOEstimate):
                 self.map = data
                 self.vx = np.arange(self.map.shape[0])
                 self.vy = np.arange(self.map.shape[1])
+            else:
+                raise ValueError("{}: Expected map with ndim=2, got {:d}".format(
+                    self, data.ndim
+                ))
         elif isinstance(data, tuple):
             if len(data) == 3:
                 self.map, self.vx, self.vy = data
+            elif len(data) == 4:
+                self.map, self.vx, self.vy, self.layers = data
+            else:
+                raise ValueError("{}: Data has the wrong number of elements: {:d}.".format(
+                    self, len(data)
+                ))
+        elif isinstance(data, dict):
+            self.map = data["map"]
+            self.vx = data.get("vx", np.arange(self.map.shape[0]))
+            self.vy = data.get("vy", np.arange(self.map.shape[1]))
+            self.layers = data.get("layers", [])
     
     def save(self):
         """Save a file"""

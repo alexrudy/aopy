@@ -24,39 +24,40 @@ import numpy as np
 from .core import BaseIO
 
 class MapIO(BaseIO):
-    """Read IDL 3-extension maps"""
+    """Read/Write IDL 3-extension maps."""
     
     def read(self, path="."):
-        """Load wind map information from IDL"""
+        """Read wind map information from IDL"""
         from astropy.io import fits
         
         filename = os.path.join(path,self.identifier + ".fits")
         
-        data = {}
+        read_data = {}
         
         with fits.open(filename) as HDUs:
             for HDU in HDUs:
                 if HDU.header["DTYPE"] == 'Wind Map':
-                    self.target.map = HDU.data.copy()
+                    read_data["map"] = HDU.data.copy()
                 elif HDU.header["DTYPE"] == 'Wind vx scale':
-                    self.target.vx = HDU.data.copy()
+                    read_data["vx"] = HDU.data.copy()
                 elif HDU.header["DTYPE"] == 'Wind vy scale':
-                    self.target.vy = HDU.data.copy()
+                    read_data["vy"] = HDU.data.copy()
                 elif HDU.header["DTYPE"] == 'Wind Layer List':
                     layer_list = np.atleast_2d(HDU.data.copy())
-                    self.target.layers = getattr(self.target,'layers',[])
+                    read_data["layers"] = []
                     for row in layer_list:
-                        self.target.layers.append({
+                        read_data["layers"].append({
                             "vx" : row[0],
                             "vy" : row[1],
                             "m"  : row[2],
                         })
         
-        if self.target.map.shape != (self.target.vx.shape + self.target.vy.shape):
+        if read_data["map"].shape != (read_data["vx"].shape + read_data["vy"].shape):
             warnings.warn("Map scale data does not match map shape: {} != {}".format(
-                self.target.map.shape, (self.target.vx.shape + self.target.vy.shape)
+                read_data["map"].shape, (read_data["vx"].shape + read_data["vy"].shape)
             ))
             
+        self.target._init_data(read_data)
     
     def write(self, path="."):
         """Write wind map information to IDL"""
@@ -98,7 +99,7 @@ class MapIO(BaseIO):
     
 
 class TimeSeriesReader(BaseIO):
-    """Read IDL FITS files with timeseries"""
+    """Read/Write IDL FITS files with time series."""
     
     def read(self, path="."):
         """Read IDL format timeseries data from FITS files."""
