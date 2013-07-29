@@ -7,20 +7,9 @@
 #  Copyright 2013 Alexander Rudy. All rights reserved.
 # 
 
-from .case import WCAOCase
+from .case import WCAOCase, WCAOData
 
 import pyshell
 
-__all__ = ['WCAOCase']
+__all__ = ['WCAOCase','WCAOData']
 
-class WCAOData(object):
-    """A base type for generic WCAO data objects."""
-    
-    def __init__(self, case):
-        if not isinstance(case, WCAOCase):
-            raise TypeError("{}: 'case' must be an instance of {}, got {}".format(
-                self, WCAOCase.__name__, type(case)
-            ))
-        self.case = case
-        self.log = pyshell.getLogger(__name__)
-        

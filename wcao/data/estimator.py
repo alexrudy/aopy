@@ -28,44 +28,11 @@ from .. import WCAOData
 class WCAOEstimate(WCAOData):
     """A reperesentation of any WCAO data"""
     
-    LONGNAMES = {
-        'GN' : "Gauss Newton",
-        'RT' : "Radon Transform",
-        '2D' : "2D Binary Search",
-        'XY' : "Split 2D Binary Search",
-        'FT' : "Time-Domain Fourier Transform",
-        '2L' : "2-Layer Gauss Newton",
-        'FS' : "Time-Domain Fourier Transform Series"
-    }
-    
-    ARRAYTYPE = {
-    'GN' : "NLTS",
-    'RT' : "NLTS",
-    '2D' : "NLTS",
-    'XY' : "NLTS",
-    'FT' : "WLLM",
-    '2L' : "NLTS",
-    'FS' : "NLTS",
-    }
-    
     __metaclass__ = abc.ABCMeta
     
     def __init__(self, case, data=None, datatype=""):
         super(WCAOEstimate, self).__init__(case=case)
-        if datatype not in self.ARRAYTYPE or datatype not in self.LONGNAMES:
-            raise ValueError("Unknown data type {:s}. Options: {!r}".format(name,self.DATATYPE.keys()))
-        self._datatype = datatype
-        self._arraytype = self.ARRAYTYPE[self._datatype]
-        self._data = data
-        self._config = self.case.config
-        self._figurename = os.path.join(
-            self.config.get("Data.figure.directory",""),
-            self.config["Data.figure.template"],
-            )
-        self._dataname = os.path.join(
-            self.config.get("Data.output.directory",""),
-            self.config["Data.output.template"]
-        )
+        self.datatype = datatype
         self._init_data(data)
         
     def __str__(self):
@@ -73,61 +40,35 @@ class WCAOEstimate(WCAOData):
         return "{0._datatype:s}: array={0._arraytype:s}, name={0.longname:s}".format(self)
         
     @property
-    def config(self):
-        """The configuration!"""
-        return self._config
+    def datatype(self):
+        """The data type property"""
+        return self._datatype
+        
+    @datatype.setter
+    def datatype(self, datatype):
+        """Set the data type value"""
+        if datatype not in self.config["Data.Estimators.Types"]:
+            raise KeyError("{}: Unknown data type {}, choices: {!r}".format(
+                self, datatype, self.config["Data.Estimators.Types"].keys()
+            ))
+        
+        self._datatype = datatype
         
     @property
-    def longname(self):
+    def description(self):
         """Expose a long name"""
-        return self.LONGNAMES[self._datatype]
+        return self.config["Data.Estimators.Types"][datatype]["description"]
+        
+    @property
+    def arraytype(self):
+        """Expose the array type code"""
+        return self.config["Data.Estimators.Types"][datatype]["array"]
         
     @property
     def data(self):
         """Get the actual data!"""
         return self._data
         
-    def dataname(self,ext):
-        """The fits-file name for this object"""
-        return self._dataname.format(
-            instrument = self.case.instrument,
-            name = self.case.casename,
-            ext = ext,
-            datatype = self._datatype,
-            arraytype = self._arraytype,
-        )
-        
-    @property
-    def fitsname(self):
-        """The fits-file name for this object"""
-        return self._dataname.format(
-            instrument = self.case.instrument,
-            name = self.case.casename,
-            ext = self.config.get("WCAOEstimate.Data.fits.ext","fits"),
-            datatype = self._datatype,
-            arraytype = self._arraytype,
-        )
-        
-    @property
-    def npyname(self):
-        """Numpy file name for this object"""
-        return self._dataname.format(
-            instrument = self.case.instrument,
-            name = self.case.casename,
-            ext = self.config.get("WCAOEstimate.Data.npy.ext","npy"),
-            datatype = self._datatype,
-            arraytype = self._arraytype,
-        )
-    
-    def figname(self, ext, figtype):
-        """Figure name"""
-        return self._figurename.format(
-            instrument = self.case.instrument,
-            name = self.case.casename,
-            ext = ext,
-            datatype = self._datatype,
-            figtype = figtype,
-        )
         
     @abc.abstractmethod
     def _init_data(self,data):
