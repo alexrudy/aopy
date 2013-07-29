@@ -39,14 +39,14 @@ class WCAOMap(WCAOEstimate):
     
     def save(self):
         """Save a file"""
-        from ..io.fitsmaps import MapWriter
-        writer = MapWriter(self.fitsname.rstrip(".fits"), self)
+        from ..io.fitsmaps import MapIO
+        writer = MapIO(self.fitsname.rstrip(".fits"), self)
         writer.write()
     
     def load(self):
         """Load a file"""
-        from ..io.fitsmaps import MapReader
-        reader = MapReader(self.fitsname.rstrip(".fits"), self)
+        from ..io.fitsmaps import MapIO
+        reader = MapIO(self.fitsname.rstrip(".fits"), self)
         reader.read()
         
     

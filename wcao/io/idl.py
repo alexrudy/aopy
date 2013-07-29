@@ -21,9 +21,9 @@ import warnings
 
 import numpy as np
 
-from .core import Reader, Writer
+from .core import BaseIO
 
-class MapReader(Reader):
+class MapIO(BaseIO):
     """Read IDL 3-extension maps"""
     
     def read(self, path="."):
@@ -58,42 +58,61 @@ class MapReader(Reader):
             ))
             
     
-class MapWriter(Writer):
-    """Write IDL 3-extension maps."""
-    
-    
     def write(self, path="."):
         """Write wind map information to IDL"""
         from astropy.io import fits
         
-        HDU_map = fits.PrimaryHDU(self.source.map)
+        HDU_map = fits.PrimaryHDU(self.target.map)
         HDU_map.header["DTYPE"] = ('Wind Map', 'In spatial domain')
         
-        HDU_vx = fits.ImageHDU(self.source.vx)
+        HDU_vx = fits.ImageHDU(self.target.vx)
         HDU_vx.header["DTYPE"] = ('Wind vx scale', 'in m/s')
         
-        HDU_vy = fits.ImageHDU(self.source.vy)
+        HDU_vy = fits.ImageHDU(self.target.vy)
         HDU_vy.header["DTYPE"] = ('Wind vy scale', 'in m/s')
         
         HDUs = fits.HDUList([HDU_map, HDU_vx, HDU_vy])
-        if getattr(self.source,'layers',False):
-            shape = (len(self.source.layers),4)
+        
+        if getattr(self.target, 'layers', False):
+            
+            shape = (len(self.target.layers),4)
             layers = np.zeros(shape)
-            for i,layer in enumerate(self.source.layers):
+            
+            for i,layer in enumerate(self.target.layers):
                 layers[i,0] = layer["vx"]
                 layers[i,1] = layer["vy"]
                 layers[i,2] = layer["m"]
+            
             HDU_layers = fits.ImageHDU(layers)
-            HDU_layers.header["DTYPE"] = ('Wind Layer List', '')
+            HDU_layers.header["DTYPE"] = ('Wind Layer List', '[vx,vy,m,0]')
             HDUs.append(HDU_layers)
+        
         map(self.addheader,HDUs)
-        filename = os.path.join(path,self.identifier)
+        filename = os.path.join(path, self.identifier)
         HDUs.writeto(filename, clobber=True)
         
     def addheader(self,hdu):
         """Add IDL type-headers"""
-        HDU.header["TSCOPE"] = self.source.case.instrument
+        HDU.header["TSCOPE"] = self.target.case.instrument
         
     
 
+class TimeSeriesReader(BaseIO):
+    """Read IDL FITS files with timeseries"""
+    
+    def read(self, path="."):
+        """Read IDL format timeseries data from FITS files."""
+        from astropy.io import fits
+        
+        filename = os.path.join(path, self.identifier + '.fits')
+        
+        with fits.open(filename) as HDUs:
+            data = HDUs[0].data.copy()[:,:2,method_index]
+            data = data[:,np.newaxis,:]
+        self.target._init_data(data)
+        
+    
+    def write(self, path="."):
+        """Write IDL format timeseries data to FITS files"""
+        pass
 
