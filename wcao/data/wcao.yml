@@ -8,6 +8,7 @@ Data:
       FT:
         estimatorclass: 'wcao.estimators.fmts.FourierModeEstimator'
         dataclass: 'wcao.data.fmtsmap.WCAOFMTSMap'
+        ioclass: 'wcao.io.fitsmaps.MapIO'
         array: WLLM
         description: "Time-Domain Fourier Transform"
       FS:
@@ -19,7 +20,7 @@ IO:
     figure:
       directory: figures
       template: "{0.datatype:s}_{filetype:s}_{0.instrument:s}_{0.casename:s}.{ext}"
-    output:
+    data:
       directory: data
       template: "{0.datatype:s}_{0.arraytype:s}_{0.instrument:s}_{0.casename:s}.{ext}"
     
