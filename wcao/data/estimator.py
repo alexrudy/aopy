@@ -23,21 +23,26 @@ from astropy.io import fits
 import pyshell
 from pyshell.config import DottedConfiguration
 
-from .. import WCAOData
+from aopy.util.basic import resolve
+from .case import WCAOData
 
 class WCAOEstimate(WCAOData):
     """A reperesentation of any WCAO data"""
     
     __metaclass__ = abc.ABCMeta
     
-    def __init__(self, case, data=None, datatype=""):
+    def __init__(self, case, datatype="", **kwargs):
         super(WCAOEstimate, self).__init__(case=case)
         self.datatype = datatype
-        self._init_data(data)
+        self.init_data(**kwargs)
         
-    def __str__(self):
-        """Pretty string ASCII-table representation of a result."""
-        return "{0._datatype:s}: array={0._arraytype:s}, name={0.longname:s}".format(self)
+    def __repr__(self):
+        """String representation of a result."""
+        return "<{0.__class__.__name__}:{0.datatype:s} array={0.arraytype:s}, name={0.description:s}>".format(self)
+        
+    def _repr_pretty_(self, p, cycle):
+        """Pretty print result"""
+        p.text("{0.datatype:s} array={0.arraytype:s}, name={0.description:s}".format(self))
         
     @property
     def datatype(self):
@@ -57,43 +62,37 @@ class WCAOEstimate(WCAOData):
     @property
     def description(self):
         """Expose a long name"""
-        return self.config["Data.Estimators.Types"][datatype]["description"]
+        return self.config["Data.Estimators.Types"][self.datatype]["description"]
         
     @property
     def arraytype(self):
         """Expose the array type code"""
-        return self.config["Data.Estimators.Types"][datatype]["array"]
+        return self.config["Data.Estimators.Types"][self.datatype]["array"]
         
-    @property
+    @abc.abstractproperty
     def data(self):
         """Get the actual data!"""
-        return self._data
-        
+        raise NotImplementedError("{!r} has no concept of data!".format(self))
         
     @abc.abstractmethod
-    def _init_data(self,data):
+    def init_data(self,**kwargs):
         """This method has no idea how to initialize data!"""
         raise NotImplementedError("{!r} has no concept of data!".format(self))
         
     
-    @abc.abstractmethod
     def save(self):
         """Save this result to a file."""
-        pass
+        fn = self._filename('data')
+        io_class = resolve(self.config["Data.Estimators.Types"][self.datatype]["ioclass"])
+        io_obj = io_class(fn, self)
+        io_obj.write()
         
-    @abc.abstractmethod
     def load(self):
         """Load this result from a file."""
-        pass
+        fn = self._filename('data')
+        io_class = resolve(self.config["Data.Estimators.Types"][self.datatype]["ioclass"])
+        io_obj = io_class(fn, self)
+        io_obj.read()
         
-    
-    def _header(self,fig):
-        """Add this object's header"""
-        inst = self.case.instrument.replace("_"," ")
-        ltext = r"{instrument:s} during \verb|{casename:s}|".format(instrument=inst,casename=self.case.casename)
-        fig.text(0.02,0.98,ltext,ha='left',va='top')
         
-        today = datetime.date.today().isoformat()
-        rtext = r"Analysis on {date:s} with {config:s}".format(date=today,config=self.case.config.hash)
-        fig.text(0.98,0.98,rtext,ha='right',va='top')
         
