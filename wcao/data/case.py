@@ -72,17 +72,21 @@ class WCAOCase(ConsoleContext):
         """Representation"""
         return "<{0.__class__.__name__}: {0.name}>".format(self)
     
-    def __repr_pretty__(self, p, cycle):
+    def _repr_pretty_(self, p, cycle):
         """Make a pretty string format of the contents of this WCAO case."""
         p.text("WCAOCase: {:s}".format(self.name))
         if self.telemetries:
-            with p.group(2, 'Telemetry:',''):
-                for telemetry in self.telemetries.values()
+            with p.group(2, ' Telemetry: ',''):
+                for idx,telemetry in enumerate(self.telemetries.values()):
+                    if idx:
+                        p.breakable(", ")
                     p.pretty(telemetry)
         
         if self.results:
-            with p.group(2, 'Estimator Results:',''):
-                for result in self.results.values()
+            with p.group(2, ' Estimator Results: ',''):
+                for idx,result in enumerate(self.results.values()):
+                    if idx:
+                        p.breakable(", ")
                     p.pretty(result)
         
     @property
@@ -139,13 +143,13 @@ class WCAOData(object):
     def _filename(self, fntype, **kwargs):
         """Create a filename."""
         fn = Filename(self.config["IO.files"][fntype].get("directory",""),self.config["IO.files"][fntype]["template"])
-        fn.format(self)
+        fn.format(self, **kwargs)
         return fn
 
-    def __getattr__(self, attr, default):
+    def __getattr__(self, attr, default=None):
         """A get attribute for returning filenames"""
         if attr in self.config["IO.files"]:
             return self._filename(attr)
         else:
-            super(WCAOEstimate, self).__getattr__(attr, default)
+            raise AttributeError("Attribute '{}' of {} does not exist".format(attr,self))
 
