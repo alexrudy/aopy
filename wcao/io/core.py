@@ -12,6 +12,8 @@ from __future__ import (absolute_import, unicode_literals, division,
 
 import abc
 
+from .filenames import Filename
+
 class WCAOVerifyError(Exception):
     """An error class indicating that the header failed validation by the WCAO Module."""
     pass
@@ -25,9 +27,13 @@ class WCAOVerifyWarning(UserWarning):
 
 class BaseIO(object):
     """A base class for io.readers"""
-    def __init__(self, identifier, target):
-        super(Reader, self).__init__()
-        self.identifier = identifier
+    def __init__(self, filename, target):
+        super(BaseIO, self).__init__()
+        if not isinstance(filename,Filename):
+            raise AttributeError("{} expects filename of type {}, got type {}".format(
+                self, Filename, type(filename)
+            ))
+        self.filename = filename
         self.target = target
         
     __metaclass__ = abc.ABCMeta
