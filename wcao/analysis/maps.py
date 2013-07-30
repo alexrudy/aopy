@@ -22,35 +22,6 @@ from .mpl import MPLAnalysis
 class WindMap(MPLAnalysis):
     """A two-dimensional wind map."""
     
-    map_data_types = [
-        
-    ]
-    
-    def __init__(self, data):
-        super(WindMap, self).__init__(data)
-        
-    def _map_circles(self, ax, dist=[0.5,1.0], origin=[0,0], color='w', crosshair=True, zorder=0.1, ls='dashed'):
-        """Show map circles in a crosshair pattern."""
-        from matplotlib.patches import Circle
-        from matplotlib.lines import Line2D
-        xm,xp = ax.get_xlim()
-        ym,yp = ax.get_ylim()
-        rm = np.max(np.abs([xm, xp, ym, yp]))
-        nc = rm//dist
-        Rs = [ (n+1)*dist for n in range(int(nc)) ]
-        circles = [ Circle(origin, R, fc='none', ec=color, ls=ls, zorder=zorder) for R in Rs]
-        if crosshair:
-            Rmax = max(Rs)
-            major = [ -Rmax, Rmax ]
-            minor = [ 0 , 0 ]
-            coords = [ (major, minor), (minor, major)]
-            for xdata,ydata in coords:
-                circles.append(
-                    Line2D(xdata,ydata, ls=ls, color=color, marker='None', zorder=zorder)
-                )
-        [ ax.add_artist(a) for a in circles ]
-        return circles
-        
     def _map_format(self,ax,data,**kwargs):
         """Formats a map with velocity information.
         
