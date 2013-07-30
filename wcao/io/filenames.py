@@ -32,8 +32,9 @@ class Filename(object):
     """A filename with string formatting tools."""
     def __init__(self, *args):
         super(Filename, self).__init__()
-        self.template = os.path.join(*args)
-        self._filepath = None
+        self._template = os.path.join(*args)
+        self._filepath = self._template
+        self._formatted = False
         
     def __repr__(self):
         """Internal representation form."""
@@ -47,14 +48,14 @@ class Filename(object):
         return self.filepath
         
     
-    def __repr_pretty__(self, p, cycle):
+    def _repr_pretty_(self, p, cycle):
         """Pretty representation."""
         p.text("Filename: '{!s}'".format(self))
     
     @property
     def formatted(self):
         """Boolean for formatted."""
-        return self._filepath is not None
+        return self._formatted
         
     @property
     def filepath(self):
@@ -66,10 +67,11 @@ class Filename(object):
     def format(self,*args,**kwargs):
         """Format this filepath."""
         formatter = DefaultKeyFormatter()
-        self._filepath = formatter.format(self.template,*args,**kwargs)
-        return self.filepath
+        self._filepath = formatter.format(self._filepath,*args,**kwargs)
+        self._formatted = True
+        return self
         
-    def __getattr__(self,attr,default):
+    def __getattr__(self,attr):
         """Pass getattr through to os.path functions."""
         try:
             if not attr.startswith("_") and hasattr(os.path,attr):
@@ -77,6 +79,8 @@ class Filename(object):
             else:
                 raise TypeError
         except TypeError:
-            return super(Filename, self).__getattr__(attr,default)
+            raise AttributeError("{} does not have attribute '{}'".format(
+                self, attr
+            ))
         
             
