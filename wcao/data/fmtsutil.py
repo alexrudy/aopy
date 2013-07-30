@@ -15,7 +15,7 @@ import itertools
 import numpy as np
 
 from pyshell.loggers import getLogger
-from aopy.util.math import lodtorec, rectolod
+from aopy.util.recarray import lodtorec, rectolod
 from wcao.data.estimator import set_wcao_header_values, verify_wcao_header_values
 from wcao.data.windmap import set_v_metric_headers, read_v_metric_headers, save_map, load_map
 

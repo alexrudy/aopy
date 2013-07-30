@@ -16,7 +16,7 @@ import pidly
 
 from aopy.atmosphere import wind
 from wcao.estimators.gaussnewton import GaussNewtonEstimator
-from wcao.data.core import WCAOCase
+from wcao.data.case import WCAOCase
 from pyshell.loggers import getSimpleLogger
 from pyshell.util import ipydb
 

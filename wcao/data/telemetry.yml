@@ -84,4 +84,14 @@ Telemetry:
           raw_remap: '3d_screen'
           raw_trans: 'offset'
           raw_data: 'data/keck/raw/data_30jul07/dataset2.dat'
-      
+        'sim_0':
+          type: 'closed-loop-dm-commands'
+          r0: 0.30
+          wind:
+            - [ 2.0, 5.0 ]
+          ntime: 6000
+          raw_time: 500
+          raw_format: 'simulated'
+          raw_remap: '3d_screen'
+          raw_trans: 'offset'
+          raw_data: 'data/keck/raw/data_30jul07/dataset2.dat'

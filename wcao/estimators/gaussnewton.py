@@ -175,6 +175,7 @@ class GaussNewtonEstimator(BaseEstimator):
         nparray = np.array
         npsum = np.sum
         npdot = np.dot
+        npfloat = np.float
         
         mode = self.shift.mode
         order = self.shift.order
@@ -187,18 +188,19 @@ class GaussNewtonEstimator(BaseEstimator):
         
         # Variables that are established before the iterations begin
         kernel = np.array([[ -0.5, 0.0, 0.5 ]])
+        kernelT = kernel.T
         denominator = np.zeros((2,2))
         
         
         for n in self.looper(range(self._ns+1,self._nt)):
             # Normalize inputs and place them in the local namespace.
             previous = current
-            current = self._phase[n].astype(np.float)
+            current = self._phase[n].astype(npfloat)
             
             # Create the Gradient Matrix (X,Y)
             gcurr = depiston(current,ap_every)
             GradI[0,:,:] = convolve(gcurr,kernel,mode='same') * ap_every * -1.0
-            GradI[1,:,:] = convolve(gcurr,kernel.T,mode='same') * ap_every * -1.0
+            GradI[1,:,:] = convolve(gcurr,kernelT,mode='same') * ap_every * -1.0
             
             if idl:
                 # Aparently scipy.convolve returns values along the edges where IDL convol doesn't.

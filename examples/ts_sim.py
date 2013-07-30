@@ -21,10 +21,12 @@ import pyshell
 
 ipydb()
 
-Data = WCAOCase("GeMS","11360204434_pol_wfs2",configuration="wcao.yml")
-Data.telemetry.phase # Force load the phase from the processed raw data for GeMS
+Data = WCAOCase("keck_simulated","sim_1",configuration="wcao.yml")
+Data.telemetry.phase # Force load the phase from the processed raw data for Keck
 
-dfiles = [ Data.telemetry.filepath("proc","{:d}_fwmap").format(i) for i in range(11) ]
+dfiles = [ Data.telemetry.filepath("proc","{:d}_fwmap").format(i) for i in range(13) ]
+
+del dfiles[1]
 
 for i,filepath in enumerate(dfiles):
     Data.results[i] = WCAOMap(Data,None,'FT')
@@ -37,12 +39,14 @@ tsdata = np.zeros((len(Data.results),max(sizes),2),dtype=float)
 for i,result in enumerate(Data.results.values()):
     for j,layer in enumerate(result.layers):
         tsdata[i,j,0] = layer["vx"]
-        tsdata[i,j,1] = layer["vy"]
+        tsdata[i,j,1] = layer["vy"]       
     for j in range(len(result.layers),max(sizes)):
         tsdata[i,j,0] = np.nan
         tsdata[i,j,1] = np.nan
 
 Data.results["TS"] = WCAOTimeseries(Data, tsdata, "FS", timestep=(1.0/Data.rate * 2048))
+np.savetxt(Data.results["TS"].figname("txt","Data"),Data.results["TS"].data[:,0,:])
+
 Data.results["GN"] = WCAOTimeseries(Data, None, "GN", timestep=(1.0/Data.rate))
 Data.results["GN"].load_IDL(Data.telemetry.filepath("proc","wind"))
 Data.results["GN"].clip = slice(None,Data.results["GN"].ntime-3000)
@@ -54,36 +58,26 @@ print("FS: {mean:5.2f} ±{std:5.2f}".format(
     std=np.std(mag(Data.results["TS"].data[:,0,:])),
 ))
 print("GN: {mean:5.2f} ±{std:5.2f}".format(
-    mean=np.mean(mag(Data.results["GN"].smoothed(1024,'flat')[:,0,:])),
-    std=np.std(mag(Data.results["GN"].smoothed(1024,'flat')[:,0,:])),
+    mean=np.mean(mag(Data.results["GN"].smoothed(1024,'flat')[100:,0,:])),
+    std=np.std(mag(Data.results["GN"].smoothed(1024,'flat')[100:,0,:])),
 ))
-print("GN: {mean:5.2f} ±{std:5.2f}".format(
-    mean=np.mean(mag(Data.results["GN"].data[:,0,:])),
-    std=np.std(mag(Data.results["GN"].data[:,0,:])),
+print("GN (not-smoothed): {mean:5.2f} ±{std:5.2f}".format(
+    mean=np.mean(mag(Data.results["GN"].data[100:,0,:])),
+    std=np.std(mag(Data.results["GN"].data[100:,0,:])),
 ))
 # Figures
 
 import matplotlib.pyplot as plt
 fig = plt.figure()
-# Data.results["GN"].threepanelts(fig,smooth=dict(window=1024,mode='flat'))
-Data.results["TS"].threepanelts(fig,smooth=False)
-fig.savefig(Data.results["TS"].figname("pdf","FS3p"))
+Data.results["GN"].threepanelts(fig)
+fig.savefig(Data.results["GN"].figname("pdf","GN3p"),dpi=600)
 fig = plt.figure()
 Data.results["GN"].map(fig.add_subplot(111),size=40,bins=161)
 fig.savefig(Data.results["GN"].figname("pdf","GNm"),dpi=600)
 fig = plt.figure()
-Data.results["GN"].map(fig.add_subplot(111),size=40,bins=161,smooth=dict(window=256,mode='flat'))
-fig.savefig(Data.results["GN"].figname("pdf","GNms"),dpi=600)
-fig = plt.figure()
-Data.results["GN"].threepanelts(fig)
-fig.savefig(Data.results["GN"].figname("pdf","GN3p"),dpi=600)
-fig = plt.figure()
-Data.results["GN"].threepanelts(fig,smooth=dict(window=256,mode='flat'))
-fig.savefig(Data.results["GN"].figname("pdf","GN3ps"),dpi=600)
-fig = plt.figure()
 Data.results["GN"].threepanelts(fig,smooth=dict(window=1024,mode='flat'))
 Data.results["TS"].threepanelts(fig,smooth=False)
-fig.savefig(Data.results["TS"].figname("pdf","FG3p"))
+fig.savefig(Data.results["TS"].figname("pdf","FS3p"))
 ax = plt.figure(figsize=(10,4)).add_subplot(111)
 Data.results["GN"].timeseries(ax,2,smooth=dict(window=1024,mode='flat'))
 Data.results["TS"].timeseries(ax,2,smooth=False,marker='.')

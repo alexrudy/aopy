@@ -49,13 +49,19 @@ Supporting Functions
     find_and_fit_peak
     
 .. autofunction::
+    joint_fit_peaks
+    
+.. autofunction::
     create_layer_metric
     
 .. autofunction::
-    fitter
+    find_layers
     
 .. autofunction::
-    find_layers
+    all_fitter
+    
+.. autofunction::
+    fitter
 
 .. autofunction::
     recenter
@@ -64,13 +70,13 @@ Peak Grid Functions - :mod:`FMTSutil`
 *************************************
 
 .. autofunction::
-    peaks_from_table
+    wcao.data.fmtsutil.peaks_from_table
     
 .. autofunction::
-    peaks_to_table
+    wcao.data.fmtsutil.peaks_to_table
 
 .. autofunction::
-    peaks_array_from_grid
+    wcao.data.fmtsutil.peaks_array_from_grid
 
 """
 
@@ -158,19 +164,30 @@ def find_and_fit_peaks_in_mode(psd,template,omega,max_peaks=6,**kwargs):
     :param ndarray omega: The Omegas which provide the scale to the PSD.
     :param int max_layers: The maximum number of layers to find. Peak fitting might fail earlier and return fewer peaks.
     :keyword kwargs: The keywords are passed through to :func:`find_and_fit_peak`
-    :return: A list of layers found in this PSD. Each layer is recorded as a dictionary with the fitting parameters.
+    :return: A list of peaks found in this PSD. Each peak is recorded as a dictionary with the fitting parameters.
     
-    """    
+    """
+    opsd = np.copy(psd)    
     fit = np.zeros_like(psd)
     mask = np.zeros_like(psd,dtype=np.bool)
-    peaks = []
-    
+    joint_fit = kwargs.pop("joint_fit",False)
+    jfp = {}
+    for key in kwargs.keys():
+        if key.startswith("jfp_"):
+            jfp[key.lstrip("jfp_")] = kwargs.pop(key)
+
+    peaks = []    
     for n in range(max_peaks):
         psd = psd - fit
-        looking, peak, mask, fit = find_and_fit_peak(psd,mask,template,omega,**kwargs)
+        looking, peak, mask, fit = find_and_fit_peak(psd, mask, template, omega, **kwargs)
         if not looking:
             break
         peaks.append(peak)
+    
+    if peaks and joint_fit:
+        kwargs.update(jfp)
+        mask = np.zeros_like(opsd, dtype=np.bool)
+        peaks = joint_fit_peaks(opsd, omega, mask, peaks, **kwargs)
     
     return peaks
     
@@ -216,7 +233,7 @@ def find_and_fit_peak(psd, mask, template, omega,
     :param int maxfev: The maximum number of function evaluations permitted during the curve fitting process. Larger values give more accurate results, but are slower.
     :param float min_power: The minimum amount of power required to consider a peak a peak.
     :keyword kwargs: The keywords are passed through to :func:`find_and_fit_peak`    
-    :returns: ``success`` , ``peaks`` , ``mask`` , ``fit_psd``. ``success`` is a boolean. Mask is the current masking array, modified for any found peaks. ``peaks`` is the list of dictionaries of peak properties. ``fit_psd`` is the final template fit psd.
+    :returns: ``success`` , ``peak`` , ``mask`` , ``fit_psd``. ``success`` is a boolean. Mask is the current masking array, modified for any found peaks. ``peak`` is the dictionaries of peak properties. ``fit_psd`` is the final template fit psd.
     
     The return values other than ``success`` are meaningless if ``success=False``.
     
@@ -256,14 +273,11 @@ def find_and_fit_peak(psd, mask, template, omega,
         popt, pcov, infodict, errmsg, ier = curvefit(fitter,omega,np.real(psd),p0,
             sigma=weights,args=(np.real(est_omega),),full_output=True,maxfev=int(maxfev))
     fit_psd = fitter(omega,popt[0],popt[1],est_omega)
-    if popt[1] <= min_power:
-        log.warning("Peak Power is too small! %g",popt[1])
-        success = False
-    elif np.max(fit_psd) > 10.0 * np.max(np.real(psd)*weights):
-        log.warning("Peak Power is much greater than PSD! %g >> %g", popt[1], np.max(np.real(psd)*weights))
-        success = False
-    elif popt[0] < min_alpha or popt[0] > max_alpha:
-        log.warning("Alpha out of range! %.3f",popt[0])
+    
+    vsuccess = _validate_peak(popt[0], est_omega, popt[1],
+        fit_psd, psd, weights, min_alpha, max_alpha, min_power, log=log)
+    
+    if not vsuccess:
         success = False
     elif ier not in [1,2,3,4]:
         log.warning("Fitting Failure: %d: %s" % (ier, errmsg))
@@ -283,6 +297,120 @@ def find_and_fit_peak(psd, mask, template, omega,
     
     return success, peak, mask, fit_psd
     
+def _validate_peak(alpha, est_omega, variance, fit_psd, psd, weights, min_alpha, max_alpha, min_power, log=None):
+    """Validate a peak.
+    
+    :param float alpha: Fitting alpha.
+    :param float est_omega: Fitting omega.
+    :param float variance: Fitting variance/power.
+    :param ndarray fit_psd: The PSD curve with the fit applied.
+    :param ndarray psd: A power-spectral-distribution on which to find peaks.
+    :param ndarray weights: The weighting of individual PSD locations.
+    :param float min_alpha: The minimum acceptable value of :math:`\\alpha`.
+    :param float max_alpha: The maximum acceptable value of :math:`\\alpha`.
+    :param float min_power: The minimum amount of power required to consider a peak a peak.
+    :param log: The logger object.
+    :returns: ``success`` , ``peaks`` , ``mask`` , ``fit_psd``. ``success`` is a boolean. Mask is the current masking array, modified for any found peaks. ``peaks`` is the list of dictionaries of peak properties. ``fit_psd`` is the final template fit psd.
+    """
+    if log is None:
+        log = getLogger(__name__ + ".validate_peak")
+    
+    success = True
+    
+    if variance <= min_power:
+        log.warning("Peak Power is too small! %g < %g",variance, min_power)
+        success = False
+    elif variance > 10.0 * np.max(np.real(psd)*weights):
+        log.warning("Peak Power is much greater than PSD! %g >> %g", np.max(fit_psd), np.max(np.real(psd)*weights))
+        success = False
+    elif alpha < min_alpha or alpha > max_alpha:
+        log.warning("Alpha out of range! %g !< %.3f !< %g",min_alpha, alpha, max_alpha)
+        success = False
+    
+    return success
+    
+def joint_fit_peaks(psd, omega, mask, peaks, search_radius=1, maxfev=1e3, min_alpha=0, max_alpha=1, min_power=1e-3, validate=False, **kwargs):
+    """Fit all of the peaks to a single PSD simultaneously using curvefit.
+    
+    :param ndarray psd: A power-spectral-distribution on which to find peaks.
+    :param ndarray omega: The Omegas which provide the scale to the PSD.
+    :param ndarray mask: A binary mask to block out the PSD. This is passed back and forth.
+    :param list peaks: The list of found peaks.
+    :param int search_radius: Limits the search for peaks to this distance around a correlation maximum.
+    :param float min_alpha: The minimum acceptable value of :math:`\\alpha`.
+    :param float max_alpha: The maximum acceptable value of :math:`\\alpha`.
+    :param int maxfev: The maximum number of function evaluations permitted during the curve fitting process. Larger values give more accurate results, but are slower.
+    :param float min_power: The minimum amount of power required to consider a peak a peak.
+    :keyword kwargs: The keywords are passed through to :func:`find_and_fit_peak`    
+    :returns: ``peaks`` is the list of dictionaries of peak properties.
+    
+    """
+    import scipy.signal
+    from aopy.util.curvefit import curvefit
+    
+    log = getLogger(__name__ + ".joint_fit_peaks")
+    psd[psd < 0] = 0.0
+    psd[mask] = 0.0
+    
+    npeaks = len(peaks)
+    fit_psd = np.empty_like(psd)
+    
+    nargs = 3
+    p0 = np.empty((npeaks*nargs),dtype=np.float)
+    for i,peak in enumerate(peaks):
+        i0 = i * nargs
+        p0[i0] = peak["alpha"]
+        p0[i0+1] = peak["variance"]
+        p0[i0+2] = peak["omega"]
+        
+    weights = (np.abs(omega - np.max(p0[2::3])) <= search_radius).astype(np.int)
+    
+    popt, pcov, infodict, errmsg, ier = curvefit(all_fitter,omega,np.real(psd),p0,
+        sigma=weights,full_output=True,maxfev=int(maxfev),args=(nargs,fitter))
+    
+    fit_psd = all_fitter(omega,*(tuple(p0)+(nargs,fitter)))
+    
+    found_peaks = []
+    for i,peak in enumerate(peaks):
+        i0 = i * nargs
+        alpha = popt[i0]
+        variance = popt[i0+1]
+        est_omega = popt[i0+2]
+        success = _validate_peak(alpha, est_omega, variance, fit_psd, psd, weights, min_alpha, max_alpha, min_power, log=log)
+        if success or (not validate):
+            log.info("Found a peak at alpha=%f omega=%f, power=%g", alpha, est_omega, variance)
+            peak["alpha"] = alpha
+            peak["omega"] = est_omega
+            peak["variance"] = variance
+            found_peaks.append(peak)
+        else:
+            log.info("Thowing out peak originally at alpha=%f omega=%f, power=%g", peak["alpha"], peak["omega"], peak["variance"])
+    
+    return found_peaks
+    
+def all_fitter(x,*ps):
+    """Joint fitting function which fits many of the same function simultaneously.
+    
+    :param x: The thing to fit to.
+    :param args: The function arguments, in order.
+    :param nargs: The number of arguments to each function.
+    :param func: The function itself.
+    :rerturn: ``f``, the floating point function value.
+    
+    """
+    ps = list(ps)
+    func = ps.pop()
+    nargs = ps.pop()
+    np = len(ps) // nargs
+    if len(ps) % nargs:
+        raise ValueError("Wrong number of arguments: Expected {}, got {} extra.".format(nargs,np % nargs))
+    f = 0
+    for n in range(np):
+        n0 = n*3
+        n1 = (n+1)*3
+        pars = ps[n0:n1]
+        f += func(x,*pars)
+    return f
     
 def fitter(x,alpha,peak,center):
     """Our mystery fitting function.

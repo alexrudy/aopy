@@ -43,10 +43,16 @@ this module against the original ``screengen.pro``, as is done in ``examples/scr
 from __future__ import (absolute_import, unicode_literals, division,
                         print_function)
 
-from aopy.util.basic import ConsoleContext
-import numpy as np
+import warnings
 
-def _generate_filter(shape,r0,du,L0=None,nsh=0):
+import numpy as np
+import astropy.units as u
+
+from aopy.util.basic import ConsoleContext
+from aopy.util.units import ensure_quantity
+
+
+def _generate_filter(shape,r0,du,L0=0,nsh=0):
     """Generate the filter for this screen.
     
     :param shape: Shape of the desired screen.
@@ -61,7 +67,7 @@ def _generate_filter(shape,r0,du,L0=None,nsh=0):
     dkx = 2 * np.pi / (n*du)
     dky = 2 * np.pi / (m*du)
     kx,ky = np.meshgrid((np.arange(n) - n//2) * dkx,(np.arange(m) - m//2) * dky,indexing='ij')
-    if L0 is None:
+    if L0 == 0:
         k0 = 0
     else:
         k0 = 2 * np.pi / L0
@@ -174,37 +180,40 @@ class Screen(ConsoleContext):
     Once a single phase screen has been generated, it is cached in the object. For a new phase screen, set a different :attr:`seed` value.
     
     :param tuple shape: The shape of the screen (x,y), as a tuple.
-    :param float r0: :math:`r_0` fried parameter for the screen, in meters (or relative to ``du`` appropriately).
-    :param float L0: :math:`L_0` outer scale for the screen.
+    :param float r0: :math:`r_0` fried parameter for the screen, in meters (or relative to ``du`` appropriately). Accepts an :mod:`astropy` class:`~astropy.units.Quantity`.
     :param int seed: Random number generator seed for :mod:`numpy.random`
     :param float du: Pixel size, in meters
+    :param float L0: :math:`L_0` outer scale for the screen. Accepts an :mod:`astropy` class:`~astropy.units.Quantity`.
     :param int nsh: Number of subharmonics. (default``=0`` for no subharmonics)
     :param bool delay: Delay initialization until :meth:`setup` is called.
     
-    To use this class, you must instantiate it, and then call :meth:`setup`. Since :meth:`setup` returns the instance, you can do::
+    The screen object is callable. Calling the screen generates a new random screen without changing the filter, and returns the new random screen::
         
-        screen = Screen((10,10),r0=2).setup()
+        new_screen_array = MyScreen()
     
-    .. note:: This initialization process is done to delay generating the screen, especially in large or multi-layer screen cases.
     """
     def __init__(self, shape, r0, seed=None, du=1.0, L0=None, nsh=0, delay=False):
         super(Screen, self).__init__()
         
         if not isinstance(shape,tuple) and len(shape) == 2:
-            raise ValueError("shape must be a tuple of (x,y)!")
-        
-        # Parameters
-        self._shape = shape
-        self._r0 = r0
-        self._du = du
-        self._L0 = L0
-        self._nsh = nsh
-        self._seed = seed
+            raise ValueError("'shape' must be a tuple of (x,y)!")
+        if not (isinstance(nsh,int) or int(nsh) == nsh):
+            raise ValueError("'nsh' must be an integer!")
+        elif nsh > 8:
+            warnings.warn("Subharmonics work well only for n <= 8. (n={})".format(nsh),UserWarning)
         
         # Generated Quantities
         self._shf = None
         self._filter = None
         self._screen = None
+        
+        # Parameters
+        self._shape = shape
+        self._r0 = ensure_quantity(r0,u.meter)
+        self._du = ensure_quantity(du,u.meter)
+        self._L0 = ensure_quantity(L0,u.meter)
+        self._nsh = nsh
+        self.seed = seed
         
         if not delay:
             self.setup()
@@ -216,17 +225,17 @@ class Screen(ConsoleContext):
         
     @property
     def r0(self):
-        """Fried's parameter :math:`r_0`, the coherence length for the screen, in meters. **Read Only**"""
+        """Fried's parameter :math:`r_0`, the coherence length for the screen, as an :mod:`astropy` class:`~astropy.units.Quantity`. **Read Only**"""
         return self._r0
         
     @property
     def L0(self):
-        """The outer scale length of the turbulence, :math:`L_0`, in meters. **Read Only**"""
+        """The outer scale length of the turbulence, :math:`L_0`, as an :mod:`astropy` class:`~astropy.units.Quantity`. **Read Only**"""
         return self._L0
         
     @property
     def du(self):
-        """Pixel size, in meters. **Read Only**"""
+        """Pixel size, as an :mod:`astropy` class:`~astropy.units.Quantity`. **Read Only**"""
         return self._du
         
     @property
@@ -240,10 +249,13 @@ class Screen(ConsoleContext):
         return self._seed
         
     @seed.setter
-    def seed(self,value):
+    def seed(self,seed):
         """Random Number Generation Seed"""
-        self._seed = value
-        self._generate_screen()
+        if not (seed is None or isinstance(seed, int) or (isinstance(seed, np.ndarray) and seed.dtype == np.int)):
+            raise ValueError("'seed' must be an integer or an array of integers.")
+        self._seed = seed
+        if self._filter is not None:
+            self._generate_screen()
         
     @property
     def screen(self):
@@ -254,7 +266,7 @@ class Screen(ConsoleContext):
             reference before changing any values here.
         
         """
-        return self._screen
+        return np.copy(self._screen)
         
     def get_screen(self):
         """Return the current screen. This method is for compatibility with subclasses, and is the same as :attr:`screen`."""
@@ -275,7 +287,7 @@ class Screen(ConsoleContext):
         
         Generate the filter required for this screen object. This method generates the filter
         (with subharmonics, if requested) that is used to generate the screen."""
-        self._filter, self._shf = _generate_filter(self.shape,self.r0,self.du,self.L0,self.nsh)
+        self._filter, self._shf = _generate_filter(self.shape,self.r0.value,self.du.value,self.L0.value,self.nsh)
         
     def _generate_screen(self):
         """Use :meth:`setup` to control this method.
@@ -283,7 +295,7 @@ class Screen(ConsoleContext):
         Generate the actual screen, using the filters produced by :meth:`_generate_filter`
         
         """
-        self._screen = _generate_screen(self._filter,self.seed,self._shf,self.du)
+        self._screen = _generate_screen(self._filter,self.seed,self._shf,self.du.value)
         
     def __call__(self):
         """Generates and returns a new independent screen."""

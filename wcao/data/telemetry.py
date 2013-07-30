@@ -37,7 +37,6 @@ class WCAOTelemetry(ConsoleContext):
         self._fmode = None
         self.fmode_path = self.filepath("proc","fmodes","fits")
         self.raw_path = os.path.expanduser(os.path.join(self.case.inst_config["data.root"],self.case.inst_config["data.cases.{0.casename:s}.raw_data".format(self.case)]))
-        self.data_config = self.case.inst_config["data.cases.{0.casename:s}".format(self.case)]
         self.log = pyshell.getLogger(__name__)
         
     def __str__(self):
@@ -46,10 +45,31 @@ class WCAOTelemetry(ConsoleContext):
             self = self,
             shape = self.aperture.__shape_str__(),
             ntime = self.nt,
-            time = self.nt / self.case.rate,
-            rate = self.case.rate,
+            time = self.nt / self.rate,
+            rate = self.rate,
         )
         
+    @property
+    def rate(self):
+        """AO system control rate"""
+        return self.data_config.get("rate",self.case.inst_config["system.rate"])
+    
+    @property
+    def subapd(self):
+        """Subaperture Diameter"""
+        return self.case.inst_config["system.d"]
+    
+    @property
+    def data_format(self):
+        """Data format specifier"""
+        return self.case.inst_config["data.format"]
+        
+    @property
+    def data_config(self):
+        """Access for the data configuration."""
+        return self.case.inst_config["data.cases.{0.casename:s}".format(self.case)]
+    
+    
     @property
     def phase(self):
         """A phase property that properly falls through to loading functions."""

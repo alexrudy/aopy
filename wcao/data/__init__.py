@@ -7,6 +7,9 @@
 #  Copyright 2013 Alexander Rudy. All rights reserved.
 # 
 
-from .core import *
+from .case import WCAOCase, WCAOData
 
-__all__ = ['WCAOCase']
+import pyshell
+
+__all__ = ['WCAOCase','WCAOData']
+

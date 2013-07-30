@@ -5,15 +5,18 @@ FMTS:
     n_sigma: 2
     frac: 0.25
   fitting:
+    joint_fit: false
     float_peak: true
     ialpha: 0.99
-    mask_radius: 0.02
-    max_alpha: 1.0
+    mask_radius: 0.015
+    max_alpha: 1.005
     min_alpha: 0.9
     min_power: 0.00001
-    search_radius: 0.03
+    search_radius: 0.02
     maxfev: 1000
     max_peaks: 7
+    jfp_maxfev: 100
+    jfp_validate: no
   periodogram:
     length: 1024
     mean_remove: true
@@ -26,5 +29,5 @@ FMTS:
     frac: 0.4
   layers:
     spacing: 2
-    min_layer_threshold: 0.4
+    min_layer_threshold: 0.5
     centroid: 10

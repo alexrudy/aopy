@@ -15,7 +15,7 @@ import os, os.path
 import numpy as np
 
 from wcao.estimators.fmts import FourierModeEstimator
-from wcao.data.core import WCAOCase
+from wcao.data.case import WCAOCase
 from pyshell.loggers import getSimpleLogger, configure_logging
 from pyshell.util import ipydb
 import pyshell
@@ -26,25 +26,18 @@ ipydb()
 
 import matplotlib.pyplot as plt
 
-Data = WCAOCase("GeMS","11106030531_pol_wfs4",(WCAOCase.__module__,'telemetry.yml'))
+Data = WCAOCase("GeMS","11360204434_pol_wfs1",configuration="wcao.yml")
 Plan = FourierModeEstimator().setup(Data)
 Plan.estimate()
 Plan.finish()
-fig = plt.figure()
-ax = fig.add_subplot(1,1,1)
-Data.results["FT"].show_metric(ax)
 
-fig = plt.figure()
+print(Data)
+Data.results["FT"].make_pdf()
+fig = plt.figure(figsize=(8,6))
 ax = fig.add_subplot(1,1,1)
-Data.results["FT"].show_peak_fit(ax,4,0)
-fig = plt.figure()
-ax = fig.add_subplot(1,1,1)
-Data.results["FT"].show_mask(ax)
-fig = plt.figure()
-Data.results["FT"].show_fit(fig)
-fig = plt.figure()
-ax = fig.add_subplot(1,1,1)
-Data.results["FT"].show_peaks(ax)
-
-plt.show()
+Data.results["FT"].show_peak_fit(ax,5,15,maxhz=30)
+ax.set_ylim(1e-3,10)
+fig.savefig(Data.results["FT"].figname("pdf","K5L15"))
+Data.results["FT"].save(clobber=True)
+Data.results["FT"].save(single=False,clobber=True)
 

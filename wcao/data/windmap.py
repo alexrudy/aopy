@@ -18,157 +18,54 @@ from __future__ import (absolute_import, unicode_literals, division,
 import numpy as np
 
 import datetime
+import warnings
 import os.path
 
-from .estimator import WCAOEstimate, set_wcao_header_values, verify_wcao_header_values
+from astropy.units import u
 
-def set_v_metric_headers(hdu,vx,vy):
-    """Set the appropriate header values for wind-velocity metric arrays."""
-    hdu.header["WCAOmaxv"] = (np.max(vx), "Maximum searched x velocity")
-    hdu.header["WCAOmixv"] = (np.min(vx), "Minimum searched x velocity")
-    hdu.header["WCAOnuxv"] = (len(vx), "Number of x velocity gridpoints")
-    hdu.header["WCAOmayv"] = (np.max(vy), "Maximum searched y velocity")
-    hdu.header["WCAOmiyv"] = (np.min(vy), "Minimum searched y velocity")
-    hdu.header["WCAOnuyv"] = (len(vy), "Number of y velocity gridpoints")
-    hdu.header["WCAOrecv"] = ("np.linspace(WCAOMI?V,WCAOMA?V,WCAONU?V)","Psuedocode to reconstruct velocity grids.")
-    return hdu
-    
-    
-def read_v_metric_headers(hdu):
-    """Read the appropriate header values for wind-velocity metric arrays."""
-    vx = np.linspace(float(hdu.header["WCAOmixv"]),float(hdu.header["WCAOmaxv"]),int(hdu.header["WCAOnuxv"]))
-    vy = np.linspace(float(hdu.header["WCAOmiyv"]),float(hdu.header["WCAOmayv"]),int(hdu.header["WCAOnuyv"]))
-    return vx,vy
-    
-    
-def save_map(wmap,vx,vy,wcaotype):
-    """Saves the minimum amount of information to reconstruct a given map."""
-    from astropy.io import fits
-    hdu = fits.ImageHDU(wmap)
-    set_wcao_header_values(hdu,wcaotype)
-    set_v_metric_headers(hdu,vx,vy)
-    return hdu
+from .estimator import WCAOEstimate
 
-def load_map(hdu,wcaotype=None,scale=True):
-    """Load a map from an HDU"""
-    verify_wcao_header_values(hdu,wcaotype)
-    wmap = hdu.data.copy()
-    if scale:
-        vx,vy = read_v_metric_headers(hdu)
-        return wmap,vx,vy
-    else:
-        return wmap
+from aopy.util.units import ensure_quantity
 
 
 class WCAOMap(WCAOEstimate):
     """A generic WCAO estimate as a map."""
     
-    def _init_data(self,data):
+    def init_data(self,data=None, vx=None, vy=None, layers=None):
         """Data initialization."""
         if isinstance(data, np.ndarray):
             if data.ndim == 2:
                 self.map = data
-        elif isinstance(data, tuple):
-            if len(data) == 3:
-                self.map, self.vx, self.vy = data
-                
-    
-    def _load_IDL_format_fits(self,filename):
-        """Load wind map information from IDL"""
-        from astropy.io import fits
+            else:
+                raise ValueError("{}: Expected map with ndim=2, got {:d}".format(
+                    self, data.ndim
+                ))
+        elif data is not None:
+            raise ValueError("{}: Expected map of type {}, got {}".format(
+                self, np.ndarray, type(data)
+            ))
+        else:
+            if not all(map(lambda i: i is None,[vx,vy,layers])):
+                warnings.warn("{}:Ignoring metadata because map==None".format(self))
+            return
         
-        with fits.open(filename) as HDUs:
-            for HDU in HDUs:
-                if HDU.header["DTYPE"] == 'Wind Map':
-                    self.map = HDU.data.copy()
-                elif HDU.header["DTYPE"] == 'Wind vx scale':
-                    self.vx = HDU.data.copy()
-                elif HDU.header["DTYPE"] == 'Wind vy scale':
-                    self.vy = HDU.data.copy()
-                elif HDU.header["DTYPE"] == 'Wind Layer List':
-                    layer_list = np.atleast_2d(HDU.data.copy())
-                    layers = []
-                    for row in layer_list:
-                        layers.append({
-                            "vx" : row[0],
-                            "vy" : row[1],
-                            "m"  : row[2],
-                        })
-                    self.layers = layers
-        
-    
-    def save(self):
-        """Save a file"""
-        HDU = save_map(self.map, self.vx, self.vy, "WCAOWLLM")
-        HDU.writeto(self.fitsname, clobber=True)
-    
-    def load(self):
-        """Load a file"""
-        from astropy.io import fits
-        
-        with fits.open(self.fitsname) as HDUs:
-            self._init_data(load_map("WCAOWLLM",scale=True))
-    
+        if vx is None:
+            self.vx = np.arange(self.map.shape[0])
+        else:
+            self.vx = ensure_quantity(vx, u.m/u.s)
+        if vy is None:
+            self.vy = np.arange(self.map.shape[1])
+        else:
+            self.vy = ensure_quantity(vy, u.m/u.s)
+        self.layers = layers or []
     
     @property
     def extent(self):
         """The extent array for this map."""
         return [np.min(self.vx),np.max(self.vx),np.min(self.vy),np.max(self.vy)]
         
-    def _map_circles(self, ax, dist=10, origin=[0,0], color='w', crosshair=True, zorder=0.1, ls='dashed'):
-        """Show map circles in a crosshair pattern."""
-        from matplotlib.patches import Circle
-        from matplotlib.lines import Line2D
-        xm,xp = ax.get_xlim()
-        ym,yp = ax.get_ylim()
-        rm = np.max(np.abs([xm, xp, ym, yp]))
-        nc = rm//dist
-        Rs = [ (n+1)*dist for n in range(int(nc)) ]
-        circles = [ Circle(origin, R, fc='none', ec=color, ls=ls, zorder=zorder) for R in Rs]
-        if crosshair:
-            Rmax = max(Rs)
-            major = [ -Rmax, Rmax ]
-            minor = [ 0 , 0 ]
-            coords = [ (major, minor), (minor, major)]
-            for xdata,ydata in coords:
-                circles.append(
-                    Line2D(xdata,ydata, ls=ls, color=color, marker='None', zorder=zorder)
-                )
-        [ ax.add_artist(a) for a in circles ]
-        return circles
-        
-    def _map_format(self,ax,data,**kwargs):
-        """Formats a map with velocity information."""
-        kwargs.setdefault('extent',self.extent)
-        kwargs.setdefault('interpolation','nearest')
-        kwargs.setdefault('origin','lower')
-        
-        xlabel = kwargs.pop('xlabel',r"$v_x\; \mathrm{(m/s)}$")
-        ylabel = kwargs.pop('ylabel',r"$v_y\; \mathrm{(m/s)}$")
-        
-        colorbar = kwargs.pop('colorbar',True)
-        colorbar_kw = kwargs.pop('colorbar_kw',{})
-        colorbar_label = kwargs.pop('colorbar_label',False)
-        
-        image = ax.imshow(data,**kwargs)
-        if colorbar:
-            cbar = ax.figure.colorbar(image,**colorbar_kw)
-            if colorbar_label:
-                cbar.set_label(colorbar_label)
-        else:
-            cbar = None
-        
-        if xlabel:
-            ax.set_xlabel(xlabel)
-        if ylabel:
-            ax.set_ylabel(ylabel)
-        
-        return cbar
-        
-    def show_map(self,ax):
-        """Show this wind map."""
-        self._map_format(ax, self.map, colorbar_label=r"Wind Strength")
-        self._map_circles(ax)
-        ax.set_title("Wind Map")
-        self._header(ax.figure)
+    @property
+    def data(self):
+        """Data accessor."""
+        return self.map
         

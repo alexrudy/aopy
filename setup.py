@@ -22,7 +22,7 @@ setup(
     'wcao.data' : ['*.txt','*.yml'],
     'wcao.estimators' : ['*.yml']
     },
-    install_requires = ['distribute','numpy>=1.7','scipy>=0.11','pyshell','scikit-image','astropy'],
+    install_requires = ['distribute','numpy>=1.7','scipy>=0.11','pyshell>=0.3.2','scikit-image','astropy>=0.2.4'],
     test_requires = ['pIDLy','nosetests'],
     author = "Alexander Rudy",
     author_email = "alex.rudy@gmail.com",
