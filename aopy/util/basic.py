@@ -7,6 +7,11 @@
 #  Copyright 2013 Alexander Rudy. All rights reserved.
 # 
 
+from __future__ import (absolute_import, unicode_literals, division,
+                        print_function)
+
+import collections
+
 def istype(instance,ttype):
     """docstring for is_type"""
     try:
@@ -29,6 +34,20 @@ def resolve(name):
             __import__(used)
             found = getattr(found, n)
     return found
+    
+def configure_class(configuration):
+    """Resolve and configure a class."""
+    if isinstance(configuration, basestring):
+        class_obj = resolve(configuration)()
+    elif isinstance(configuration, collections.MutableMapping):
+        if "()" in configuration:
+            class_type = resolve(configuration.pop("()"))
+            class_obj = class_type(**configuration)
+        else:
+            raise ValueError("Must provide class name in key '()'")
+    else:
+        raise ValueError("Can't understand {}".format(configuration))
+    return class_obj
 
 class ConsoleContext(object):
     """Allow a switch between range and progress-bar"""
