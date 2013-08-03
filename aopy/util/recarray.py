@@ -19,6 +19,11 @@ Numerical Tasks
     lodtorec
 """
 
+from __future__ import (absolute_import, unicode_literals, division,
+                        print_function)
+
+import numpy as np
+
 def lodtorec(listofdicts,order=None,dtypes=None):
     """Convert a list of dictionaries each with the same keys to a numpy record array.
     
