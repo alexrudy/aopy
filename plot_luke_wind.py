@@ -13,6 +13,7 @@ import matplotlib.cm as cm
 import matplotlib.patches
 import matplotlib.lines
 import matplotlib.collections
+from matplotlib import gridspec
 import numpy as np
 import pyfits as pf
 import os.path, glob
@@ -20,9 +21,11 @@ import scipy.ndimage
 import logging,warnings
 import subprocess
 
-from pyshell.util import query_string, is_type_factory, check_exists
+from pyshell.util import query_string, is_type_factory, check_exists, ipydb
 from pyshell.base import CLIEngine
 import pyshell
+
+ipydb()
 
 def make_hist(X,Y,Z=None,nbins=1e3,size=None):
     """docstring for make_hist"""
@@ -96,7 +99,7 @@ class _WindPredictionMethod(object):
         'XY' : "Split 2D Binary Search",
         'FT' : "Time-Domain Fourier Transform",
         '2La' : "2-Layer Gauss Newton A",
-        '2Lb' : "2-Layer Guass Newton B"
+        '2Lb' : "2-Layer Gauss Newton B"
     }
     nbins = {
         'GN' : 51,
@@ -256,7 +259,11 @@ class PlotLukeWind(CLIEngine):
         for method in self.methods:
             self.methods[method].figures = {}
             self.methods[method].figures["map"] = plt.figure()
-            self.methods[method].figures["map"].add_subplot(1,1,1)
+            gs = gridspec.GridSpec(1, 2,
+                                   width_ratios=[10,1],
+                                   )
+            self.methods[method].figures["map"].add_subplot(111)
+            # self.methods[method].figures["map"].add_subplot(gs[1])
             self.methods[method].figures["timeseries"] = plt.figure()
             self.methods[method].figures["timeseries"].add_subplot(3,1,1)
             self.methods[method].figures["timeseries"].add_subplot(3,1,2)
@@ -372,11 +379,12 @@ class PlotLukeWind(CLIEngine):
     def _make_map(self,M,filename):
         """docstring for _make_map"""
         H, xedges, yedges, extent = M.normalized_data(mode='smoothed',time=1.0/self.config["Smooth.Frequency"])
+        extent = [40,-40,-40,40]
         kw = {}
         if not M.istimeseries():
             kw['vmin'] = 0
             kw['vmax'] = 1
-        M.figures["map"].axes[0].imshow(H,extent=extent,
+        Image = M.figures["map"].axes[0].imshow(H,extent=extent,
              interpolation='nearest',origin='lower',cmap=self.config.get("Maps.cmap",None),**kw)
         C = M.figures["map"].axes[0].contour(H,10,origin='lower',extent=extent)
         [ c.remove() for c  in C.collections[:5] ]
@@ -384,21 +392,24 @@ class PlotLukeWind(CLIEngine):
         # PA, = M.figures["map"].axes[0].plot(x,y,'o-',label="Center: "+M.name,color=M.color,mfc=M.color,markersize=14,mew=3)
         x,y = M.max()
         # PB, = M.figures["map"].axes[0].plot(x,y,'^-',label="Max: "+M.name,color=M.color,mfc=M.color,mew=3,markersize=14)
-        [ M.figures["map"].axes[0].add_artist(a) for a in make_circles(self.circles,color=self.config.get("Maps.Grid.imcolor","k")) ]
+        [ M.figures["map"].axes[0].add_artist(a) for a in make_circles(self.circles,color=self.config.get("Maps.Grid.imcolor","k"))]
         M.figures["map"].axes[0].add_artist(matplotlib.patches.Circle((0,0),self.config.get("Maps.Limits.rmin"),fc='none',ec='k',alpha=0.5,zorder=0.1))
         M.figures["map"].axes[0].set_xlim(self.limits)
         M.figures["map"].axes[0].set_ylim(self.limits)
         M.figures["map"].axes[0].set_xlabel("Velocity (m/s)")
         M.figures["map"].axes[0].set_ylabel("Velocity (m/s)")
         M.figures["map"].axes[0].set_title("Wind Map for {tel_tex} using {method_desc} during {set_tex}".format(**M.fd))
+        cb = M.figures['map'].colorbar(Image,shrink=0.75)
+        cb.set_ticks(np.arange(0,1.1,0.1))
+        cb.set_ticklabels(map("{:2d}\%".format,range(0,110,10)))
+        cb.set_label("Wind Likelyhood")
         M.figures["map"].savefig(filename,dpi=self.config["Figures.DPI"])
-        M.figures["map"].axes[0].clear()
         self.log.debug("Wrote '{}'".format(filename))
         return filename
         
     def do(self):
         """Take action!"""
-        files = glob.glob("data/{inst}/proc/*_phase.fits".format(inst=self.config.get("instrument","**")))
+        files = glob.glob("data/{inst}/proc/*_fwmap.fits".format(inst=self.config.get("instrument","**")))
         if len(self.opts.name) == 0:
             self.opts.name = select_files(files)
         if len(self.opts.name) == 1 and is_type_factory(int)(self.opts.name[0]) and int(self.opts.name[0]) == 0:
@@ -410,15 +421,15 @@ class PlotLukeWind(CLIEngine):
             elif isinstance(fname,basestring) and check_exists(fname):
                 FileNames.append(strip_filename(fname))
             else:
-                self.log("Skipping File '{}'".format(fname))
+                self.log.info("Skipping File '{}'".format(fname))
         
         self.log.info("Examining:")
         for filename in FileNames:
             self.log.info(" - '{:s}' ".format(filename))
         self.log.info("Plotting {!r} {!r}".format(self.config["Plots.Enable"],isinstance(self.config["Plots.Enable"],list)))
-        self._setup_methods()
         
         for FileName in FileNames:
+            self._setup_methods()
             BaseName   = os.path.splitext(os.path.basename(FileName))[0]
             Instrument = FileName.split("/")[1]
             FigureDict  = {
@@ -429,8 +440,14 @@ class PlotLukeWind(CLIEngine):
                 'ext' : "png"
             }
             Figures = set()
-            CWMapFile = pf.open(FileName+'_wind.fits')
-            FWMapFile = pf.open(FileName+'_fwmap.fits')
+            if check_exists(FileName+'_wind.fits'):
+                CWMapFile = pf.open(FileName+'_wind.fits')
+            else:
+                CWMapFile = False
+            if check_exists(FileName+'_fwmap.fits'):
+                FWMapFile = pf.open(FileName+'_fwmap.fits')
+            else:
+                FWMapFile = False
             if check_exists(FileName+'_luke_wind.fits'):
                 LWMapFile = pf.open(FileName+'_luke_wind.fits')
             else:
