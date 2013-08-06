@@ -19,3 +19,14 @@ def ensure_quantity(item,unit=None):
     else:
         value = item
     return value.to(unit)
+    
+def format_quantity(q, fmt="{:g}", ufmt="{:s}", u=None):
+    """docstring for format_quantity"""
+    
+    if u is not None:
+        q = q.to(u)
+    
+    return "{value:s} {unit:s}".format(
+        value = fmt.format(q.value),
+        unit = ufmt.format(q.unit)
+    )
