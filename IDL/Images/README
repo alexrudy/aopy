@@ -1,0 +1,69 @@
+		       Changing Graphics Devices
+
+		      Last updated 22 October 1993
+
+
+Note: The routines previously named X and SUN were renamed to XWIN and
+      SUNVIEW respectively.
+
+These routines form the part of the SERTS subroutine library pertaining
+to switching back and forth between graphics devices.  The philosophy
+behind these routines is to be able to switch from one device to
+another, and to be in the same state as when last using that device.
+That way one could be working in both Tektronix and PostScript modes,
+switching back and forth between them making plots and overplots, and
+everything would work.  One could also be using hardware fonts in one
+and software fonts in the other.
+
+The routines used to switch between modes are:
+
+	TEK		- Tektronix 4000 series terminal
+	TEKxxxx		- Tektronix 4100 series (or above) terminal
+	REGIS		- Regis terminal
+	PS		- PostScript plot file
+	QMS		- QMS plot file
+	PCL		- HP LaserJet (PCL) plot file
+	SUNVIEW		- SunView
+	XWIN		- X-windows display or terminal
+	WIN		- Microsoft Windows display
+
+These routines will only work if used exclusively to change the plotting
+device.  Internally they use the routine SETPLOT, but this would not
+normally be used directly.
+
+One can also place multiple plots on the same screen, and switch between
+them, using the routine SETVIEW.  When switching between graphics
+devices, the view must be defined separately for each graphics device,
+but the view will be preserved when switching back and forth.  Using
+SETWINDOW instead of WSET will also allow the view and the plotting
+parameters to be preserved when switching between windows.
+
+SETSCALE can be used to force the same scale to be used for both the X
+and Y plot axes.  Currently, it is recommended that one calls SETSCALE
+to set the scale, generates the plot, and then calls SETSCALE again to
+reset the system variables to the values they had before the scale was
+set.  The routines SETPLOT, SETWINDOW, and SETVIEW will automatically
+reset SETSCALE.  Even after disabling the SETSCALE parameters,
+additional graphics functions such as OPLOT will still be possible.
+
+The routines devoted to PostScript, i.e. PS, PSCLOSE, and PSPLOT, are
+also designed to work together.  Only these routines should be used to
+control the format and state of the PostScript file.  If the optional
+QMS device driver is present, then these comments also apply to QMS,
+QMCLOSE and QMPLOT.  The same goes for the PCL routines.
+
+The routines PSPLOT and QMPLOT make reference to a specific printer queue
+called SOLAR$TALARIS (and perhaps others).  This refers to a printer at our
+site which requires a special command to print QMS or PostScript files.  These
+references can be safely ignored, deleted, or used as a model for other
+printers who require nonstandard print statements.
+
+These routines also use the special system variables !BCOLOR and !ASPECT.
+These system variables are defined in the procedure DEVICELIB.  It is
+suggested that the command DEVICELIB be placed in the user's IDL_STARTUP
+file.
+
+Questions should be directed to:
+
+	PAL::THOMPSON				(SPAN)
+	William.T.Thompson.1@gsfc.nasa.gov	(Internet)
