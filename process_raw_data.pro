@@ -14,7 +14,7 @@ pro prd_add_header_info, obs, h1
   fxaddpar, h1, 'TSCOPE', obs.telescope, 'Telescope of observation'
   fxaddpar, h1, 'RAWPATH', obs.raw_path, 'File path and name of raw telemetry archive'
   fxaddpar, h1, 'PROCPATH', obs.processed_path, 'File path and name of the processes data'
-  ;; fxaddpar, h1, '', '', ''
+  fxaddpar, h1, 'RATE', obs.rate, 'Observation Rate (Hz)'
   ;; fxaddpar, h1, '', '', ''
   ;; fxaddpar, h1, '', '', ''
   ;; fxaddpar, h1, '', '', ''
@@ -212,6 +212,7 @@ pro process_raw_data, obs, stop=stopflag, enforce_frat=eflag, ngs=ngs, cut=cut
   fourier_modes = make_array(/comp, obs.n, obs.n, len)
   for t=0, len-1 do begin
       fmodes = fft(dm_shape[*,*,t])
+      if cut ne 0 then $
       fmodes = hpf(temporary(fmodes),cut,/butterworth_filter)
       fourier_modes[*,*,t] = fmodes
       dm_shape[*,*,t] = fft(fmodes,/inverse)

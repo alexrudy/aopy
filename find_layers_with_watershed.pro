@@ -6,7 +6,7 @@ function find_layers_with_watershed, metric, vx, lax=laxflag, stop=stopflag
 
   ;; basic parameters that you might change
 
-  min_likelihood = 0.7 ;;; must have 70% likelihood to be found
+  min_likelihood = 0.6 ;;; must have 70% likelihood to be found
   if keyword_set(laxflag) then min_likelihood = laxflag
 
   max_n_lay = 5.

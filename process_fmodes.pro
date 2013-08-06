@@ -34,7 +34,7 @@ pro process_fmodes, obs, per_len=pflag, more=moreflag, lax=laxflag, verbose=vfla
 
   ;; read in the Fmodes
   sig = readfits(obs.processed_path+'_fmodes.fits', h1) 
-  fourier_modes = complex(sig[*,*,*,0],sig[*,*,*,1]) 
+  fourier_modes = complex(sig[*,*,*,0],sig[*,*,*,1])
 
 
 
@@ -56,15 +56,16 @@ pro process_fmodes, obs, per_len=pflag, more=moreflag, lax=laxflag, verbose=vfla
      for l=0, n-1 do $
         modal_psds[k,l,*] = gen_periodogram(/mean, /half, fourier_modes[k,l,*], per_len)
   
+  ; writefits,"PSD04.fits",real_part(modal_psds[0,4,*])
   ;;; now handle the Influence Function response of DM
   for k=0, n-1 do $
      for l=0, n-1 do $
         modal_psds[k,l,*] = modal_psds[k,l,*]*obs.dmtrans_mulfac[k,l]
-
-
+ 
+  ; writefits, "scPSD04.fits", real_part(modal_psds[0,4,*])
   ;; now deal with the data type and the temporal response of the
   ;; control loop.
-
+  ; stop
 
 
     ;;; calculate everything
@@ -78,7 +79,7 @@ pro process_fmodes, obs, per_len=pflag, more=moreflag, lax=laxflag, verbose=vfla
 
   cofz = obs.gain/(1 - obs.integrator_c*zinv) ;; actually 1*zinv, but must prevent division by zero!
   delay_term = wfs_cont*dm_cont*delay_cont
-
+  
   tf_to_convert_to_phase = omega*0 + 1.
 
   if strcmp(obs.datatype, 'closed-loop-residual') then $
@@ -91,7 +92,7 @@ pro process_fmodes, obs, per_len=pflag, more=moreflag, lax=laxflag, verbose=vfla
                                 ;tf_to_convert_to_phase = abs((1 + delay_term*cofz)/(dm_cont*delay_cont*cofz))^2
   if strcmp(obs.datatype, 'closed-loop-dm-commands') then $
      tf_to_convert_to_phase = abs((1 + delay_term*cofz)/(cofz))^2
-
+  
   ;;; if open loop, don't do anything!
 ;  if strcmp(obs.datatype, 'open-loop-residual') then $
 ;     tf_to_convert_to_phase = omega*0 + 1.
@@ -116,7 +117,7 @@ pro process_fmodes, obs, per_len=pflag, more=moreflag, lax=laxflag, verbose=vfla
 
   ;;; first thing we can do is split this into noise and signl terms
   ;;; with a straightforward fitting procedure.
-
+    
   split_psds_into_atm_and_noise, modal_psds, atm_psds, noise_psds
 
   if 0 then begin
@@ -178,19 +179,10 @@ pro process_fmodes, obs, per_len=pflag, more=moreflag, lax=laxflag, verbose=vfla
 
      stop
   endif
-      mkhdr, h1, wind_data.metric, /extend
-    fxaddpar, h1, 'TSCOPE', obs.telescope, 'Telescope of observation'
-    fxaddpar, h1, 'RAWPATH', obs.raw_path, 'File path and name of raw telemetry archive'
-    fxaddpar, h1, 'PROCPATH', obs.processed_path, 'File path and name of the processes data'
-    fxaddpar, h1, 'DTYPE', 'Wind Map', 'In spatial domain'
-    writefits,obs.processed_path+'_fwmap.fits',wind_data.metric,h1
-    mkhdr, h2, wind_data.vx, /image
-    fxaddpar, h2, 'DTYPE', 'Wind vx scale', 'in m/s'
-    writefits,obs.processed_path+'_fwmap.fits',wind_data.vx,h2,/append
-    mkhdr, h3, wind_data.vy, /image
-    fxaddpar, h3, 'DTYPE', 'Wind vy scale', 'in m/s'
-    writefits,obs.processed_path+'_fwmap.fits',wind_data.vy,h3,/append
-    print,"Done Processing FModes"
+  
+  
+  save_wind_map, wind_data, obs
+  
   print, 'Next routines require ImageMagick, etc.'
   print, ' '
   ; stop
@@ -228,6 +220,7 @@ pro process_fmodes, obs, per_len=pflag, more=moreflag, lax=laxflag, verbose=vfla
   k = 0
   l = 4
   make_plot_compare_psd, hz, atm_psds, fit_data, obs, k, l, /pdf
+  ; stop
 ; make_plot_psd, hz, atm_psds, k, l, /pdf
 
 end

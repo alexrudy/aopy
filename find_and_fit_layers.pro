@@ -73,11 +73,11 @@ function find_and_fit_layers, peaks_hz, obs, lax=laxflag
         endif
      endfor
   endfor
-
-
+  
+  
   ;;; now that we've got the metric, find and fit them with watershed!
   thisres = find_layers_with_watershed(metric, vx, lax=laxflag)
-
+  
   res = {vx:vx, vy:vy, metric:metric, layer_list:thisres}
   make_wind_map, /old, res, obs, lax=laxflag
 

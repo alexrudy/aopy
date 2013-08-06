@@ -593,6 +593,50 @@ function get_case_gems, identifier
         rate = 0.   ;; will be read in from the data!
         wfs_number = 4
      end
+     
+     ; Case from Andres for comparison at AO4ELT
+     
+     235: begin
+        datatype = 'pseudo-open-loop-slopes'
+        pupil_remap = 'gems-fratricide-wfs'
+        archive_location = 'sPOL13149211651'
+        filename = '13149211651_pol_wfs0'
+        rate = 0.  ;; will be read in from the data!
+        wfs_number = 0
+     end
+     236: begin
+        datatype = 'pseudo-open-loop-slopes'
+        pupil_remap = 'gems-fratricide-wfs'
+        archive_location = 'sPOL13149211651'
+        filename = '13149211651_pol_wfs1'
+        rate = 0.   ;; will be read in from the data!
+        wfs_number = 1
+     end
+     237: begin
+        datatype = 'pseudo-open-loop-slopes'
+        pupil_remap = 'gems-fratricide-wfs'
+        archive_location = 'sPOL13149211651'
+        filename = '13149211651_pol_wfs2'
+        rate = 0.   ;; will be read in from the data!
+        wfs_number = 2
+     end
+     238: begin
+        datatype = 'pseudo-open-loop-slopes'
+        pupil_remap = 'gems-fratricide-wfs'
+        archive_location = 'sPOL13149211651'
+        filename = '13149211651_pol_wfs3'
+        rate = 0.   ;; will be read in from the data!
+        wfs_number = 3
+     end
+     239: begin
+        datatype = 'pseudo-open-loop-slopes'
+        pupil_remap = 'gems-fratricide-wfs'
+        archive_location = 'sPOL13149211651'
+        filename = '13149211651_pol_wfs4'
+        rate = 0.   ;; will be read in from the data!
+        wfs_number = 4
+     end
+     
 
 
 

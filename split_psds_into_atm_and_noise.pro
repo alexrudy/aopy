@@ -34,8 +34,9 @@ pro split_psds_into_atm_and_noise, modal_psds, atm_psds, noise_psds
         if option eq 1 then begin
            ;; be fancy here. What we'd like to do is mask out
            ;; the portions where noise dominates the atm.
-
            noise_rms = stddev(this_psd[per_len/2-wid:per_len/2+wid])
+           print,noise_rms
+           writefits,"psd.fits",this_psd[per_len/2-wid:per_len/2+wid]
            mask = this_psd LT noise_level + 2*noise_rms
            zl = where(mask EQ 1, numz)
            if numz GT 0 then $
