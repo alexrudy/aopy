@@ -1,0 +1,38 @@
+Maps:
+  Limits:
+    min: -40
+    max: 40
+    rmin: 5
+  Nbins: 50
+  RebinFT: false
+  # cmap: spectral
+  Grid:
+    color: k
+    imcolor: w
+Smooth:
+  Frequency: 100
+Figures:
+  DPI: 300
+Plots:
+  Enable:
+    - map
+    # - timeseries
+    # - cmap
+    # - mmap
+    # - bintest
+Methods:
+  Base: ['FT']
+  Enable:
+    # - 'GN'
+    # - '2D'
+    # - 'XY'
+    - 'FT'
+    # - '2La'
+    # - '2Lb'
+  MMap: ['FT','GN','2La','2Lb']
+logging:
+  root:
+    level: DEBUG
+  handlers:
+    console:
+      level: DEBUG

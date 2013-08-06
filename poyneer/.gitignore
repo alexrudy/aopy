@@ -1,0 +1,17 @@
+# 
+#  .gitignore
+#  telem_analysis_13
+#  
+#  Created by Jaberwocky on 2013-01-31.
+#  Copyright 2013 Jaberwocky. All rights reserved.
+# 
+*.png
+*.fits
+data/*
+figures/*
+movies/*
+tmp/*
+*.pyc
+reports/*.log
+reports/*.aux
+reports/*.pdf

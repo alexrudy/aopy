@@ -1,0 +1,140 @@
+\documentclass[12pt]{article}
+%--- PACKAGES ---
+%\usepackage{fontspec} %XeTeX Fonts
+\usepackage[usenames,dvipsnames]{color}
+
+% Paper Geometry
+\usepackage{geometry} 
+\geometry{letterpaper} %Paper Size
+\usepackage{fancyhdr}
+\usepackage{lscape}
+%\usepackage{fullpage}
+%\usepackage{lastpage}
+
+% Graphics Packages
+\usepackage[xetex]{graphicx}
+%\usepackage{epstopdf}
+\usepackage{wrapfig}
+\usepackage{float}
+\usepackage{rotating}
+
+
+% Problem Statement Commands
+\usepackage{boxedminipage}
+\usepackage{enumitem}
+
+% Mathematics and Symbols
+\usepackage{amsmath} 
+\usepackage{amssymb}
+
+% Text and References
+\usepackage{varioref}
+\usepackage{url}
+\usepackage{natbib}
+\usepackage{setspace}
+\usepackage{xltxtra}
+
+
+%--- GRAPHICS COMMANDS ---%
+\DeclareGraphicsRule{.tif}{png}{.png}{`convert #1 `dirname #1`/`basename #1 .tif`.png}
+%\renewcommand{\labelenumi}{\textbf{(\alph{enumi})}}
+
+%---- XeLaTeX COMMANDS ---%
+%\setromanfont{Palatino}
+
+%---- META-DATA INFORMATION ----%
+% Set up for Homework from courses: change titlepages etc.
+\newcommand{\gotitle}{\today\ Report on Wind Prediction Methods}
+\newcommand{\goauthor}{Alexander Rudy}
+
+%---- TITLE INFORMATION ----%
+% LaTeX Metadata commands required for \maketitle, which is actually pretty bad
+\title{\gotitle}
+\author{\goauthor}
+\date{\today}                                                         
+
+%--- HEADER INFORMATION ----         
+\pagestyle{fancy}
+
+\fancyhf{}
+%Header Content
+\lhead{\goauthor}
+\chead{\gotitle}
+\rhead{}
+%Footer Content
+\cfoot{ - \thepage \ - }
+\lfoot{}
+\rfoot{}
+% Header
+\headheight 40 pt
+\headsep 10pt
+\renewcommand{\headrulewidth}{0 pt}
+\renewcommand{\footrulewidth}{0 pt}
+
+% Meta Rules
+\newcommand{\note}[1]{{\color{blue}\emph{#1}}}
+\newcommand{\scrap}[1]{{\color{green}#1}}
+\newcommand{\error}[1]{{\color{red}#1}}
+
+%--- CUSTOM COMMANDS ---
+\renewcommand{\ll}{\left} %Left Parenthesis
+\newcommand{\rr}{\right} %Right Parenthesis
+\newcommand{\txt}{\textrm} %text mode shortcut
+\renewcommand{\v}[1]{\vec{#1}} %Vector Notation
+\newcommand{\unit}[1]{\txt{ #1}} %Units Mode
+\renewcommand{\b}[1]{\mathbf{#1}} %Bold in Math Mode
+\newcommand{\E}[1]{\times 10^{#1}} %Times 10 to the [argument]
+\renewcommand{\deg}{^{\circ}} %degrees symbol
+
+%--- Some MKS Numbers for Astro ---%
+\newcommand{\g}{9.8\ \txt{ m} \txt{ s}^{-2}} %Insert g
+\renewcommand{\G}{6.7 \times 10^{-11} \txt{ N m}^2\txt{ s}^{-2}} %Insert G
+\newcommand{\ms}[1]{\txt{ m} \txt{ s}^{#1}} %Meters per second^[argument]
+
+% General Formatting Rules
+\newcommand{\HRule}{\rule{\linewidth}{0.5mm}} %Horizontal Line
+\newcommand{\pref}[1]{(\ref{#1})} %Parenthesis References
+
+% QM Commands
+\newcommand{\bra}{\langle}
+\newcommand{\ket}{\rangle}
+
+%--- DOCUMENT ---
+\begin{document}
+
+\begin{figure}[htbp]
+   \centering
+   \includegraphics[width=\textwidth]{../figures/histogram_FT_keck_simulated_sim_0} % requires the graphicx package
+   \caption{This is the wind map for an artificially generated wind analyzed by the `Fourier Transform' method. It shows the artificially inserted wind at $-25 \unit{m/s}$ as expected. The triangle shows the peak value, and the circle shows the measured image Center-of-Mass. Neither is a sophisticated peak finding method.}
+   \label{histogram_FT_keck_simulated_sim_0}
+\end{figure}
+
+\begin{figure}[htbp]
+   \centering
+   \includegraphics[width=\textwidth]{../figures/contours_all_keck_simulated_sim_0.png} % requires the graphicx package
+   \caption{This is the wind map for an artificially generated wind. It shows the artificially inserted wind at $-25 \unit{m/s}$. The triangle shows the peak value, and the circle shows the measured image Center-of-Mass. The individual methods are GN: Gauss-Newton Minimization, 2D: 2D Binary Search, XY: Split Binary Search, and FT: Fourier Transform}
+   \label{contours_all_keck_simulated_sim_0}
+\end{figure}
+
+
+\begin{figure}[htbp]
+   \centering
+   \includegraphics[width=\textwidth]{../figures/timeseries_GN_keck_simulated_sim_0.png} % requires the graphicx package
+   \caption{This is a timeseires plot of the measured wind with the Gauss-Newton Method, smoothed for a temporal updating response of $100\unit{Hz}$. The blue lines show results from my runs of Luke's code, the black X's show Luke's code's direct output. The good agreement is a nice sanity check. The smoothing is a flat window filter. Notice that the Gauss-Newton wind never seems to predict the full $25 \unit{m/s}$ wind expected in the $x$ direction.}
+   \label{timeseries_GN_keck_simulated_sim_0}
+\end{figure}
+
+\begin{figure}[htbp]
+   \centering
+   \includegraphics[width=\textwidth]{../figures/histogram_FT_altair_20070417.png} % requires the graphicx package
+   \caption{This is the wind map for an altair measured wind. It shows what appears to be a single strong layer at $\left(22,10\right)\unit{m/s}$.}
+   \label{histogram_FT_altair_20070417}
+\end{figure}
+
+\begin{figure}[htbp]
+   \centering
+   \includegraphics[width=\textwidth]{../figures/contours_all_altair_20070417.png} % requires the graphicx package
+   \caption{This is the wind map for an altair measured wind. As expected, Luke's methods form a center-of-mass measurement in between markers of Lisa's layers.}
+   \label{contours_all_altair_20070417}
+\end{figure}
+\end{document}
