@@ -1,7 +1,19 @@
 AOPY - AdaptiveOpticsPYthon
 ===========================
 
-This is a module for doing Adaptive-Optics-y things in Python.
+This is a module for doing Adaptive-Optics-y things in Python. There are several subdirectories in this repository.
+
+Layout
+------
+
+* ``aopy`` - Basic Adaptive Optics routines. These directories will hold python ports of Don Gavel's libraries. This should eventual be split into its own library.
+* ``docs`` - Sphinx based documentation for all of the python code in here.
+* ``external`` - External python libraries that are used.
+* ``IDL`` - IDL libraries and programs.
+* ``tests`` - Python unit tests.
+* ``wcao`` - Wind-corrective-adaptive-optics, the python wind estimation framework
+
+
 
 Requirements
 ------------
