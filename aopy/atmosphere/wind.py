@@ -206,7 +206,7 @@ class ManyLayerScreen(BlowingScreen):
         super(ManyLayerScreen, self).__init__(shape, r0, seed, vel=None, delay=True, **kwargs)
         
         self._vel = vel
-        self._shape = tuple((np.array(self.shape) + np.abs(np.max(self._vel,axis=0)) * np.ceil(self._tmax / self._du)).to(1).value.astype(np.int))
+        self._shape = tuple(np.fix((np.array(self.shape) + np.abs(np.max(self._vel,axis=0)) * np.ceil(self._tmax / self._du)).to(1).value))
         
         self._screens = np.zeros((self._vel.shape[0],)+self._shape)
         
