@@ -30,7 +30,7 @@ setup(
     author_email = "alex.rudy@gmail.com",
     entry_points = {
         'console_scripts' : [
-            'WCAO = wcao.analysis.core:WCAOPipeline.script'
+            'WCAO = wcao.controllers.controller:WCAOController.script'
         ]
     }
     )
