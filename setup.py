@@ -20,7 +20,9 @@ setup(
     package_data = {'aopy': ['aopy/data/*'],
     'wcao.estimators.pidly' : ['idl/*.pro'],
     'wcao.data' : ['*.txt','*.yml'],
-    'wcao.estimators' : ['*.yml']
+    'wcao.estimators' : ['*.yml'],
+    'wcao.estimators.fmts' : ['*.yml'],
+    'wcao' : ['*.yml'],
     },
     install_requires = ['distribute','numpy>=1.7','scipy>=0.11','pyshell>=0.3.2','scikit-image','astropy>=0.2.4'],
     test_requires = ['pIDLy','nosetests'],
