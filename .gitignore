@@ -57,3 +57,5 @@ profile/*
 
 # IPython stuff
 .ipynb_checkpoints
+
+development/*
