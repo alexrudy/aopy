@@ -20,6 +20,8 @@ Contents:
    atmosphere.wind
    aperture
    aperture.core
+   wavefront
+   wavefront.zernike
    util.math
 
 
