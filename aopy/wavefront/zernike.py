@@ -243,9 +243,12 @@ def zernike_slope_cartesian(n, m, X, Y):
     
     """
     Rho, Phi = cartesian_to_polar(X, Y)
+    DRho = Rho.copy()
+    DRho[Rho == 0] = 1
     S_Rho, S_Phi = zernike_slope_polar(n, m, Rho, Phi)
-    X_s = np.sin(Phi) * S_Rho + np.cos(Phi) * S_Phi / Rho
-    Y_s = np.cos(Phi) * S_Rho - np.sin(Phi) * S_Phi / Rho
+    S_Phi[Rho == 0] = 0
+    X_s = np.sin(Phi) * S_Rho + np.cos(Phi) * S_Phi / DRho
+    Y_s = np.cos(Phi) * S_Rho - np.sin(Phi) * S_Phi / DRho
     return X_s, Y_s
     
 def noll_to_zern(j):
@@ -297,7 +300,7 @@ def zernike_noll_polar(j, Rho, Phi):
     n, m = noll_to_zern(j)
     return zernike_polar(n, m, Rho, Phi)
     
-def zernike_noll_cartesian(n, m, X, Y):
+def zernike_noll_cartesian(j, X, Y):
     """
     Calculate the jth linear Noll indexed Zernike mode.
     
@@ -369,7 +372,7 @@ def zernike_triangle(figure=None, noll=16, size=40, radius=18):
     ap = (np.sqrt(X**2 + Y**2) < 1.0).astype(np.int)
     
     
-    rows, figures = _find_triangular_number(max_noll)
+    rows, figures = _find_triangular_number(noll)
     cols = (rows * 2)
     
     gs = matplotlib.gridspec.GridSpec(rows, cols)
@@ -378,14 +381,16 @@ def zernike_triangle(figure=None, noll=16, size=40, radius=18):
         n, m = noll_to_zern(j)
         x = rows + m
         Z = zernike_noll_cartesian(j, X, Y)
-        ax = figure.add_subplot(gs[n,x-1:x+1])
         Z[ap != 1] = np.nan
+        
+        ax = figure.add_subplot(gs[n,x-1:x+1])
         ax.imshow(Z, interpolation='nearest')
         ax.get_xaxis().set_visible(False)
         ax.get_yaxis().set_visible(False)
-        ax.set_title("Zernike ({:d},{:d})".format(n, m))
+        ax.set_frame_on(False)
+        ax.text(-0.1,0, r"$Z_{{{n}}}^{{{m}}}$".format(n=n,m=m), transform=ax.transAxes, ha='left', va='bottom')
         
-def zernike_slope_triangle(figure=None, max_noll=16, size=40, radius=18):
+def zernike_slope_triangle(figure=None, noll=16, size=40, radius=18):
     """
     Make a zernike slope triangle diagram
     
@@ -403,25 +408,26 @@ def zernike_slope_triangle(figure=None, max_noll=16, size=40, radius=18):
     X, Y = np.mgrid[-size/2:size/2,-size/2:size/2] / radius
     ap = (np.sqrt(X**2 + Y**2) < 1.0).astype(np.int)
     
-    
-    rows, figures = _find_triangular_number(max_noll)
+    rows, figures = _find_triangular_number(noll)
     cols = (rows * 4)
     
+    label = r"$\frac{{\partial Z_{{{n}}}^{{{m}}}}}{{\partial {ax}}}$"
     gs = matplotlib.gridspec.GridSpec(rows, cols)
     
     for j in range(1,int(figures)+1):
         n, m = noll_to_zern(j)
-        x = 2 * rows + 2 * m
+        x = 2 * (rows + m)
         Z_x, Z_y = zernike_slope_cartesian(n, m, X, Y)
-        ax_x = figure.add_subplot(gs[n,x-2:x])
         Z_x[ap != 1] = np.nan
-        ax_x.imshow(Z_x, interpolation='nearest')
-        ax_x.get_xaxis().set_visible(False)
-        ax_x.get_yaxis().set_visible(False)
-        ax_x.set_title("X Slopes ({:d},{:d})".format(n, m))
-        ax_y = figure.add_subplot(gs[n,x:x+2])
         Z_y[ap != 1] = np.nan
-        ax_y.imshow(Z_y, interpolation='nearest')
-        ax_y.get_xaxis().set_visible(False)
-        ax_y.get_yaxis().set_visible(False)
-        ax_y.set_title("Y Slopes ({:d},{:d})".format(n, m))
+        Z = np.hstack((Z_x, Z_y))
+        
+        ax = figure.add_subplot(gs[n,x-2:x+2])
+        ax.imshow(Z, interpolation='nearest')
+        ax.get_xaxis().set_visible(False)
+        ax.get_yaxis().set_visible(False)
+        ax.text(0.25,0, label.format(n=n,m=m,ax='x'), fontsize=8,
+            transform=ax.transAxes, ha='center', va='top')
+        ax.text(0.75,0, label.format(n=n,m=m,ax='y'), fontsize=8,
+            transform=ax.transAxes, ha='center', va='top')
+        ax.set_title("({n},{m})".format(n=n,m=m))
