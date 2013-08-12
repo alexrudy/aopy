@@ -15,14 +15,14 @@ Contents:
 .. toctree::
    :maxdepth: 2
    
-   atmosphere
-   atmosphere.screen
-   atmosphere.wind
-   aperture
-   aperture.core
-   wavefront
-   wavefront.zernike
-   util.math
+   aopy/atmosphere
+   aopy/atmosphere.screen
+   aopy/atmosphere.wind
+   aopy/aperture
+   aopy/aperture.core
+   aopy/wavefront
+   aopy/wavefront.zernike
+   aopy/util.math
 
 
 WCAO - Wind Controlled Adaptive Optics
