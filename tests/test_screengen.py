@@ -16,9 +16,7 @@ import os, os.path
 
 import pidly
 
-def npeq_(a,b,msg):
-    """Assert numpy equal"""
-    nt.ok_(np.allclose(a,b,rtol=1e-4),"{:s} {!s}!={!s}".format(msg,a,b))
+from .util import npeq_
 
 class test_screen_functions(object):
     """aopy.atmosphere.screen functions"""

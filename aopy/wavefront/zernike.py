@@ -88,7 +88,7 @@ import numpy as np
 
 from scipy.misc import factorial
 
-def zernike_ks(n, m):
+def zernike_ks(n, m, slope=False):
     r"""
     The zernike factorial terms.
     
@@ -103,7 +103,8 @@ def zernike_ks(n, m):
     
     """
     ks = np.arange(0, (n-m)/2 + 1)
-    ks = ks[(2*ks != n)]
+    if slope:
+        ks = ks[(2*ks != n)]
     kterm = ((-1.0)**ks * factorial(n-ks)) / (factorial(ks) * factorial((n+m)/2.0 - ks) * factorial((n-m)/2.0 - ks))
     return ks, kterm
 
@@ -144,7 +145,7 @@ def zernike_rho_slope(n, m, Rho):
         \frac{\partial R_{n}^{m}}{\partial \rho}
     
     """
-    ks, kterm = zernike_ks(n, m)
+    ks, kterm = zernike_ks(n, m, slope=True)
     Rp = np.power(Rho[...,np.newaxis], n - 2.0 * ks - 1 ) * (n - 2.0 * ks) * kterm
     return np.sum(Rp, axis=-1)
     
@@ -161,7 +162,7 @@ def zernike_phi_slope(n, m, Rho):
         \frac{\partial R_{n}^{m}}{\partial \varphi}
     
     """
-    ks, kterm = zernike_ks(n, m)
+    ks, kterm = zernike_ks(n, m, slope=True)
     Rthetap = np.power(Rho[...,np.newaxis], n - 2.0 * ks ) * kterm
     return np.sum(Rthetap, axis=-1)
     
