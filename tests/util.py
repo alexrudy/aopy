@@ -15,6 +15,6 @@ import nose.tools as nt
 
 import numpy as np
 
-def npeq_(a,b,msg, rtol=1e-4):
+def npeq_(a,b,msg, rtol=1e-8, atol=1e-4):
     """Assert numpy equal"""
-    nt.ok_(np.allclose(a,b,rtol=rtol),"{:s} {!s}!={!s}".format(msg,a,b))
+    nt.ok_(np.allclose(a,b,rtol=rtol, atol=atol),"{:s} {!s}!={!s}".format(msg,a,b))
