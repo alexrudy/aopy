@@ -29,7 +29,7 @@ class test_zernike_polynomials(object):
         IDL_PATH = os.path.normpath(os.path.join(os.path.dirname(__file__),"../IDL/zernike/"))
         self.idl_output = True
         self.size = 40
-        self.radius = 19
+        self.radius = 19.0
         self.circle_args = {
             'size': self.size,
             'center': self.size/2,
@@ -66,6 +66,45 @@ class test_zernike_polynomials(object):
         gap[~np.isfinite(gap)] = 0.0
         npeq_(z_idl[self.ap == 1],z_pyt[self.ap == 1], "Zernike Mismatch by {} +/- {}, [{},{}]".format(
             np.mean(gap), np.std(gap), np.min(gap), np.max(gap)))
+<<<<<<< Updated upstream
+=======
+            
+    @nt.nottest
+    def zernike_slope_tests(self, n, m):
+        """Zernike Mode Slope Tests"""
+        zernike_args = self.circle_args
+        zernike_args["n"] = n
+        zernike_args["m"] = np.abs(m)
+        
+        z_npy = zernike.zernike_cartesian(n, m, self.X + + 0.5/self.radius, self.Y + + 0.5/self.radius)
+        ys_npy, xs_npy = np.gradient(z_npy)
+        xs_npy = xs_npy * self.ap * self.radius
+        ys_npy = ys_npy * self.ap * self.radius
+        
+        xs_pyt, ys_pyt = zernike.zernike_slope_cartesian(n, m, self.X + + 0.5/self.radius, self.Y + 0.5/self.radius)
+        xs_pyt = xs_pyt * self.ap
+        ys_pyt = ys_pyt * self.ap
+        
+        npy_filename = "zs_npy_{n:d}_{m:d}.npy".format(n=n,m=m)
+        pyt_filename = "zs_pyt_{n:d}_{m:d}.npy".format(n=n,m=m)
+        
+        if not (np.allclose(xs_pyt, xs_npy, atol=1e-5) and np.allclose(ys_pyt, ys_npy, atol=1e-5)):
+            np.save(npy_filename, np.dstack((xs_npy, ys_npy)))
+            np.save(pyt_filename, np.dstack((xs_pyt, ys_pyt)))
+        else:
+            remove(npy_filename)
+            remove(pyt_filename)
+            
+        x_gap = xs_npy[self.ap == 1] - xs_pyt[self.ap == 1]
+        y_gap = ys_npy[self.ap == 1] - ys_pyt[self.ap == 1]
+        
+        npeq_(xs_npy[self.ap == 1], xs_pyt[self.ap == 1], "Zernike X-Slope Mismatch by {} +/- {} [{},{}]".format(
+            np.mean(x_gap), np.std(x_gap), np.min(x_gap), np.max(x_gap), atol=0.1
+        ))
+        npeq_(ys_npy[self.ap == 1], ys_pyt[self.ap == 1], "Zernike Y-Slope Mismatch by {} +/- {} [{},{}]".format(
+            np.mean(y_gap), np.std(y_gap), np.min(y_gap), np.max(y_gap), atol=0.1
+        ))
+>>>>>>> Stashed changes
     
     def test_zernike_focus(self):
         """zernike focus (2, 0)"""

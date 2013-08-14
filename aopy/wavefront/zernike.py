@@ -248,8 +248,8 @@ def zernike_slope_cartesian(n, m, X, Y):
     DRho[Rho == 0] = 1
     S_Rho, S_Phi = zernike_slope_polar(n, m, Rho, Phi)
     S_Phi[Rho == 0] = 0
-    X_s = np.sin(Phi) * S_Rho + np.cos(Phi) * S_Phi / DRho
     Y_s = np.cos(Phi) * S_Rho - np.sin(Phi) * S_Phi / DRho
+    X_s = np.sin(Phi) * S_Rho + np.cos(Phi) * S_Phi / DRho
     return X_s, Y_s
     
 def noll_to_zern(j):
@@ -259,7 +259,7 @@ def noll_to_zern(j):
     :param int j: Linear Noll Index
     
     """
-    if (j <= 0):
+    if (j < 0):
         raise ValueError("Noll indices start at 1.")
     
     n = 0

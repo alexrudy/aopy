@@ -16,7 +16,7 @@
 from __future__ import (absolute_import, unicode_literals, division,
                         print_function)
 
-
+import numpy as np
 
 def slope_management(ap, xs, ys):
     """
@@ -57,7 +57,7 @@ def slope_management(ap, xs, ys):
     
     for j in range(n):
         if apr_sum[j] != 0:
-            loc = np.where(apr_sum[j] != 0)
+            loc = np.where(ap[:,j] != 0)[0]
             left = loc[0]
             right = loc[-1]
             
@@ -66,11 +66,11 @@ def slope_management(ap, xs, ys):
             if right == n:
                 raise ValueError("Not enough space to edge correct, row {j} ends at k={k}".format(j=j, k=n))
             
-            xs_c[left-1,j] = - 0.5 * xsr_sum[j]
-            xs_c[right+1,j] = -0.5 * xsr_sum[j]
+            xs_c[left-1, j] = - 0.5 * xsr_sum[j]
+            xs_c[right+1, j] = -0.5 * xsr_sum[j]
         
         if apc_sum[j] != 0:
-            loc = np.where(apr_sum[j] != 0)
+            loc = np.where(ap[j,:] != 0)[0]
             bottom = loc[0]
             top = loc[-1]
             
