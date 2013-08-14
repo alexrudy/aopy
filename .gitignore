@@ -49,6 +49,7 @@ tests/pkg
 /*.yml
 *.dat
 /data/*
+*.npy
 
 # Logging etc.
 *.profile
