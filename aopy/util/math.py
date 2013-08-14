@@ -30,8 +30,13 @@ Phase and Aperture Functions
 """
 from __future__ import (absolute_import, unicode_literals, division,
                         print_function)
-                        
+                  
+import functools, contextlib
 import numpy as np
+
+def complexmp(mag, phase):
+    """docstring for complexmp"""
+    return mag * np.cos(phase) + mag * 1j * np.sin(phase)
 
 def circle(R,radius=None,orig=None):
     """docstring for circle"""
@@ -125,6 +130,13 @@ def smooth(x,window_len=11,window='hanning'):
     y=np.convolve(w/w.sum(),s,mode='same')
     return y[window_len:-window_len+1]
 
-
+@contextlib.contextmanager
+def ignoredivide():
+    """A context manager for ignoring division"""
+    errsettings = np.seterr(all='ignore')
+    yield
+    np.seterr(**errsettings)
+    
+    
     
         

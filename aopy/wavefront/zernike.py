@@ -162,7 +162,7 @@ def zernike_phi_slope(n, m, Rho):
         \frac{\partial R_{n}^{m}}{\partial \varphi}
     
     """
-    ks, kterm = zernike_ks(n, m, slope=True)
+    ks, kterm = zernike_ks(n, m, slope=False)
     Rthetap = np.power(Rho[...,np.newaxis], n - 2.0 * ks ) * kterm
     return np.sum(Rthetap, axis=-1)
     
@@ -191,11 +191,12 @@ def zernike_polar(n, m, Rho, Phi):
         
     """
     if m > 0:
-        return zernike_rho(n, m, Rho) * np.cos(m * Phi)
+        Z = zernike_rho(n, m, Rho) * np.cos(m * Phi)
     elif m < 0:
-        return zernike_rho(n, -m, Rho) * np.sin(-m * Phi)
+        Z = zernike_rho(n, -m, Rho) * np.sin(-m * Phi)
     else:
-        return zernike_rho(n, 0, Rho)
+        Z = zernike_rho(n, 0, Rho)
+    return Z * np.sqrt((2 * (n+1))/(1 + int(m == 0)))
     
 def zernike_slope_polar(n, m, Rho, Phi):
     """
@@ -209,14 +210,16 @@ def zernike_slope_polar(n, m, Rho, Phi):
     
     """
     if m > 0:
-        S_Rho = zernike_rho_slope(n, m, Rho) * np.cos(m * Phi)
-        S_Phi = zernike_phi_slope(n, m, Rho) * -m * np.sin(m * Phi)
+        S_Rho = zernike_rho_slope(n, m, Rho) * np.cos(m * Phi)  
+        S_Phi = zernike_rho(n, m, Rho) * -m * np.sin(m * Phi)
     elif m < 0:
-        S_Rho = zernike_rho_slope(n, -m, Rho) * np.sin( -m * Phi)
-        S_Phi = zernike_phi_slope(n, -m, Rho) * -m * np.cos(m * Phi)
+        S_Rho = zernike_rho_slope(n, -m, Rho) * -np.sin( -m * Phi)
+        S_Phi = zernike_rho(n, -m, Rho) * -m * np.cos(m * Phi)
     else:
         S_Rho = zernike_rho_slope(n, 0, Rho)
         S_Phi = np.zeros_like(S_Rho)
+    S_Rho *= np.sqrt((2.0 * (n+1))/(1.0 + int(m == 0)))
+    S_Phi *= np.sqrt((2.0 * (n+1))/(1.0 + int(m == 0)))
     return S_Rho, S_Phi
     
     
@@ -262,13 +265,9 @@ def noll_to_zern(j):
     if (j < 0):
         raise ValueError("Noll indices start at 1.")
     
-    n = 0
-    j1 = j-1
-    while (j1 > n):
-        n += 1
-        j1 -= n
-
-    m = (-1)**j * ((n % 2) + 2 * int((j1+((n+1) % 2)) / 2.0 ))
+    n = np.ceil((-3 + np.sqrt(9 + 8*j))/2)
+    m = 2*j - n*(n+2)
+    
     return (n, m)
 
 def zern_to_noll(n, m):
@@ -279,16 +278,8 @@ def zern_to_noll(n, m):
     :param m: Zernike `m` index.
     
     """
-    j = 1
-    jmax = 2 * n
-    while (j < jmax):
-        nf, mf = noll_to_zern(j)
-        if nf == n and mf == m:
-            return j
-        else:
-            j += 1
-    raise ValueError("Searched {:d} Noll indicies, no (n={:d},m={:d}) pair found!".format(jmax, n, m))
-    
+    j = (n * (n+1))/2 + (n+m)/2
+
 def zernike_noll_polar(j, Rho, Phi):
     """
     Calculate the jth linear Noll indexed Zernike mode.

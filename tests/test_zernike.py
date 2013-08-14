@@ -14,6 +14,7 @@ import numpy as np
 
 import os, os.path
 
+from pyshell.util import remove
 import pidly
 
 from .util import npeq_
@@ -56,18 +57,23 @@ class test_zernike_polynomials(object):
         zernike_args["n"] = n
         zernike_args["m"] = m
         self.IDL('z = zernike({size},{size},{radius},{n},{m},/noll)'.format(**zernike_args), print_output=self.idl_output)
-        z_idl = self.IDL.z * self.ap
+        z_idl = self.IDL.z.T * self.ap
         
-        z_pyt = zernike.zernike_cartesian(n, m, self.X, self.Y) * self.ap * np.sqrt(n+1)
+        z_pyt = zernike.zernike_cartesian(n, m, self.X, self.Y) * self.ap
         
-        np.savetxt("z_idl.dat",z_idl)
-        np.savetxt("z_pyt.dat",z_pyt)
+        idl_filename = "z_idl_{n:d}_{m:d}.dat".format(n=n,m=m)
+        pyt_filename = "z_pyt_{n:d}_{m:d}.dat".format(n=n,m=m)
+        if not np.allclose(z_idl, z_pyt, atol=1e-5):
+            np.savetxt(idl_filename,z_idl)
+            np.savetxt(pyt_filename,z_pyt)
+        else:
+            remove(idl_filename)
+            remove(pyt_filename)
+        
         gap = z_idl[self.ap == 1]-z_pyt[self.ap == 1]
         gap[~np.isfinite(gap)] = 0.0
         npeq_(z_idl[self.ap == 1],z_pyt[self.ap == 1], "Zernike Mismatch by {} +/- {}, [{},{}]".format(
             np.mean(gap), np.std(gap), np.min(gap), np.max(gap)))
-<<<<<<< Updated upstream
-=======
             
     @nt.nottest
     def zernike_slope_tests(self, n, m):
@@ -104,16 +110,52 @@ class test_zernike_polynomials(object):
         npeq_(ys_npy[self.ap == 1], ys_pyt[self.ap == 1], "Zernike Y-Slope Mismatch by {} +/- {} [{},{}]".format(
             np.mean(y_gap), np.std(y_gap), np.min(y_gap), np.max(y_gap), atol=0.1
         ))
->>>>>>> Stashed changes
     
     def test_zernike_focus(self):
         """zernike focus (2, 0)"""
         self.zernike_tests(2, 0)
         
-    def test_zernike_coma(self):
-        """zernike coma (+/- 1, 3)"""
-        self.zernike_tests(1, 3)
-        self.zernike_tests(-1, 3)
+    def test_zernike_astigmatism(self):
+        """zernike astigmatism (2, +/- 2)"""
+        self.zernike_tests(2, 2)
+        self.zernike_tests(2, -2)
         
-
+    def test_zernike_coma(self):
+        """zernike coma (3, +/- 1)"""
+        self.zernike_tests(3, 1)
+        self.zernike_tests(3, -1)
+        
+    def test_zernike_tt(self):
+        """zernike tip-tilt (1, +/- 1)"""
+        self.zernike_tests(1, -1)
+        self.zernike_tests(1, 1)
+        
+    def test_zernike_trefoil(self):
+        """zernike trefoil (3, +/- 3)"""
+        self.zernike_tests(3, 3)
+        self.zernike_tests(3, -3)
+        
+    def test_zernike_slope_focus(self):
+        """zernike slope focus (2, 0)"""
+        self.zernike_slope_tests(2, 0)
+    
+    def test_zernike_slope_coma(self):
+        """zernike slope coma (3, +/- 1)"""
+        self.zernike_slope_tests(3, -1)
+        self.zernike_slope_tests(3, 1)
+    
+    def test_zernike_slope_tt(self):
+        """zernike slope tip-tilt (1, +/- 1)"""
+        self.zernike_slope_tests(1, -1)
+        self.zernike_slope_tests(1, 1)
+    
+    def test_zernike_slope_trefoil(self):
+        """zernike slope trefoil (3, +/- 3)"""
+        self.zernike_slope_tests(3, -3)
+        self.zernike_slope_tests(3, 3)
+        
+    def test_zernike_slope_astigmatism(self):
+        """zernike slope astigmatism (2, +/- 2)"""
+        self.zernike_slope_tests(2, -2)
+        self.zernike_slope_tests(2, 2)
         

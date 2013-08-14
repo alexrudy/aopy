@@ -1,0 +1,1 @@
+!PATH = expand_path("<IDL_DEFAULT>") + "."
