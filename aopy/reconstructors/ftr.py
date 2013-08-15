@@ -140,8 +140,8 @@ class FixedFilterFTR(FourierTransformReconstructor):
         ff = scipy.fftpack.fftfreq(self.n, 1/(2*np.pi))
         fx, fy = np.meshgrid(ff, ff)
         
-        gx = np.exp(1j*fy/2)-1#*(np.exp(1j*fx) - 1)
-        gy = np.exp(1j*fx/2)-1#*(np.exp(1j*fy) - 1)
+        gx = np.exp(1j*fy/2)*(np.exp(1j*fx) - 1)
+        gy = np.exp(1j*fx/2)*(np.exp(1j*fy) - 1)
         
         gx[self.n/2,:] = 0.0
         gy[:,self.n/2] = 0.0
@@ -198,8 +198,8 @@ class FixedFilterFTR(FourierTransformReconstructor):
 
         # the filter is anti-Hermitian here. The real_part takes care
         # of it, but simpler to just zero it out.
-        gx[:,self.n/2] = 0
-        gy[self.n/2,:] = 0
+        gx[self.n/2,:] = 0.0
+        gy[:,self.n/2] = 0.0
         
         self.gx = gx
         self.gy = gy
