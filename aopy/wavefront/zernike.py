@@ -193,7 +193,7 @@ def zernike_polar(n, m, Rho, Phi):
     if m > 0:
         Z = zernike_rho(n, m, Rho) * np.cos(m * Phi)
     elif m < 0:
-        Z = zernike_rho(n, -m, Rho) * np.sin(-m * Phi)
+        Z = zernike_rho(n, np.abs(m), Rho) * np.sin(np.abs(m) * Phi)
     else:
         Z = zernike_rho(n, 0, Rho)
     return Z * np.sqrt((2 * (n+1))/(1 + int(m == 0)))
@@ -210,11 +210,11 @@ def zernike_slope_polar(n, m, Rho, Phi):
     
     """
     if m > 0:
-        S_Rho = zernike_rho_slope(n, m, Rho) * np.cos(m * Phi)  
-        S_Phi = zernike_rho(n, m, Rho) * -m * np.sin(m * Phi)
+        S_Rho = zernike_rho_slope(n, np.abs(m), Rho) * np.cos(m * Phi)  
+        S_Phi = zernike_rho(n, np.abs(m), Rho) * -m * np.sin(m * Phi)
     elif m < 0:
-        S_Rho = zernike_rho_slope(n, -m, Rho) * -np.sin( -m * Phi)
-        S_Phi = zernike_rho(n, -m, Rho) * -m * np.cos(m * Phi)
+        S_Rho = zernike_rho_slope(n, np.abs(m), Rho) * -np.sin(m * Phi)
+        S_Phi = zernike_rho(n, np.abs(m), Rho) * -m * np.cos(m * Phi)
     else:
         S_Rho = zernike_rho_slope(n, 0, Rho)
         S_Phi = np.zeros_like(S_Rho)
@@ -251,8 +251,8 @@ def zernike_slope_cartesian(n, m, X, Y):
     DRho[Rho == 0] = 1
     S_Rho, S_Phi = zernike_slope_polar(n, m, Rho, Phi)
     S_Phi[Rho == 0] = 0
-    Y_s = np.cos(Phi) * S_Rho - np.sin(Phi) * S_Phi / DRho
-    X_s = np.sin(Phi) * S_Rho + np.cos(Phi) * S_Phi / DRho
+    X_s = np.cos(Phi) * S_Rho - np.sin(Phi) * S_Phi / DRho
+    Y_s = np.sin(Phi) * S_Rho + np.cos(Phi) * S_Phi / DRho
     return X_s, Y_s
     
 def noll_to_zern(j):
@@ -263,12 +263,16 @@ def noll_to_zern(j):
     
     """
     if (j < 0):
-        raise ValueError("Noll indices start at 1.")
+        raise ValueError("Noll indices start at 0. j={:d}".format(j))
     
     n = np.ceil((-3 + np.sqrt(9 + 8*j))/2)
     m = 2*j - n*(n+2)
+    if not int(n) == n:
+        raise ValueError("This should never happen, n={:f} should be an integer.".format(n))
+    if not int(m) == m:
+        raise ValueError("This should never happen, n={:f} should be an integer.".format(m))
     
-    return (n, m)
+    return (int(n), int(m))
 
 def zern_to_noll(n, m):
     """
@@ -279,6 +283,11 @@ def zern_to_noll(n, m):
     
     """
     j = (n * (n+1))/2 + (n+m)/2
+    
+    if not int(j) == j:
+        raise ValueError("This should never happen, j={:f} should be an integer.".format(j))
+    
+    return int(j)
 
 def zernike_noll_polar(j, Rho, Phi):
     """

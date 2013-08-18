@@ -12,6 +12,7 @@ Testing Utilities
 """
 
 import nose.tools as nt
+from nose.plugins.attrib import attr
 
 import os, os.path
 import numpy as np
@@ -46,24 +47,40 @@ def npeq_or_save(a, b, rtol=1e-8, atol=1e-4, a_name=False, b_name=False, save=Fa
     
     return result
 
+@attr(IDL=1)
 class PIDLYTests(object):
     """Base class for tests that will use PIDLY"""
     
     IDL_PATHS = []
     IDL_OUTPUT = False
+    IDL_LIBRARY = "IDL/library/"
+    POSTMORTEM = []
+    IDL_ENABLE = True
     
     def setup(self):
         """Open IDL session and add path."""
+        if not self.IDL_ENABLE:
+            return
+        
         import pidly
         
         self.IDL = pidly.IDL()
         self.IDL("!PATH=expand_path(\"<IDL_default>\")", print_output=False)
+        if self.IDL_LIBRARY:
+            self.IDL_PATHS.append(self.IDL_LIBRARY)
         for PATH in self.IDL_PATHS:
             canonical = os.path.normpath(os.path.join(os.path.dirname(__file__),"..",PATH))
             self.IDL("!PATH=!PATH+\":\"+expand_path(\"{path}\")".format(path=canonical), print_output=False)
         
     def teardown(self):
-        """docstring for teardown"""
+        """Close IDL"""
+        if not self.IDL_ENABLE:
+            return
         self.IDL.close()
+        
+    @nt.nottest
+    def postmortem(self):
+        """Save any postmortem data if the test failed."""
+        
     
         
