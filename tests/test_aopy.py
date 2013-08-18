@@ -7,12 +7,3 @@
 # 
 
 import aopy
-
-class test_aopy(object):
-    """Tests for aopy"""
-    
-    def test_something(self):
-        """A single test"""
-        assert True
-
-        
