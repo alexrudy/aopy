@@ -50,6 +50,7 @@ tests/pkg
 *.dat
 /data/*
 *.npy
+*.png
 
 # Logging etc.
 *.profile
