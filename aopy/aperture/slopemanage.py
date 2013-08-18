@@ -49,10 +49,10 @@ def slope_management(ap, xs, ys):
     xs_c = np.copy(xs_s)
     ys_c = np.copy(ys_s)
     
-    xsr_sum = np.sum(xs_s, axis=0)
+    ysr_sum = np.sum(ys_s, axis=0)
     apr_sum = np.sum(ap, axis=0)
     
-    ysc_sum = np.sum(ys_s, axis=1)
+    xsc_sum = np.sum(xs_s, axis=1)
     apc_sum = np.sum(ap, axis=1)
     
     for j in range(n):
@@ -66,8 +66,8 @@ def slope_management(ap, xs, ys):
             if right == n:
                 raise ValueError("Not enough space to edge correct, row {j} ends at k={k}".format(j=j, k=n))
             
-            xs_c[left-1, j] = - 0.5 * xsr_sum[j]
-            xs_c[right+1, j] = -0.5 * xsr_sum[j]
+            ys_c[left-1, j] = - 0.5 * ysr_sum[j]
+            ys_c[right+1, j] = -0.5 * ysr_sum[j]
         
         if apc_sum[j] != 0:
             loc = np.where(ap[j,:] != 0)[0]
@@ -79,8 +79,8 @@ def slope_management(ap, xs, ys):
             if top == n:
                 raise ValueError("Not enough space to edge correct, column {j} ends at k={k}".format(j=j, k=n))
             
-            ys_c[j, bottom-1] = -0.5 * ysc_sum[j]
-            ys_c[j, top+1]    = -0.5 * ysc_sum[j]
+            xs_c[j, bottom-1] = -0.5 * xsc_sum[j]
+            xs_c[j, top+1]    = -0.5 * xsc_sum[j]
             
     return (xs_c, ys_c)
     

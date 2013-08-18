@@ -17,20 +17,20 @@ import os, os.path
 from pyshell.util import remove
 import pidly
 
-from .util import npeq_
+from .util import npeq_, PIDLYTests, npeq_or_save
 
+from aopy.wavefront import zernike
 from aopy.aperture.slopemanage import slope_management
 
-class test_slopemanage(object):
+class test_slopemanage(PIDLYTests):
     """aopy.aperture.slopemanage"""
     
+    IDL_PATHS = ["IDL/poyneer/"]
+    IDL_OUTPUT = True
     
     def setup(self):
         """Initialize IDL"""
-        
-        IDL_PATH = os.path.normpath(os.path.join(os.path.dirname(__file__),"../IDL/poyneer/"))
-        IDL_Library = os.path.normpath(os.path.join(os.path.dirname(__file__),"../IDL/library/"))
-        self.idl_output = True
+        super(test_slopemanage, self).setup()
         self.size = 40
         self.radius = 19.0
         self.circle_args = {
@@ -39,40 +39,70 @@ class test_slopemanage(object):
             'radius': self.radius,
             'value' : 1.0,
         }
-        self.IDL = pidly.IDL()
-        self.IDL('!PATH=expand_path("<IDL_default>")+":"+expand_path("+{:s}")+":"+expand_path("+{:s}")'.format(IDL_PATH,IDL_Library),
-            print_output=self.idl_output)
-        self.IDL('.compile slope_management.pro',print_output=self.idl_output)
+        self.IDL('.compile slope_management.pro',print_output=self.IDL_OUTPUT)
         self.IDL('ap = circle({size},{size},{center},{center},{radius},{value})'.format(
             ** self.circle_args
-        ), print_output=self.idl_output)
-        self.ap = self.IDL.ap
+        ), print_output=self.IDL_OUTPUT)
+        self.idl_ap = self.IDL.ap
+        n = self.size
+        self.Xs, self.Ys = np.mgrid[-n:n,-n:n] / self.radius
+        self.X, self.Y = np.mgrid[-n:n,-n:n]
+        self.ap = (np.sqrt(self.X**2.0 + self.Y**2.0) < self.radius).astype(np.int)
     
-    def teardown(self):
-        """Teardown IDL"""
-        self.IDL.close()
-
     def test_idl_focus_slopes(self):
-        """agreement with idl focus slopes"""
+        """idl focus slopes"""
         n = 2
         m = 0
         self.IDL('generate_grids, x, y, {size}'.format(size=self.size))
         self.IDL('xs = x * ap')
         self.IDL('ys = y * ap')
-        xs = self.IDL.xs.T
-        ys = self.IDL.ys.T
+        ys = self.IDL.xs.T
+        xs = self.IDL.ys.T
         self.IDL('slope_management, ap, xs, ys')
-        xs_idl = self.IDL.xs.T
-        ys_idl = self.IDL.ys.T
-        xs_pyt, ys_pyt = slope_management(self.ap, xs, ys)
+        xs_idl = self.IDL.ys.T
+        ys_idl = self.IDL.xs.T
+        xs_pyt, ys_pyt = slope_management(self.idl_ap, xs, ys)
         
-        idl_filename = "zs_sm_idl_{n:d}_{m:d}.npy".format(n=n,m=m)
-        pyt_filename = "zs_sm_pyt_{n:d}_{m:d}.npy".format(n=n,m=m)
-        np.savetxt("y_idl.txt",self.IDL.y.T)
-        np.savetxt("yz_idl.txt",ys)
-        np.savetxt("yz_sm_idl.txt",ys_idl)
+        idl_filename = "s_sm_IDL_idl_{n:d}_{m:d}.npy".format(n=n,m=m)
+        pyt_filename = "s_sm_IDL_pyt_{n:d}_{m:d}.npy".format(n=n,m=m)
         
-        self.compare_slopes(xs_idl, xs_pyt, ys_idl, ys_pyt, idl_filename, pyt_filename)
+        x_result = npeq_or_save(xs_idl, xs_pyt, a_name="x"+idl_filename, b_name="x"+pyt_filename)
+        y_result = npeq_or_save(ys_idl, ys_pyt, a_name="y"+idl_filename, b_name="y"+pyt_filename)
+        nt.ok_(x_result and y_result, "Slope Mismatch")
+        
+        
+    def test_focus_slopes(self):
+        """focus slopes"""
+        self.python_slopes(2, 0)
+        
+    def test_tiptilt_slopes(self):
+        """tip/tilt slopes"""
+        self.python_slopes(1, -1)
+        self.python_slopes(1, 1)
+        
+    @nt.nottest
+    def python_slopes(self, n, m):
+        """Run a test of a set of python slopes."""
+        xs_pyt, ys_pyt = zernike.zernike_slope_cartesian(n, m, self.Xs + + 0.5/self.radius, self.Ys + 0.5/self.radius)
+        xs_pyt = xs_pyt * self.ap
+        ys_pyt = ys_pyt * self.ap
+        self.IDL.xs = ys_pyt.T
+        self.IDL.ys = xs_pyt.T
+        self.IDL.ap = self.ap
+        self.IDL('slope_management, ap, xs, ys')
+        self.IDL('xs_sm = ys')
+        self.IDL('ys_sm = xs')
+        xs_idl = self.IDL.xs_sm.T
+        ys_idl = self.IDL.ys_sm.T
+        xs_pyt, ys_pyt = slope_management(self.ap, xs_pyt, ys_pyt)
+        
+        idl_filename = "s_sm_idl_{n:d}_{m:d}.npy".format(n=n,m=m)
+        pyt_filename = "s_sm_pyt_{n:d}_{m:d}.npy".format(n=n,m=m)
+        
+        x_result = npeq_or_save(xs_idl, xs_pyt, a_name="x"+idl_filename, b_name="x"+pyt_filename)
+        y_result = npeq_or_save(ys_idl, ys_pyt, a_name="y"+idl_filename, b_name="y"+pyt_filename)
+        nt.ok_(x_result and y_result, "Slope Mismatch")
+        
         
     @nt.nottest
     def compare_slopes(self, xs_a, xs_b, ys_a, ys_b, fn_a, fn_b):
