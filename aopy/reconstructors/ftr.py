@@ -170,8 +170,8 @@ class FixedFilterFTR(FourierTransformReconstructor):
         ff = scipy.fftpack.fftfreq(self.n, 1/(2*np.pi))
         fx, fy = np.meshgrid(ff, ff)
         
-        gx = np.exp(1j*fx)#*np.exp(1j*fx/2)
-        gy = np.exp(1j*fy)#*np.exp(1j*fy/2)
+        gx = 1j*np.ones_like(fx)
+        gy = 1j*np.ones_like(fy)
         
         gx[self.n/2,:] = 0.0
         gy[:,self.n/2] = 0.0
@@ -189,7 +189,7 @@ class FixedFilterFTR(FourierTransformReconstructor):
         with ignoredivide():
             gx = np.conj(1/fy * ((np.cos(fy) - 1) * np.sin(fx) + (np.cos(fx) - 1) * np.sin(fy) ) +
                       1j/fy * ((np.cos(fx) - 1) * (np.cos(fy) - 1) - np.sin(fx) * np.sin(fy)))
-            gy = np.conj(1j/fx * ((np.cos(fx) - 1) * np.sin(fy) + (np.cos(fy) - 1) * np.sin(fx)) +
+            gy = np.conj(1/fx * ((np.cos(fx) - 1) * np.sin(fy) + (np.cos(fy) - 1) * np.sin(fx)) +
                       1j/fx * ((np.cos(fy) - 1) * (np.cos(fx) - 1) - np.sin(fy) * np.sin(fx)))
               
         # Exclude division by zero!
