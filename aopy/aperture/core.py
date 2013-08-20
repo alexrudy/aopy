@@ -45,21 +45,24 @@ class Aperture(object):
     """
     def __init__(self, response):
         super(Aperture, self).__init__()
-        self._edgemask = False
-        self._edgemask_generated = True
         self.response = response
         if self.response.ndim != 2:
             raise ValueError, "{0!r} response dimesnions should be 2, not {0.response.ndim:d}".format(
                 self
             )
         
+    
+    _response = None
+    _edgemask_generated = True
+    _edgemask = False
+    
     def __shape_str__(self):
         """Turn the shape of the aperture into a string."""
         return "({:s})".format("x".join(map(str,self.shape)))
         
     def __str__(self):
         """A pretty string printing of this aperture."""
-        return "Aperture shape {shape:s} open {per:d}%".format(
+        return "Aperture shape {shape:s} open {per:.0f}%".format(
             shape = self.__shape_str__(),
             per = np.sum(self.pupil) / np.sum(np.ones_like(self.pupil)) * 100,
         )
@@ -72,13 +75,13 @@ class Aperture(object):
     @property
     def response(self):
         """The original response function."""
-        return self._response
+        return np.copy(self._response)
         
     @response.setter
     def response(self,response):
         """Respons function setter."""
         if isinstance(response,tuple):
-            response = np.ones(response)
+            response = np.ones(response,dtype=np.float)
         if not isinstance(self._edgemask,np.ndarray):
             pass 
         elif self._edgemask_generated:
@@ -138,6 +141,17 @@ class DMAperture(Aperture):
         
         if isinstance(n,np.ndarray):
             response = n
+            loc = np.where(np.sum(response,axis=0) != 0)[0]
+            lx = loc[0]
+            hx = loc[-1]
+            loc = np.where(np.sum(response,axis=1) != 0)[0]
+            ly = loc[0]
+            hy = loc[-1]
+            if lx == ly and hx == hy:
+                l = lx
+                h = hx
+            else:
+                ValueError("{!r} does not have a square aperture visible: X({},{}) Y({},{})".format(self,lx,hx,ly,hy))
         elif istype(n,int):
             l = l or 0
             h = h or n
@@ -148,6 +162,8 @@ class DMAperture(Aperture):
         
         super(DMAperture, self).__init__(response)
         self._dmlh = (l,h)
+        
+    _dmlh = None
         
     @property
     def dmlh(self):
