@@ -47,8 +47,13 @@ class FourierTransformReconstructor(object):
         
     @property
     def n(self):
-        """The dimension size"""
+        """The dimension size. Reconstructs on an (n x n) grid."""
         return self._n
+        
+    @property
+    def shape(self):
+        """Shape of the reconstructed grid."""
+        return (self.n, self.n)
         
     @property
     def gx(self):
