@@ -16,7 +16,8 @@ from aopy import version
 setup(
     name = "aopy",
     version = version,
-    packages = find_packages(exclude=['']),
+    packages = find_packages(exclude=['']) + find_packages('plugins'),
+    package_dir = {'keck':'plugins/keck'},
     package_data = {'aopy': ['aopy/data/*'],
     'wcao.estimators.pidly' : ['idl/*.pro'],
     'wcao.data' : ['*.txt','*.yml'],
