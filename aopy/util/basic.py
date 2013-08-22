@@ -54,6 +54,8 @@ def configure_class(configuration):
 
 class ConsoleContext(object):
     """Allow a switch between range and progress-bar"""
+    _console = False
+    
     def __init__(self):
         super(ConsoleContext, self).__init__()
         self._looper = self._pseudoloop
@@ -71,7 +73,7 @@ class ConsoleContext(object):
         
     def _pseudoloop(self,total_or_items):
         """docstring for _pseudoloop"""
-        from astropy.util.misc import isiterable
+        from astropy.utils.misc import isiterable
         if isiterable(total_or_items):
             iterator = iter(total_or_items)
             total = len(total_or_items)
