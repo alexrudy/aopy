@@ -7,6 +7,11 @@
 #  Copyright 2013 Alexander Rudy. All rights reserved.
 # 
 
+"""
+:mod:`~aopy.util.units` – Functions for :mod:`astropy.units`
+============================================================
+"""
+
 import astropy.units as u
 
 def ensure_quantity(item, unit=""):

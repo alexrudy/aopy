@@ -7,7 +7,7 @@
 #  Copyright 2013 Jaberwocky. All rights reserved.
 # 
 """
-:mod:`atmosphere.wind <aopy.atmosphere.wind>` – Blowing Komolgorov Screens
+:mod:`~aopy.atmosphere.wind` – Blowing Komolgorov Screens
 ==========================================================================
 
 This module contains screens which can appear to "blow" through an aperture. Screens
@@ -59,10 +59,6 @@ class BlowingScreen(Screen):
     :param float dt: Timestep size, in seconds.
     :param float du: pixel size, in meters
     :param int nsh: Number of subharmonics. (default``=0`` for no subharmonics)
-    
-    To use this class, you must instantiate it, and then call :meth:`setup`. Since :meth:`setup` returns the instance, you can do::
-        
-        screen = BlowingScreen((10,10),r0=2,vel=[1.0,0.0]).setup()
     
     """ 
     def __init__(self, shape, r0, seed=None, vel=None, tmax=100, dt=1, delay=False, order=3, **kwargs):
@@ -188,10 +184,6 @@ class ManyLayerScreen(BlowingScreen):
     :param float dt: Timestep size, in seconds.
     :param float du: Pixel size, in meters.
     :param int nsh: Number of subharmonics. (default``=0`` for no subharmonics)
-    
-    To use this class, you must instantiate it, and then call :meth:`setup`. Since :meth:`setup` returns the instance, you can do::
-        
-        screen = ManyLayerScreen((10,10),r0=2,vel=[1.0,0.0]).setup()
     
     """ 
     def __init__(self, shape, r0, seed=None, vel=None, strength=None, delay=False, **kwargs):
