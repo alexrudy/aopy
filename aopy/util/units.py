@@ -9,7 +9,7 @@
 
 import astropy.units as u
 
-def ensure_quantity(item,unit=None):
+def ensure_quantity(item, unit=""):
     """Ensures that this object is an astropy quantity.
     
     :param item: The item to ensure is a quantity. If this is ``None``, the quantity value is assumed to be 0.
