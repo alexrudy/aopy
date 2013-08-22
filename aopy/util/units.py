@@ -23,7 +23,7 @@ def ensure_quantity(item,unit=None):
     else:
         value = item
     if not value.unit.is_equivalent(unit):
-        raise ValueError("Quantity {} cannot be converted to {}".format(format_quantity(value), unit))
+        raise ValueError("Quantity '{}' cannot be converted to {!s}".format(format_quantity(value), unit))
     return value
     
 def format_quantity(q, fmt="{:g}", ufmt="{:s}", u=None, basefmt="{value:s} {unit:s}"):
@@ -42,3 +42,22 @@ def format_quantity(q, fmt="{:g}", ufmt="{:s}", u=None, basefmt="{value:s} {unit
         value = fmt.format(q.value),
         unit = ufmt.format(q.unit)
     )
+    
+def quantity_representer(dumper, data):
+    """A YAML representer for quantities"""
+    dumper.represent_scalar("!quantity",format_quantity(data))
+    
+def quantity_constructor(loader, node):
+    """A YAML loader for quantities"""
+    from yaml.nodes import ScalarNode
+    scalar = loader.construct_scalar(node)
+    value_str, unit_str = scalar.split(None,1)
+    vnode = ScalarNode('tag:yaml.org,2002:float', value_str)
+    value = loader.construct_yaml_float(vnode)
+    unit = u.Unit(unit_str)
+    return (value * unit)
+    
+def use_yaml_quantity():
+    import yaml
+    yaml.add_constructor('!quantity', quantity_constructor)
+    yaml.add_representer(u.Quantity, quantity_representer)
