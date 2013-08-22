@@ -8,7 +8,7 @@
 # 
 """
 :mod:`math` – Mathematical Functions for AO-Py
-==============================================
+----------------------------------------------
 
 These are various mathematical algorithms used in :mod:`aopy`. They are implemented here to ensure that their implementation is consistent across :mod:`aopy`.
 
@@ -16,7 +16,7 @@ These are various mathematical algorithms used in :mod:`aopy`. They are implemen
 .. _util.math.aperture:
 
 Phase and Aperture Functions
-----------------------------
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. autofunction::
     depiston
@@ -26,6 +26,9 @@ Phase and Aperture Functions
 
 .. autofunction::
     edgemask
+    
+Other Mathematical Functions
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 """
 from __future__ import (absolute_import, unicode_literals, division,

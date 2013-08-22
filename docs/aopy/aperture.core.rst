@@ -1,2 +1,0 @@
-.. automodule::
-    aopy.aperture.core
