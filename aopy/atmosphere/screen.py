@@ -7,14 +7,14 @@
 #  Copyright 2013 Jaberwocky. All rights reserved.
 #
 """
-:mod:`atmosphere.screen <aopy.atmosphere.screen>` – Static Kolmolgorov Screen Generation
-========================================================================================
+:mod:`~aopy.atmosphere.screen` – Static Kolmolgorov Screen Generation
+---------------------------------------------------------------------
 
 This module is an object-oriented port of Don Gavel's ``screengen.pro``,
 a program from generating Kolmolgorov phase screens.
 
 :class:`Screen` – Static Kolmolgorov phase screens
---------------------------------------------------
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. autoclass::
     Screen
@@ -23,7 +23,7 @@ a program from generating Kolmolgorov phase screens.
     
 
 Internal Phase Screen Functions
--------------------------------
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 These functions are the underlying algorithm for :class:`Screen`. 
 It is not recommended that you use them, but they are useful for testing

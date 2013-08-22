@@ -16,8 +16,6 @@ Contents:
    :maxdepth: 2
    
    aopy/atmosphere
-   aopy/atmosphere.screen
-   aopy/atmosphere.wind
    aopy/aperture
    aopy/aperture.core
    aopy/wavefront

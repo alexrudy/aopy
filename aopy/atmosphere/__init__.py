@@ -16,6 +16,12 @@ This module exposes :class:`Screen` and :class:`ManyLayerScreen`::
     
     wind = ManyLayerScreen((10,10),r0=10,vel=[[1,0],[3,3]]).setup()
     
+.. automodule::
+    aopy.atmosphere.screen
+    
+.. automodule::
+    aopy.atmosphere.wind
+    
 Testing :mod:`aopy.atmosphere` against IDL
 ------------------------------------------
 

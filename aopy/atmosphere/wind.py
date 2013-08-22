@@ -7,7 +7,7 @@
 #  Copyright 2013 Jaberwocky. All rights reserved.
 # 
 """
-:mod:`atmosphere.wind <aopy.atmosphere.wind>` – Blowing Komolgorov Screens
+:mod:`~aopy.atmosphere.wind` – Blowing Komolgorov Screens
 ==========================================================================
 
 This module contains screens which can appear to "blow" through an aperture. Screens
