@@ -180,10 +180,10 @@ class Screen(ConsoleContext):
     Once a single phase screen has been generated, it is cached in the object. For a new phase screen, set a different :attr:`seed` value.
     
     :param tuple shape: The shape of the screen (x,y), as a tuple.
-    :param float r0: :math:`r_0` fried parameter for the screen, in meters (or relative to ``du`` appropriately). Accepts an :mod:`astropy` class:`~astropy.units.Quantity`.
+    :param float r0: :math:`r_0` fried parameter for the screen, in meters (or relative to ``du`` appropriately). Accepts an :mod:`astropy` :class:`~astropy.units.Quantity`.
     :param int seed: Random number generator seed for :mod:`numpy.random`
     :param float du: Pixel size, in meters
-    :param float L0: :math:`L_0` outer scale for the screen. Accepts an :mod:`astropy` class:`~astropy.units.Quantity`.
+    :param float L0: :math:`L_0` outer scale for the screen. Accepts an :mod:`astropy` :class:`~astropy.units.Quantity`.
     :param int nsh: Number of subharmonics. (default``=0`` for no subharmonics)
     :param bool delay: Delay initialization until :meth:`setup` is called.
     
@@ -225,17 +225,17 @@ class Screen(ConsoleContext):
         
     @property
     def r0(self):
-        """Fried's parameter :math:`r_0`, the coherence length for the screen, as an :mod:`astropy` class:`~astropy.units.Quantity`. **Read Only**"""
+        """Fried's parameter :math:`r_0`, the coherence length for the screen, as an :mod:`astropy` :class:`~astropy.units.Quantity`. **Read Only**"""
         return self._r0
         
     @property
     def L0(self):
-        """The outer scale length of the turbulence, :math:`L_0`, as an :mod:`astropy` class:`~astropy.units.Quantity`. **Read Only**"""
+        """The outer scale length of the turbulence, :math:`L_0`, as an :mod:`astropy` :class:`~astropy.units.Quantity`. **Read Only**"""
         return self._L0
         
     @property
     def du(self):
-        """Pixel size, as an :mod:`astropy` class:`~astropy.units.Quantity`. **Read Only**"""
+        """Pixel size, as an :mod:`astropy` :class:`~astropy.units.Quantity`. **Read Only**"""
         return self._du
         
     @property
