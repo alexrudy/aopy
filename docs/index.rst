@@ -18,7 +18,6 @@ Contents:
    aopy/atmosphere
    aopy/aperture
    aopy/wavefront
-   aopy/wavefront.zernike
    aopy/util.math
 
 
