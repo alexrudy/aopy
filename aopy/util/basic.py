@@ -6,20 +6,23 @@
 #  Created by Alexander Rudy on 2013-05-05.
 #  Copyright 2013 Alexander Rudy. All rights reserved.
 # 
+"""
+:mod:`~aopy.util.basic` – Utiltiy Functions
+-------------------------------------------
+
+"""
+
 
 from __future__ import (absolute_import, unicode_literals, division,
                         print_function)
 
 import collections
 
-def istype(instance,ttype):
-    """docstring for is_type"""
-    try:
-        ttype(instance)
-    except Exception:
-        return False
-    else:
-        return True
+from pyshell.util import is_type_factory
+
+def istype(instance, ttype):
+    """Tests whether an instance is of a current type."""
+    return is_type_factory(ttype)(instance)
         
 def resolve(name):
     """Resolve a dotted name to a global object."""
