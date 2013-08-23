@@ -63,23 +63,39 @@ class BlowingScreen(Screen):
     """ 
     def __init__(self, shape, r0, seed=None, vel=None, tmax=100, dt=1, delay=False, order=3, **kwargs):
         super(BlowingScreen, self).__init__(shape, r0, seed, delay=True, **kwargs)
+        # Sanitize Velocities
         if vel is None:
             vel = [1.0,0.0]
         vel = np.array(vel)
         if vel.shape != (2,):
             raise ValueError("Velocity must have shape (2,), not {}".format(vel.shape))
+        
+        # Setup instance variables
         self._vel = ensure_quantity(vel,unit=u.meter/u.second)
         self._tmax = ensure_quantity(tmax, unit=u.second)
         self._dt = ensure_quantity(dt, unit=u.second)
         self._outshape = tuple(np.copy(self.shape).astype(np.int))
+        self._stepshape = tuple(np.fix((np.array(self.shape) + np.abs(self._vel) * np.ceil(1.0 * u.s / self._du)).to('').value).astype(np.int))
         self._shape = tuple(np.fix((np.array(self.shape) + np.abs(self._vel) * np.ceil(self._tmax / self._du)).to('').value).astype(np.int))
-        self._all = None
         self._order = order
-        self._ti = 0
         
+        # Setup generated variables
+        self._all = None
+        self._ti = 0
+        self._filtered_screen = None
         if not delay:
             self.setup()
     
+    # Instance variable setup
+    _vel = None
+    _tmax = None
+    _dt = None
+    _outshape = tuple()
+    _shape = tuple()
+    _all = None
+    _order = None
+    _ti = None
+    _filtered_screen = None
     
     @property
     def velocity(self):
@@ -117,6 +133,13 @@ class BlowingScreen(Screen):
         self._generate_screen()
         return self
         
+    def _generate_screen(self):
+        """Ensure filtered screen is generated."""
+        import scipy.ndimage.interpolation
+        super(BlowingScreen, self)._generate_screen()
+        self._filtered_screen = scipy.ndimage.interpolation.spline_filter(self._screen, self._order)
+        
+        
     def get_screen(self,t):
         """Get a screen at time `t`.
         
@@ -126,10 +149,11 @@ class BlowingScreen(Screen):
         import scipy.ndimage.interpolation
         shift = (ensure_quantity(t,u.second) * self._vel / self._du).to('').value
         shifted = scipy.ndimage.interpolation.shift(
-            input = self._screen,
+            input = self._filtered_screen,
             shift = shift,
             order = self._order,
             mode = 'wrap', #So we go in circles!
+            prefilter = False, #Because we already filtered it!
         )
         n,m = self._outshape
         return shifted[:n,:m]
@@ -142,7 +166,7 @@ class BlowingScreen(Screen):
         
     def __len__(self):
         """Length"""
-        return (self._tmax//self._dt).to('').value
+        return (self._tmax // self._dt).to('').value
         
     @property
     def screens(self):
@@ -206,6 +230,7 @@ class ManyLayerScreen(BlowingScreen):
         self._shape = tuple(np.fix((np.array(self.shape) + np.abs(np.max(self._vel,axis=0)) * np.ceil(self._tmax / self._du)).to('').value))
         
         self._screens = np.zeros((self._vel.shape[0],)+self._shape)
+        self._filtered_screens = np.zeros_like(self._screens)
         
         if not delay:
             self.setup()
@@ -217,9 +242,14 @@ class ManyLayerScreen(BlowingScreen):
         
         :param seed: The random number generator seed.
         """
+        import scipy.ndimage.interpolation
         norm = np.sum(self._strength)
         for i, strength in enumerate(self._strength):
-            self._screens[i,...] = _generate_screen(self._filter,self.seed,self._shf,self.du.meter) * (strength/norm)
+            screen = _generate_screen(self._filter,self.seed,self._shf,self.du.meter) * (strength/norm)
+            self._screens[i,...] = screen
+            self._filtered_screens[i,...] = scipy.ndimage.interpolation.spline_filter(screen, self._order)
+            
+        
         
     def get_screen(self,t):
         """Get a screen at time `t`.
@@ -230,12 +260,13 @@ class ManyLayerScreen(BlowingScreen):
         import scipy.ndimage.interpolation
         shifts = (ensure_quantity(t,u.second) * self._vel / self._du).to(1).value
         shifted = np.zeros_like(self._screens)
-        for i,(shift,screen) in enumerate(zip(shifts,self._screens)):
+        for i,(shift,screen) in enumerate(zip(shifts,self._filtered_screens)):
             shifted[i,...] = scipy.ndimage.interpolation.shift(
                 input = screen,
                 shift = shift,
                 order = self._order,
                 mode = 'wrap', #So we go in circles!
+                prefilter = False, #Because we already filtered it!
             )
         n,m = self._outshape
         shifted = np.sum(shifted[:,:n,:m],axis=0)

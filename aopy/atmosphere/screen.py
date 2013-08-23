@@ -218,6 +218,17 @@ class Screen(ConsoleContext):
         if not delay:
             self.setup()
         
+    # Variable Setup
+    _shf = None
+    _filter = None
+    _screen = None
+    _shape = tuple()
+    _r0 = None
+    _du = None
+    _L0 = None
+    _nsh = None
+    _seed = None
+        
     @property
     def shape(self):
         """Shape of the screen (n x m). **Read Only**"""
