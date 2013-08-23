@@ -9,14 +9,9 @@
 """
 .. _util.recarray:
 
-Numerical Tasks
----------------
-    
-.. autofunction::
-    smooth
-    
-.. autofunction::
-    lodtorec
+:mod:`~aopy.util.recarray` – Handle Record Arrays
+-------------------------------------------------
+
 """
 
 from __future__ import (absolute_import, unicode_literals, division,

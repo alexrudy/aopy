@@ -7,3 +7,6 @@
 This module contains wavefront management functions.
 
 - :mod:`~aopy.wavefront.zernike` Zernike Polynomial Functions
+
+.. automodule::
+    aopy.wavefront.zernike
