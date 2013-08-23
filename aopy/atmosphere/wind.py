@@ -246,7 +246,7 @@ class ManyLayerScreen(BlowingScreen):
         import scipy.ndimage.interpolation
         norm = np.sum(self._strength)
         for i, strength in enumerate(self._strength):
-            screen = _generate_screen(self._filter,self.seed,self._shf,self.du.meter) * (strength/norm)
+            screen = _generate_screen(self._filter, self.seed, self._shf, self.du.to('meter').value) * (strength/norm)
             self._screens[i,...] = screen
             self._filtered_screens[i,...] = scipy.ndimage.interpolation.spline_filter(screen, self._order)
             
@@ -261,13 +261,13 @@ class ManyLayerScreen(BlowingScreen):
         import scipy.ndimage.interpolation
         shifts = (ensure_quantity(t,u.second) * self._vel / self._du).to(1).value
         shifted = np.zeros((len(shifts),) + self._outshape)
-        for i,(shift,screen) in enumerate(zip(shifts,self._filtered_screens)):
+        for i,(shift,screen) in enumerate(zip(shifts, self._screens)):
             shifted[i,...] = fast_shift(
                 input = screen,
                 shift = shift,
                 order = self._order,
                 mode = 'wrap', #So we go in circles!
-                prefilter = False, #Because we already filtered it!
+                prefilter = True, #Because we already filtered it!
                 output_shape = self._outshape,
             )
         shifted = np.sum(shifted, axis=0)
