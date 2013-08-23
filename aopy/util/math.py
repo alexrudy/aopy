@@ -114,16 +114,17 @@ def fast_shift(input, shift, order=1, mode='wrap', prefilter=True, output_shape=
     This is a wrapper around :func:`scipy.ndimage.interpolation.shift` which speeds up shifting if the desired output shape is much smaller than the total array shape. It works by only undertaking the non-integer part of the shift in scipy, and using indexing tricks to collect only the target area and a 1-element border.
     """
     import scipy.ndimage.interpolation
+    pad = 2
     source = input
-    start = np.floor(shift)
-    _shift = shift - start + 1.0
+    start = np.floor(shift) - pad
+    _shift = start - shift
     if output_shape is None:
         output_shape = source.shape
-    _shape = tuple(np.array(output_shape) + 2)
+    _shape = tuple(np.array(output_shape) + 2*pad)
     inds = np.indices(_shape)
-    inds += start[:,np.newaxis,np.newaxis] - 1
+    inds += start[:,np.newaxis,np.newaxis]
     indicies = np.ravel_multi_index(inds, _shape, mode='wrap')
-    shifted = np.take(source, indicies)
+    shifted = np.take(source.flatten(), indicies).reshape(_shape)
     if (_shift != 0.0).any():
         interped = scipy.ndimage.interpolation.shift(
             input = shifted,
@@ -134,7 +135,8 @@ def fast_shift(input, shift, order=1, mode='wrap', prefilter=True, output_shape=
         )
     else:
         interped = shifted
-    return np.resize(interped,output_shape)
+    x,y = np.indices(output_shape)
+    return interped[x,y]
     
 def slow_shift(input, shift, order=1, mode='wrap', prefilter=True, output_shape=None):
     """docstring for slow_shift"""
@@ -146,7 +148,8 @@ def slow_shift(input, shift, order=1, mode='wrap', prefilter=True, output_shape=
         mode = mode,
         prefilter = prefilter,
     )
-    return np.resize(interped,output_shape)
+    x,y = np.indices(output_shape)
+    return interped[x,y]
     
 def smooth(x,window_len=11,window='hanning'):
     """Smooth an array.
