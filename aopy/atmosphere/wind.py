@@ -43,6 +43,7 @@ import numpy as np
 
 import astropy.units as u
 from ..util.units import ensure_quantity
+from ..util.math import fast_shift
 
 from .screen import Screen, _generate_screen
 
@@ -148,15 +149,15 @@ class BlowingScreen(Screen):
         """
         import scipy.ndimage.interpolation
         shift = (ensure_quantity(t,u.second) * self._vel / self._du).to('').value
-        shifted = scipy.ndimage.interpolation.shift(
+        shifted = fast_shift(
             input = self._filtered_screen,
             shift = shift,
             order = self._order,
             mode = 'wrap', #So we go in circles!
             prefilter = False, #Because we already filtered it!
+            output_shape = self._outshape,
         )
-        n,m = self._outshape
-        return shifted[:n,:m]
+        return shifted
         
     @property
     def screen(self):
@@ -259,16 +260,16 @@ class ManyLayerScreen(BlowingScreen):
         """
         import scipy.ndimage.interpolation
         shifts = (ensure_quantity(t,u.second) * self._vel / self._du).to(1).value
-        shifted = np.zeros_like(self._screens)
+        shifted = np.zeros((len(shifts),) + self._outshape)
         for i,(shift,screen) in enumerate(zip(shifts,self._filtered_screens)):
-            shifted[i,...] = scipy.ndimage.interpolation.shift(
+            shifted[i,...] = fast_shift(
                 input = screen,
                 shift = shift,
                 order = self._order,
                 mode = 'wrap', #So we go in circles!
                 prefilter = False, #Because we already filtered it!
+                output_shape = self._outshape,
             )
-        n,m = self._outshape
-        shifted = np.sum(shifted[:,:n,:m],axis=0)
+        shifted = np.sum(shifted, axis=0)
         return shifted
         

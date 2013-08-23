@@ -108,6 +108,46 @@ def edgemask(aperture):
     result = scipy.signal.convolve((aperture != 0).astype(np.float),kernel,mode='same')
     return result >= 9
     
+def fast_shift(input, shift, order=1, mode='wrap', prefilter=True, output_shape=None):
+    """Do a fast shift, clipping to match output shape.
+    
+    This is a wrapper around :func:`scipy.ndimage.interpolation.shift` which speeds up shifting if the desired output shape is much smaller than the total array shape. It works by only undertaking the non-integer part of the shift in scipy, and using indexing tricks to collect only the target area and a 1-element border.
+    """
+    import scipy.ndimage.interpolation
+    source = input
+    start = np.floor(shift)
+    _shift = shift - start + 1.0
+    if output_shape is None:
+        output_shape = source.shape
+    _shape = tuple(np.array(output_shape) + 2)
+    inds = np.indices(_shape)
+    inds += start[:,np.newaxis,np.newaxis] - 1
+    indicies = np.ravel_multi_index(inds, _shape, mode='wrap')
+    shifted = np.take(source, indicies)
+    if (_shift != 0.0).any():
+        interped = scipy.ndimage.interpolation.shift(
+            input = shifted,
+            shift = _shift,
+            order = order,
+            mode = mode,
+            prefilter = prefilter,
+        )
+    else:
+        interped = shifted
+    return np.resize(interped,output_shape)
+    
+def slow_shift(input, shift, order=1, mode='wrap', prefilter=True, output_shape=None):
+    """docstring for slow_shift"""
+    import scipy.ndimage.interpolation
+    interped = scipy.ndimage.interpolation.shift(
+        input = input,
+        shift = shift,
+        order = order,
+        mode = mode,
+        prefilter = prefilter,
+    )
+    return np.resize(interped,output_shape)
+    
 def smooth(x,window_len=11,window='hanning'):
     """Smooth an array.
     
