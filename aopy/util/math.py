@@ -108,6 +108,62 @@ def edgemask(aperture):
     result = scipy.signal.convolve((aperture != 0).astype(np.float),kernel,mode='same')
     return result >= 9
     
+def fast_shift(source, shift, order=1, mode='wrap', prefilter=True, shape=None, pad=1):
+    """Do a fast shift, clipping to match output shape.
+    
+    This shift method currently is limited to 2-dimensional objects.
+    
+    :param source: The source array. This item **must** be an :class:`numpy.ndarray`.
+    :param shift: The shift vector.
+    :param int order: The spline interpolation order, ``1 <= order <= 5``.
+    :param mode: What to do at the borders. See the documentation for :func:`scipy.ndimage.interpolation.shift`, but note that technically, the ``wrap`` mode is broken. That won't matter so long as `pad` is more than 0.
+    :param bool prefilter: Whether to apply a spline interpolation prefilter, if it is required. This is required for spline interpolation with order larger than 1. However, doing the filter once on the source array may be more efficient than individually filtering data.
+    :param shape: The desired output shape, after the shift. The output shape will start from the ``0,0`` index after the shift.
+    :param int pad: The padding used around array edges. Padding allows this method to fix the broken `wrap` mode in :mod:`scipy.ndimage`.
+    
+    This is a wrapper around :func:`scipy.ndimage.interpolation.shift` which speeds up shifting if the desired output shape is much smaller than the total array shape. It works by only undertaking the non-integer part of the shift in scipy, and using indexing tricks to collect only the target area and a 1-element border.
+    """
+    import scipy.ndimage.interpolation
+    shift = np.array(shift)
+    if shape is None:
+        shape = source.shape
+    _shape = tuple(np.array(shape) + 2*pad)
+    _inds = np.indices(_shape)
+    _floor = np.floor(shift)
+    _shift = (shift - _floor)
+    _start = -1 * _floor - pad    
+    _inds += _start[:,np.newaxis,np.newaxis]
+    r_inds = np.ravel_multi_index(_inds, source.shape, mode='wrap')
+    shifted = source.flat[r_inds]
+    if (_shift != 0.0).any():
+        interped = scipy.ndimage.interpolation.shift(
+            input = shifted,
+            shift = -1*_shift,
+            order = order,
+            mode = mode,
+            prefilter = prefilter,
+        )
+    else:
+        interped = shifted
+    x,y = np.array(shape) + pad
+    return interped[pad:x,pad:y]
+
+    
+def slow_shift(input, shift, order=1, mode='wrap', prefilter=True, output_shape=None):
+    """Do a full shift using :func:`scipy.ndimage.interpolation.shift`.
+    
+    .. warning:: Due to <https://github.com/scipy/scipy/issues/2640?source=cc>, when this shift wraps, it produces an error!"""
+    import scipy.ndimage.interpolation
+    interped = scipy.ndimage.interpolation.shift(
+        input = input,
+        shift = shift,
+        order = order,
+        mode = mode,
+        prefilter = prefilter,
+    )
+    x,y = np.indices(output_shape)
+    return interped[x,y]
+    
 def smooth(x,window_len=11,window='hanning'):
     """Smooth an array.
     

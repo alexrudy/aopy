@@ -218,6 +218,17 @@ class Screen(ConsoleContext):
         if not delay:
             self.setup()
         
+    # Variable Setup
+    _shf = None
+    _filter = None
+    _screen = None
+    _shape = tuple()
+    _r0 = None
+    _du = None
+    _L0 = None
+    _nsh = None
+    _seed = None
+        
     @property
     def shape(self):
         """Shape of the screen (n x m). **Read Only**"""
@@ -287,7 +298,7 @@ class Screen(ConsoleContext):
         
         Generate the filter required for this screen object. This method generates the filter
         (with subharmonics, if requested) that is used to generate the screen."""
-        self._filter, self._shf = _generate_filter(self.shape,self.r0.meter,self.du.meter,self.L0.meter,self.nsh)
+        self._filter, self._shf = _generate_filter(self.shape,self.r0.to('meter').value,self.du.to('meter').value,self.L0.to('meter').value,self.nsh)
         
     def _generate_screen(self):
         """Use :meth:`setup` to control this method.
@@ -295,7 +306,7 @@ class Screen(ConsoleContext):
         Generate the actual screen, using the filters produced by :meth:`_generate_filter`
         
         """
-        self._screen = _generate_screen(self._filter,self.seed,self._shf,self.du.meter)
+        self._screen = _generate_screen(self._filter,self.seed,self._shf,self.du.to('meter').value)
         
     def __call__(self):
         """Generates and returns a new independent screen."""
