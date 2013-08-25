@@ -108,14 +108,23 @@ def edgemask(aperture):
     result = scipy.signal.convolve((aperture != 0).astype(np.float),kernel,mode='same')
     return result >= 9
     
-def fast_shift(source, shift, order=1, mode='wrap', prefilter=True, output_shape=None):
+def fast_shift(source, shift, order=1, mode='wrap', prefilter=True, shape=None, pad=1):
     """Do a fast shift, clipping to match output shape.
+    
+    This shift method currently is limited to 2-dimensional objects.
+    
+    :param source: The source array. This item **must** be an :class:`numpy.ndarray`.
+    :param shift: The shift vector.
+    :param int order: The spline interpolation order, ``1 <= order <= 5``.
+    :param mode: What to do at the borders. See the documentation for :func:`scipy.ndimage.interpolation.shift`, but note that technically, the ``wrap`` mode is broken. That won't matter so long as `pad` is more than 0.
+    :param bool prefilter: Whether to apply a spline interpolation prefilter, if it is required. This is required for spline interpolation with order larger than 1. However, doing the filter once on the source array may be more efficient than individually filtering data.
+    :param shape: The desired output shape, after the shift. The output shape will start from the ``0,0`` index after the shift.
+    :param int pad: The padding used around array edges. Padding allows this method to fix the broken `wrap` mode in :mod:`scipy.ndimage`.
     
     This is a wrapper around :func:`scipy.ndimage.interpolation.shift` which speeds up shifting if the desired output shape is much smaller than the total array shape. It works by only undertaking the non-integer part of the shift in scipy, and using indexing tricks to collect only the target area and a 1-element border.
     """
     import scipy.ndimage.interpolation
     shift = np.array(shift)
-    pad = 1
     if output_shape is None:
         output_shape = source.shape
     _shape = tuple(np.array(output_shape) + 2*pad)

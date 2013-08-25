@@ -150,12 +150,12 @@ class BlowingScreen(Screen):
         import scipy.ndimage.interpolation
         shift = (ensure_quantity(t,u.second) * self._vel / self._du).to('').value
         shifted = fast_shift(
-            input = self._filtered_screen,
+            source = self._filtered_screen,
             shift = shift,
             order = self._order,
             mode = 'wrap', #So we go in circles!
             prefilter = False, #Because we already filtered it!
-            output_shape = self._outshape,
+            shape = self._outshape,
         )
         return shifted
         
@@ -261,14 +261,15 @@ class ManyLayerScreen(BlowingScreen):
         import scipy.ndimage.interpolation
         shifts = (ensure_quantity(t,u.second) * self._vel / self._du).to(1).value
         shifted = np.zeros((len(shifts),) + self._outshape)
-        for i,(shift,screen) in enumerate(zip(shifts, self._screens)):
+        for i,(shift,screen) in enumerate(zip(shifts, self._filtered_screens)):
             shifted[i,...] = fast_shift(
-                input = screen,
+                source = screen,
                 shift = shift,
                 order = self._order,
                 mode = 'wrap', #So we go in circles!
-                prefilter = True, #Because we already filtered it!
-                output_shape = self._outshape,
+                prefilter = False, #Because we already filtered it!
+                # prefilter=True means **apply the prefilter**. Since we are using filtered screens, don't worry!
+                shape = self._outshape,
             )
         shifted = np.sum(shifted, axis=0)
         return shifted
