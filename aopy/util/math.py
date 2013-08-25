@@ -125,9 +125,9 @@ def fast_shift(source, shift, order=1, mode='wrap', prefilter=True, shape=None, 
     """
     import scipy.ndimage.interpolation
     shift = np.array(shift)
-    if output_shape is None:
-        output_shape = source.shape
-    _shape = tuple(np.array(output_shape) + 2*pad)
+    if shape is None:
+        shape = source.shape
+    _shape = tuple(np.array(shape) + 2*pad)
     _inds = np.indices(_shape)
     _floor = np.floor(shift)
     _shift = (shift - _floor)
@@ -145,7 +145,7 @@ def fast_shift(source, shift, order=1, mode='wrap', prefilter=True, shape=None, 
         )
     else:
         interped = shifted
-    x,y = np.array(output_shape) + pad
+    x,y = np.array(shape) + pad
     return interped[pad:x,pad:y]
 
     
