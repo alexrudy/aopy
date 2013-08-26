@@ -20,6 +20,8 @@ import collections
 
 from pyshell.util import is_type_factory
 
+__all__ = ['istype', 'resolve', 'configure_class', 'ConsoleContext', '_ConsoleContext']
+
 def istype(instance, ttype):
     """Tests whether an instance is of a current type."""
     return is_type_factory(ttype)(instance)
@@ -52,12 +54,12 @@ def configure_class(configuration):
         raise ValueError("Can't understand {}".format(configuration))
     return class_obj
 
-class ConsoleContext(object):
+class _ConsoleContext(object):
     """Allow a switch between range and progress-bar"""
     _console = False
     
     def __init__(self):
-        super(ConsoleContext, self).__init__()
+        super(_ConsoleContext, self).__init__()
         self._looper = self._pseudoloop
         self.console = True
     
@@ -97,3 +99,4 @@ class ConsoleContext(object):
             self._looper = self._pseudoloop
         self._console = value
         
+ConsoleContext = _ConsoleContext

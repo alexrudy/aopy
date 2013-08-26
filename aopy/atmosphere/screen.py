@@ -48,7 +48,7 @@ import warnings
 import numpy as np
 import astropy.units as u
 
-from aopy.util.basic import ConsoleContext
+from aopy.util.basic import _ConsoleContext
 from aopy.util.units import ensure_quantity
 
 
@@ -175,7 +175,7 @@ def _generate_screen(f,seed=None,shf=None,du=None):
     shn = (_shn[:4] + 1j*_shn[4:])/np.sqrt(2.0)
     return _generate_screen_with_noise(f,rn,shf,shn,du)
 
-class Screen(ConsoleContext):
+class Screen(_ConsoleContext):
     """A static Kolmolgorov Phase Screen Class. This class builds a Komologorv Filter and then generates a phase screen for that filter.
     Once a single phase screen has been generated, it is cached in the object. For a new phase screen, set a different :attr:`seed` value.
     
