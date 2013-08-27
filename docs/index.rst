@@ -51,6 +51,7 @@ Contents:
     plugins/index
     plugins/keck
     plugins/mcaobench
+    plugins/fmts
 
 
 Indices and tables
