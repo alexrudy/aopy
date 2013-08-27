@@ -50,6 +50,7 @@ Contents:
     
     plugins/index
     plugins/keck
+    plugins/mcaobench
 
 
 Indices and tables
