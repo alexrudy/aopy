@@ -57,6 +57,7 @@ def configure_class(configuration):
 class _ConsoleContext(object):
     """Allow a switch between range and progress-bar"""
     _console = False
+    _looper = None
     
     def __init__(self):
         super(_ConsoleContext, self).__init__()
@@ -66,6 +67,8 @@ class _ConsoleContext(object):
     @property
     def looper(self):
         """The range function"""
+        if self._looper is None:
+            return self._pseudoloop
         return self._looper
     
     @property
@@ -85,7 +88,7 @@ class _ConsoleContext(object):
             except TypeError:
                 raise TypeError("Argument must be int or sequence")
             else:
-                iterator = iter(xrange(self._total))
+                iterator = iter(xrange(total))
         return iterator
         
         
