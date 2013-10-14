@@ -29,6 +29,9 @@ setup(
     entry_points = {
         'console_scripts' : [
             'WCAO = wcao.controllers.controller:WCAOController.script'
-        ]
+        ],
+        'wcao.plugins' : [
+            'WCAO = wcao:configuration'
+        ],
     }
     )
