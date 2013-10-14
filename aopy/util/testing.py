@@ -62,12 +62,12 @@ class PIDLYTests(object):
         if self.IDL_ENABLE:        
             import pidly
             self.IDL = pidly.IDL()
-            self.IDL("!PATH=expand_path(\"<IDL_default>\")", print_output=False)
+            self.IDL('!PATH=expand_path("<IDL_default>")', print_output=False)
             if self.IDL_LIBRARY:
                 self.IDL_PATHS.append(self.IDL_LIBRARY)
             for PATH in self.IDL_PATHS:
-                canonical = os.path.normpath(os.path.join(os.path.dirname(__file__),"../../",PATH))
-                self.IDL("!PATH=!PATH+\":\"+expand_path(\"{path}\")".format(path=canonical), print_output=False)
+                canonical = os.path.relpath(PATH)
+                self.IDL('!PATH=!PATH+":"+expand_path("{path}")'.format(path=canonical), print_output=False)
         
     def teardown(self):
         """Close IDL"""
