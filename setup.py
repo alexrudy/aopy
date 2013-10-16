@@ -28,7 +28,8 @@ setup(
     author_email = "alex.rudy@gmail.com",
     entry_points = {
         'console_scripts' : [
-            'WCAO = wcao.controllers.controller:WCAOController.script'
+            'WCAO = wcao.controllers.controller:WCAOController.script',
+            'PlayPhase = aopy.wavefront.cli:PhasePlayer.script'
         ],
         'wcao.plugins' : [
             'WCAO = wcao:configuration'
