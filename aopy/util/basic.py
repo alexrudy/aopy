@@ -81,7 +81,6 @@ class _ConsoleContext(object):
         from astropy.utils.misc import isiterable
         if isiterable(total_or_items):
             iterator = iter(total_or_items)
-            total = len(total_or_items)
         else:
             try:
                 total = int(total_or_items)
