@@ -31,6 +31,9 @@ class PhasePlayer(pyshell.CLIEngine):
         self.parser.add_argument('file', help="The input FITS file.", metavar="file.fits")
         self.parser.add_argument('--show',action='store_true',help="Show the movie, don't save it.")
         self.parser.add_argument('--idl', help='IDL Scope to use for .sav files', default='')
+        self.parser.add_argument('--log', action='store_true', help='Log-scale data')
+        self.parser.add_argument('--delay', help="delay movie start by n frames", type=int, default=0)
+        self.parser.add_argument('--sigclip', action='store_true', help='use sigma-clipped data (3sig)')
         
     def get_data(self, filename):
         """Get the data from the file"""
@@ -63,7 +66,7 @@ class PhasePlayer(pyshell.CLIEngine):
     def do(self):
         """Run the phase screen."""
         import matplotlib
-        matplotlib.use('agg')
+        matplotlib.use('TkAgg')
         matplotlib.rcParams['text.usetex'] = False
         from matplotlib import verbose
         verbose.set_level('debug')
@@ -72,19 +75,32 @@ class PhasePlayer(pyshell.CLIEngine):
         
         self.data = self.get_data(self.opts.file)
         self.ntime = self.data.shape[0]
-        vlim = (np.min(self.data),np.max(self.data))
+        
+        if self.opts.log:
+            self.data -= np.min(self.data) - 1.0
+            self.data = np.log10(self.data)
+            
+        if self.opts.delay > 0:
+            self.data = self.data[self.opts.delay:,...]
+            
+        if self.opts.sigclip:
+            sigma = np.std(self.data)
+            mean = np.mean(self.data)
+            vlim = (mean - 3 * sigma, mean + 3 * sigma)        
+        else:
+            vlim = (np.min(self.data),np.max(self.data))
         
         fig = plt.figure(figsize=(9,5))
         ax = fig.add_subplot(111)
         self.I = ax.imshow(self.data[0,...],interpolation='nearest',vmin=vlim[0],vmax=vlim[1])
         fig.colorbar(self.I)
         self.title = ax.set_title("Phase at t=%5d/%5d" % (0,self.ntime))
-        anim = animation.FuncAnimation(fig, self.animate, frames=self.ntime, interval=0.1)
+        anim = animation.FuncAnimation(fig, self.animate, frames=self.data.shape[0], interval=1)
         if self.opts.show:
+            print("Showing Phase in live window")
             plt.show()
         else:
-            anim.save(self.opts.movie, fps=30,
-            writer='ffmpeg')
+            anim.save(self.opts.movie, fps=30, writer='ffmpeg')
         
     def animate(self,t):
         """Animate the screen!"""
