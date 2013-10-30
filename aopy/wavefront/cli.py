@@ -34,6 +34,7 @@ class PhasePlayer(pyshell.CLIEngine):
         self.parser.add_argument('--log', action='store_true', help='Log-scale data')
         self.parser.add_argument('--delay', help="delay movie start by n frames", type=int, default=0)
         self.parser.add_argument('--sigclip', action='store_true', help='use sigma-clipped data (3sig)')
+        self.parser.add_argument('-v','--verbose', action='store_true', help='be verbose')
         
     def get_data(self, filename):
         """Get the data from the file"""
@@ -68,8 +69,12 @@ class PhasePlayer(pyshell.CLIEngine):
         import matplotlib
         matplotlib.use('TkAgg')
         matplotlib.rcParams['text.usetex'] = False
-        from matplotlib import verbose
-        verbose.set_level('debug')
+        
+        if self.opts.verbose:
+            from matplotlib import verbose
+            verbose.set_level('debug')
+        
+        from astropy.utils.console import ProgressBar
         import matplotlib.pyplot as plt
         from matplotlib import animation
         
@@ -100,14 +105,17 @@ class PhasePlayer(pyshell.CLIEngine):
             print("Showing Phase in live window")
             plt.show()
         else:
-            anim.save(self.opts.movie, fps=30, writer='ffmpeg')
+            print("Writing Movie...")
+            with ProgressBar(self.data.shape[0], file=object() if self.opts.verbose else None) as self.pbar:
+                anim.save(self.opts.movie, fps=30, writer='ffmpeg')
         
     def animate(self,t):
         """Animate the screen!"""
         frame = self.data[t,...]
         self.I.set_data(frame)
         self.title.set_text("Phase at t=%5d/%5d" % (t,self.ntime))
-        
+        if hasattr(self,'pbar'):
+            self.pbar.update()
     
 
 if __name__ == '__main__':
