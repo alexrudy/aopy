@@ -7,22 +7,9 @@
 #  Copyright 2013 Jaberwocky. All rights reserved.
 # 
 """
-:mod:`aperture.core <aopy.aperture.core>` – Aperture Classes
-============================================================
-
-This module is useful for representing apertures. It uses algorithms from :ref:`util.math.aperture` in :mod:`util.math <aopy.util.math>`.
-
 :class:`Aperture` – Making Apertures
 ------------------------------------
-
-.. autoclass::
-    Aperture
-    :members:
-    
-.. autoclass::
-    DMAperture
-    :members:
-    :inherited-members:
+This module is useful for representing apertures. It uses algorithms from :ref:`util.math.aperture` in :mod:`util.math <aopy.util.math>`.
 
 """
 from __future__ import (absolute_import, unicode_literals, division,

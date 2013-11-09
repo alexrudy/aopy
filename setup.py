@@ -7,8 +7,6 @@
 #  Copyright 2012 Alexander Rudy. All rights reserved.
 # 
 
-from distribute_setup import use_setuptools
-use_setuptools()
 from setuptools import setup, find_packages
 
 from aopy import version
@@ -16,7 +14,7 @@ from aopy import version
 setup(
     name = "aopy",
     version = version,
-    packages = find_packages(exclude=['']),
+    packages = find_packages(exclude=['tests']),
     package_data = {'aopy': ['aopy/data/*'],
     'wcao.estimators.pidly' : ['idl/*.pro'],
     'wcao.data' : ['*.txt','*.yml'],
@@ -25,12 +23,16 @@ setup(
     'wcao' : ['*.yml'],
     },
     install_requires = ['distribute','numpy>=1.7','scipy>=0.11','pyshell>=0.3.2','scikit-image','astropy>=0.2.4'],
-    test_requires = ['pIDLy','nosetests'],
+    tests_require = ['pIDLy','nosetests'],
     author = "Alexander Rudy",
     author_email = "alex.rudy@gmail.com",
     entry_points = {
         'console_scripts' : [
-            'WCAO = wcao.controllers.controller:WCAOController.script'
-        ]
+            'WCAO = wcao.controllers.controller:WCAOController.script',
+            'PlayPhase = aopy.wavefront.cli:PhasePlayer.script'
+        ],
+        'wcao.plugins' : [
+            'WCAO = wcao:configuration'
+        ],
     }
     )

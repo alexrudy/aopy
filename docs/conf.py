@@ -252,4 +252,5 @@ intersphinx_mapping = {
 'numpy' : ('http://docs.scipy.org/doc/numpy-1.7.0/reference/','http://docs.scipy.org/doc/numpy-1.7.0/objects.inv'),
 'scipy' : ('http://docs.scipy.org/doc/scipy-0.12.0/reference/',None),
 'skimage' : ('http://scikit-image.org/docs/dev/',None),
+'astropy' : ('http://docs.astropy.org/en/latest/', None)
 }

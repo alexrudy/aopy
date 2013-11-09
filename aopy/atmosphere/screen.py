@@ -7,14 +7,14 @@
 #  Copyright 2013 Jaberwocky. All rights reserved.
 #
 """
-:mod:`atmosphere.screen <aopy.atmosphere.screen>` – Static Kolmolgorov Screen Generation
-========================================================================================
+:mod:`~aopy.atmosphere.screen` – Static Kolmolgorov Screen Generation
+---------------------------------------------------------------------
 
 This module is an object-oriented port of Don Gavel's ``screengen.pro``,
 a program from generating Kolmolgorov phase screens.
 
 :class:`Screen` – Static Kolmolgorov phase screens
---------------------------------------------------
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. autoclass::
     Screen
@@ -23,7 +23,7 @@ a program from generating Kolmolgorov phase screens.
     
 
 Internal Phase Screen Functions
--------------------------------
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 These functions are the underlying algorithm for :class:`Screen`. 
 It is not recommended that you use them, but they are useful for testing
@@ -48,7 +48,7 @@ import warnings
 import numpy as np
 import astropy.units as u
 
-from aopy.util.basic import ConsoleContext
+from aopy.util.basic import _ConsoleContext
 from aopy.util.units import ensure_quantity
 
 
@@ -175,15 +175,15 @@ def _generate_screen(f,seed=None,shf=None,du=None):
     shn = (_shn[:4] + 1j*_shn[4:])/np.sqrt(2.0)
     return _generate_screen_with_noise(f,rn,shf,shn,du)
 
-class Screen(ConsoleContext):
+class Screen(_ConsoleContext):
     """A static Kolmolgorov Phase Screen Class. This class builds a Komologorv Filter and then generates a phase screen for that filter.
     Once a single phase screen has been generated, it is cached in the object. For a new phase screen, set a different :attr:`seed` value.
     
     :param tuple shape: The shape of the screen (x,y), as a tuple.
-    :param float r0: :math:`r_0` fried parameter for the screen, in meters (or relative to ``du`` appropriately). Accepts an :mod:`astropy` class:`~astropy.units.Quantity`.
+    :param float r0: :math:`r_0` fried parameter for the screen, in meters (or relative to ``du`` appropriately). Accepts an :mod:`astropy` :class:`~astropy.units.Quantity`.
     :param int seed: Random number generator seed for :mod:`numpy.random`
     :param float du: Pixel size, in meters
-    :param float L0: :math:`L_0` outer scale for the screen. Accepts an :mod:`astropy` class:`~astropy.units.Quantity`.
+    :param float L0: :math:`L_0` outer scale for the screen. Accepts an :mod:`astropy` :class:`~astropy.units.Quantity`.
     :param int nsh: Number of subharmonics. (default``=0`` for no subharmonics)
     :param bool delay: Delay initialization until :meth:`setup` is called.
     
@@ -218,6 +218,17 @@ class Screen(ConsoleContext):
         if not delay:
             self.setup()
         
+    # Variable Setup
+    _shf = None
+    _filter = None
+    _screen = None
+    _shape = tuple()
+    _r0 = None
+    _du = None
+    _L0 = None
+    _nsh = None
+    _seed = None
+        
     @property
     def shape(self):
         """Shape of the screen (n x m). **Read Only**"""
@@ -225,17 +236,17 @@ class Screen(ConsoleContext):
         
     @property
     def r0(self):
-        """Fried's parameter :math:`r_0`, the coherence length for the screen, as an :mod:`astropy` class:`~astropy.units.Quantity`. **Read Only**"""
+        """Fried's parameter :math:`r_0`, the coherence length for the screen, as an :mod:`astropy` :class:`~astropy.units.Quantity`. **Read Only**"""
         return self._r0
         
     @property
     def L0(self):
-        """The outer scale length of the turbulence, :math:`L_0`, as an :mod:`astropy` class:`~astropy.units.Quantity`. **Read Only**"""
+        """The outer scale length of the turbulence, :math:`L_0`, as an :mod:`astropy` :class:`~astropy.units.Quantity`. **Read Only**"""
         return self._L0
         
     @property
     def du(self):
-        """Pixel size, as an :mod:`astropy` class:`~astropy.units.Quantity`. **Read Only**"""
+        """Pixel size, as an :mod:`astropy` :class:`~astropy.units.Quantity`. **Read Only**"""
         return self._du
         
     @property
@@ -287,7 +298,7 @@ class Screen(ConsoleContext):
         
         Generate the filter required for this screen object. This method generates the filter
         (with subharmonics, if requested) that is used to generate the screen."""
-        self._filter, self._shf = _generate_filter(self.shape,self.r0.value,self.du.value,self.L0.value,self.nsh)
+        self._filter, self._shf = _generate_filter(self.shape,self.r0.to('meter').value,self.du.to('meter').value,self.L0.to('meter').value,self.nsh)
         
     def _generate_screen(self):
         """Use :meth:`setup` to control this method.
@@ -295,7 +306,7 @@ class Screen(ConsoleContext):
         Generate the actual screen, using the filters produced by :meth:`_generate_filter`
         
         """
-        self._screen = _generate_screen(self._filter,self.seed,self._shf,self.du.value)
+        self._screen = _generate_screen(self._filter,self.seed,self._shf,self.du.to('meter').value)
         
     def __call__(self):
         """Generates and returns a new independent screen."""

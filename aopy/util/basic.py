@@ -6,20 +6,25 @@
 #  Created by Alexander Rudy on 2013-05-05.
 #  Copyright 2013 Alexander Rudy. All rights reserved.
 # 
+"""
+:mod:`~aopy.util.basic` – Utiltiy Functions
+-------------------------------------------
+
+"""
+
 
 from __future__ import (absolute_import, unicode_literals, division,
                         print_function)
 
 import collections
 
-def istype(instance,ttype):
-    """docstring for is_type"""
-    try:
-        ttype(instance)
-    except Exception:
-        return False
-    else:
-        return True
+from pyshell.util import is_type_factory
+
+__all__ = ['istype', 'resolve', 'configure_class', 'ConsoleContext', '_ConsoleContext']
+
+def istype(instance, ttype):
+    """Tests whether an instance is of a current type."""
+    return is_type_factory(ttype)(instance)
         
 def resolve(name):
     """Resolve a dotted name to a global object."""
@@ -49,16 +54,21 @@ def configure_class(configuration):
         raise ValueError("Can't understand {}".format(configuration))
     return class_obj
 
-class ConsoleContext(object):
+class _ConsoleContext(object):
     """Allow a switch between range and progress-bar"""
+    _console = False
+    _looper = None
+    
     def __init__(self):
-        super(ConsoleContext, self).__init__()
+        super(_ConsoleContext, self).__init__()
         self._looper = self._pseudoloop
         self.console = True
     
     @property
     def looper(self):
         """The range function"""
+        if self._looper is None:
+            return self._pseudoloop
         return self._looper
     
     @property
@@ -68,17 +78,16 @@ class ConsoleContext(object):
         
     def _pseudoloop(self,total_or_items):
         """docstring for _pseudoloop"""
-        from astropy.util.misc import isiterable
+        from astropy.utils.misc import isiterable
         if isiterable(total_or_items):
             iterator = iter(total_or_items)
-            total = len(total_or_items)
         else:
             try:
                 total = int(total_or_items)
             except TypeError:
                 raise TypeError("Argument must be int or sequence")
             else:
-                iterator = iter(xrange(self._total))
+                iterator = iter(xrange(total))
         return iterator
         
         
@@ -92,3 +101,4 @@ class ConsoleContext(object):
             self._looper = self._pseudoloop
         self._console = value
         
+ConsoleContext = _ConsoleContext

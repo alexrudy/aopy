@@ -9,14 +9,9 @@
 """
 .. _util.recarray:
 
-Numerical Tasks
----------------
-    
-.. autofunction::
-    smooth
-    
-.. autofunction::
-    lodtorec
+:mod:`~aopy.util.recarray` – Handle Record Arrays
+-------------------------------------------------
+
 """
 
 from __future__ import (absolute_import, unicode_literals, division,
@@ -59,7 +54,7 @@ def lodtorec(listofdicts,order=None,dtypes=None):
                 raise KeyError("Column '{:s}' was not in the master!".format(key))
             rowcols[key] = True
         if not all(rowcols.values()):
-            missing_cols = [ key for key in columns.keys() if rowcols[key] ]
+            missing_cols = [ key for key in columns.keys() if ~rowcols[key] ]
             raise KeyError("Missing columns {:s} for row {:d}".format(missing_cols,i))
     
     if order is None:
