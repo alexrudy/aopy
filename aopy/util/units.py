@@ -43,10 +43,17 @@ def format_quantity(q, fmt="{:g}", ufmt="{:s}", u=None, basefmt="{value:s} {unit
     if u is not None:
         q = q.to(u)
     
-    return basefmt.format(
-        value = fmt.format(q.value),
-        unit = ufmt.format(q.unit)
-    )
+    try:
+        string = basefmt.format(
+            value = fmt.format(q.value),
+            unit = ufmt.format(q.unit)
+        )
+    except ValueError:
+        string = basefmt.format(
+            value = repr(q.value),
+            unit = ufmt.format(q.unit)
+        )
+    return string
     
 def quantity_representer(dumper, data):
     """A YAML representer for quantities"""
