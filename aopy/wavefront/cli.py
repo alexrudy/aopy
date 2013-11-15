@@ -97,7 +97,7 @@ class PhasePlayer(pyshell.CLIEngine):
         
         fig = plt.figure(figsize=(9,5))
         ax = fig.add_subplot(111)
-        self.I = ax.imshow(self.data[0,...],interpolation='nearest',vmin=vlim[0],vmax=vlim[1])
+        self.I = ax.imshow(self.data[0,...],interpolation='nearest',vmin=vlim[0],vmax=vlim[1], cmap='binary')
         fig.colorbar(self.I)
         self.title = ax.set_title("Phase at t=%5d/%5d" % (0,self.ntime))
         anim = animation.FuncAnimation(fig, self.animate, frames=self.data.shape[0], interval=1)
