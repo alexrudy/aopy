@@ -50,7 +50,7 @@ class PhasePlayer(pyshell.CLIEngine):
         """Get the data from a FITS file."""
         from astropy.io import fits
         with fits.open(filename) as HDUs:
-            return HDUs[0].data
+            return HDUs[0].data.copy()
         
     def get_idl_data(self, filename):
         """Read the data from an IDL save file."""
