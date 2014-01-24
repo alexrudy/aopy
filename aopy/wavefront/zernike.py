@@ -270,7 +270,6 @@ def noll_to_zern(j):
     if not int(n) == n:
         raise ValueError("This should never happen, n={:f} should be an integer.".format(n))
     if not int(m) == m:
-        raise ValueError("This should never happen, n={:f} should be an integer.".format(m))
         raise ValueError("This should never happen, m={:f} should be an integer.".format(m))
     
     return (int(n), int(m))
@@ -379,9 +378,9 @@ def zernike_triangle(figure=None, noll=16, size=40, radius=18):
     
     gs = matplotlib.gridspec.GridSpec(rows, cols)
     
-    for j in range(1,int(figures)+1):
+    for j in range(int(figures)):
         n, m = noll_to_zern(j)
-        x = rows + m
+        x = rows + m + 1
         Z = zernike_noll_cartesian(j, X, Y)
         Z[ap != 1] = np.nan
         
@@ -418,13 +417,13 @@ def zernike_slope_triangle(figure=None, noll=16, size=40, radius=18):
     
     for j in range(1,int(figures)+1):
         n, m = noll_to_zern(j)
-        x = 2 * (rows + m)
+        x = 2 * (rows + m + 1)
         Z_x, Z_y = zernike_slope_cartesian(n, m, X, Y)
         Z_x[ap != 1] = np.nan
         Z_y[ap != 1] = np.nan
         Z = np.hstack((Z_x, Z_y))
         
-        ax = figure.add_subplot(gs[n,x-2:x+2])
+        ax = figure.add_subplot(gs[n - 1,x-2:x+2])
         ax.imshow(Z, interpolation='nearest')
         ax.get_xaxis().set_visible(False)
         ax.get_yaxis().set_visible(False)

@@ -16,13 +16,16 @@ import time
 try:
     import pyshell
     import pyshell.util
-
+    import pyshell.loggers
+    
     pyshell.util.ipydb()
+    pyshell.loggers.activateSimpleLogging('all')
     log = pyshell.getSimpleLogger("__main__")
-except ImportError:
+except ImportError as e:
     import logging
     log = logging.getLogger(__name__)
     logging.basicConfig()
+    print(e)
 
 
 def test_array(a,b,name=""):
@@ -46,7 +49,7 @@ args = {
     'nsh':8,
 }
 # Number fo timing trials
-ntrial = int(1)
+ntrial = int(100)
 # Path to Don's IDL Libraries
 DON_PATH = "./IDL/screengen"
 idl_output = True
