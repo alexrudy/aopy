@@ -271,6 +271,7 @@ def noll_to_zern(j):
         raise ValueError("This should never happen, n={:f} should be an integer.".format(n))
     if not int(m) == m:
         raise ValueError("This should never happen, n={:f} should be an integer.".format(m))
+        raise ValueError("This should never happen, m={:f} should be an integer.".format(m))
     
     return (int(n), int(m))
 

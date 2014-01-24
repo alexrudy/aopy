@@ -298,7 +298,9 @@ class Screen(_ConsoleContext):
         
         Generate the filter required for this screen object. This method generates the filter
         (with subharmonics, if requested) that is used to generate the screen."""
-        self._filter, self._shf = _generate_filter(self.shape,self.r0.to('meter').value,self.du.to('meter').value,self.L0.to('meter').value,self.nsh)
+        self._filter, self._shf = _generate_filter(self.shape, 
+            self.r0.to('meter').value, self.du.to('meter').value,
+            self.L0.to('meter').value, self.nsh)
         
     def _generate_screen(self):
         """Use :meth:`setup` to control this method.
@@ -306,7 +308,7 @@ class Screen(_ConsoleContext):
         Generate the actual screen, using the filters produced by :meth:`_generate_filter`
         
         """
-        self._screen = _generate_screen(self._filter,self.seed,self._shf,self.du.to('meter').value)
+        self._screen = _generate_screen(self._filter, self.seed, self._shf, self.du.to('meter').value)
         
     def __call__(self):
         """Generates and returns a new independent screen."""

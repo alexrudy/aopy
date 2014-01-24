@@ -66,13 +66,13 @@ class BlowingScreen(Screen):
         super(BlowingScreen, self).__init__(shape, r0, seed, delay=True, **kwargs)
         # Sanitize Velocities
         if vel is None:
-            vel = [1.0,0.0]
+            vel = [1.0, 0.0]
         vel = np.array(vel)
         if vel.shape != (2,):
             raise ValueError("Velocity must have shape (2,), not {}".format(vel.shape))
         
         # Setup instance variables
-        self._vel = ensure_quantity(vel,unit=u.meter/u.second)
+        self._vel = ensure_quantity(vel, unit=u.meter/u.second)
         self._tmax = ensure_quantity(tmax, unit=u.second)
         self._dt = ensure_quantity(dt, unit=u.second)
         self._outshape = tuple(np.copy(self.shape).astype(np.int))
