@@ -6,10 +6,11 @@ This is a module for doing Adaptive-Optics-y things in Python. There are several
 Layout
 ------
 
-* ``aopy`` - Basic Adaptive Optics routines. These directories will hold python ports of Don Gavel's libraries. This should eventual be split into its own library.
+* ``aopy`` - Basic Adaptive Optics routines. These directories will hold python ports of Don Gavel's libraries. This should eventualy be split into its own library.
 * ``docs`` - Sphinx based documentation for all of the python code in here.
 * ``external`` - External python libraries that are used.
 * ``IDL`` - IDL libraries and programs.
+* ``plugins`` - Sub-modules which perform specific tasks within the WCAO framework
 * ``tests`` - Python unit tests.
 * ``wcao`` - Wind-corrective-adaptive-optics, the python wind estimation framework
 
