@@ -3,6 +3,10 @@ Development
 
 Below are things that I need to do to improve the performance of the WCAO/FMTS libraries.
 
+Data Manipulation
+-----------------
+- Rewrite MCAOIngest to handle new file formats.
+
 
 Pairity with IDL
 ----------------
@@ -25,6 +29,7 @@ Improvements to Internal Algorithms
 Documentation
 -------------
 - add ``automodapi`` support.
+- automatic overwriting of log files / many log file management.
 
 Diagnostic Tools
 ----------------
