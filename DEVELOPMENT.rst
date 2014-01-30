@@ -6,6 +6,7 @@ Below are things that I need to do to improve the performance of the WCAO/FMTS l
 Data Manipulation
 -----------------
 - Rewrite MCAOIngest to handle new file formats.
+- Object Model for MCAOIngest
 
 Pairity with IDL
 ----------------
@@ -49,6 +50,7 @@ Data Structures and Features
 - Variable Gain TF Models
 - TF Model Persistance
 - Closer linking of the various PSD grids to each other.
+- Better memory controls. MMAP'd large files? Removing old telemetry?
 
 Refactoring
 -----------
