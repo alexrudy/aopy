@@ -7,17 +7,20 @@ Data Manipulation
 -----------------
 - Rewrite MCAOIngest to handle new file formats.
 
-
 Pairity with IDL
 ----------------
-- Match Fitting Performance to IDL libraries
+- Match Fitting Performance to IDL libraries [DONE]
 - Match Simulated Data Performance to IDL libraries
 - Make IDL respect directory structures
 - IDL-YAML interaction?
 
+IDL Library Improvements
+------------------------
+- IO using python library format [PARTIAL]
+
 Things that are broken
 ----------------------
-- Configfile loading, especially ad-hoc config files in the working directory
+- Configfile loading, especially ad-hoc config files in the working directory [Mostly FIXED]
 - Sanitizing or Generating Telemetry Data.
 
 Improvements to Internal Algorithms
@@ -34,8 +37,9 @@ Documentation
 Diagnostic Tools
 ----------------
 - Comparison Tools for IDL results
-- Peak Fitting Diagnostic with Residuals
+- Peak Fitting Diagnostic with Residuals [DONE]
 - Interactive Peak Fitting Exploration Tool
+- Interactive Found Peaks tool [DONE]
 - Interactive layer matching tool
 
 Data Structures and Features
