@@ -22,10 +22,12 @@ IDL Library Improvements
 Things that are broken
 ----------------------
 - Configfile loading, especially ad-hoc config files in the working directory [Mostly FIXED]
-- Sanitizing or Generating Telemetry Data.
+- Sanitizing or Generating Telemetry Data. [FIXED]
+- There is a 90º rotation somewhere in the code for displaying / fitting peaks.
 
 Improvements to Internal Algorithms
 -----------------------------------
+- Arbitrary and periodic periodogram masks
 - Variable Weighting Algorithms
 - Log/Log Fitting routines
 - Log/Linear Fitting routines
@@ -41,7 +43,8 @@ Diagnostic Tools
 - Peak Fitting Diagnostic with Residuals [DONE]
 - Interactive Peak Fitting Exploration Tool
 - Interactive Found Peaks tool [DONE]
-- Interactive layer matching tool
+- Interactive layer matching tool [DONE]
+- Residuals timeseries examination and periodgram masking diagnostics
 
 Data Structures and Features
 ----------------------------
@@ -50,7 +53,7 @@ Data Structures and Features
 - Variable Gain TF Models
 - TF Model Persistance
 - Closer linking of the various PSD grids to each other.
-- Better memory controls. MMAP'd large files? Removing old telemetry?
+- Better memory controls. MMAP'd large files? Removing old telemetry? [FIX started]
 
 Refactoring
 -----------
@@ -65,7 +68,6 @@ Refactoring
     - Information relevant to the specific case
     - Information relevant to the algorithm
     - General, possibly unused, configuration of classes etc.
-
-Plans
-=====
+- Sub-data products should appear as first class data products, and link via dictionaries to their children.
+- Classes should be self-configured in one place by meta-classes. I.E. you should set all of the configuration items from the YAML file on the class itself. The YAML file should still override those values, but the defaults should be held in the classes and a registry-built metaclass.
 
