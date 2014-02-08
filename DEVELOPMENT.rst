@@ -54,13 +54,15 @@ Data Structures and Features
 - TF Model Persistance
 - Closer linking of the various PSD grids to each other.
 - Better memory controls. MMAP'd large files? Removing old telemetry? [FIX started]
+- Management of Units (Real / Simulated 3.0m / NGAO sized?)
 
 Refactoring
 -----------
 - 'analysis' module should change names.
 - 'controllers' should be rethought
 - API interface for use on the test bench.
-- Restructuring for continuous intake of data
+- Restructuring for continuous intake of data.
+- Threading of all operations - No main thread computation.
 - Cases should be encapsulated in SQLite
 - Cases could be held on a server, and downloaded when needed
 - Configuration could be subdivided:
@@ -70,4 +72,5 @@ Refactoring
     - General, possibly unused, configuration of classes etc.
 - Sub-data products should appear as first class data products, and link via dictionaries to their children.
 - Classes should be self-configured in one place by meta-classes. I.E. you should set all of the configuration items from the YAML file on the class itself. The YAML file should still override those values, but the defaults should be held in the classes and a registry-built metaclass.
+- IO and other subclasses should be refactored to be classified.
 
