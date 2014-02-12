@@ -24,6 +24,7 @@ movies
 # Sphinx
 _build
 _generated
+api
 
 # Packages/installer info
 *.egg
