@@ -7,14 +7,12 @@ Layout
 ------
 
 * ``aopy`` - Basic Adaptive Optics routines. These directories will hold python ports of Don Gavel's libraries. This should eventualy be split into its own library.
+* ``cextern`` - ``c`` source files.
 * ``docs`` - Sphinx based documentation for all of the python code in here.
-* ``external`` - External python libraries that are used.
-* ``IDL`` - IDL libraries and programs.
-* ``plugins`` - Sub-modules which perform specific tasks within the WCAO framework
+* ``IDL`` - IDL code which does the same thing as this python code, used for parity testing.
+* ``licences`` - The licenses used for this code.
+* ``scripts`` - Command line tools for this code.
 * ``tests`` - Python unit tests.
-* ``wcao`` - Wind-corrective-adaptive-optics, the python wind estimation framework
-
-
 
 Requirements
 ------------
