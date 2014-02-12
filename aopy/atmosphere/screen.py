@@ -13,31 +13,6 @@
 This module is an object-oriented port of Don Gavel's ``screengen.pro``,
 a program from generating Kolmolgorov phase screens.
 
-:class:`Screen` – Static Kolmolgorov phase screens
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-.. autoclass::
-    Screen
-    :members:
-    :exclude-members: get_screen
-    
-
-Internal Phase Screen Functions
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-These functions are the underlying algorithm for :class:`Screen`. 
-It is not recommended that you use them, but they are useful for testing
-this module against the original ``screengen.pro``, as is done in ``examples/screengen.py``
-
-.. autofunction::
-    _generate_filter
-
-.. autofunction::
-    _generate_screen
-    
-.. autofunction::
-    _generate_screen_with_noise
-
 """
 
 from __future__ import (absolute_import, unicode_literals, division,

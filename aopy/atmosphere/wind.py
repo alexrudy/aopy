@@ -7,29 +7,8 @@
 #  Copyright 2013 Jaberwocky. All rights reserved.
 # 
 """
-:mod:`~aopy.atmosphere.wind` – Blowing Komolgorov Screens
-==========================================================================
-
 This module contains screens which can appear to "blow" through an aperture. Screens
 can be composed of multiple blowing layers, or a single layer.
-
-:class:`BlowingScreen` – Single Layer Wind
-------------------------------------------
-
-.. autoclass::
-    BlowingScreen
-    :members:
-    :inherited-members:
-
-
-:class:`ManyLayerScreen` – Many Layer Wind
-------------------------------------------
-
-.. autoclass::
-    ManyLayerScreen
-    :members:
-    :inherited-members:
-
 """
 
 from __future__ import (absolute_import, unicode_literals, division,

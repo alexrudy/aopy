@@ -4,7 +4,16 @@
 :mod:`AOPY` – Adaptive Optics in PYthon
 =======================================
 
-This module provides tools for working on Adaptive Optics systems in Python.
+This module provides tools for working on Adaptive Optics systems in Python. It contains several submodules which provide for a variety of functionality to do simple work with AO systems in Python.
+
+
+.. toctree::
+    :maxdepth: 2
+    
+    atmosphere.rst
+    aperture.rst
+    wavefront.rst
+    util.rst
 
 
 .. _astropy-units:
