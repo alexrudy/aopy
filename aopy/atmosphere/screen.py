@@ -7,8 +7,8 @@
 #  Copyright 2013 Jaberwocky. All rights reserved.
 #
 """
-:mod:`~aopy.atmosphere.screen` – Static Kolmolgorov Screen Generation
----------------------------------------------------------------------
+Static Kolmolgorov Screen Generation
+------------------------------------
 
 This module is an object-oriented port of Don Gavel's ``screengen.pro``,
 a program from generating Kolmolgorov phase screens.

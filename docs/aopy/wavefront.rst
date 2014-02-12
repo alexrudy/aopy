@@ -1,12 +1,10 @@
 .. module:: aopy.wavefront
-    
 
-:mod:`wavefront <aopy.wavefront>` – Wavefront Management Functions
-==================================================================
+Wavefront Management Functions
+==============================
 
-This module contains wavefront management functions.
-
-- :mod:`~aopy.wavefront.zernike` Zernike Polynomial Functions
+This module contains wavefront management functions, which produce
+and decompose basic wavefronts using the Zernikie polynomials.
 
 .. automodule::
     aopy.wavefront.zernike

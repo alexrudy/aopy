@@ -7,8 +7,8 @@
 #  Copyright 2013 Alexander Rudy. All rights reserved.
 # 
 """
-:mod:`wavefront.zernike` – Zernike Polynomials
-==============================================
+Zernike Polynomials
+===================
 
 The `zernike polynomials`_ are a modal basis set defined on a circular aperture, and so are useful for optics.
 They are defined in an even/odd fashion, with the following convention
