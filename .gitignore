@@ -19,7 +19,7 @@ __pycache__
 movies
 
 # Other generated files
-MANIFEST
+*/version.py
 
 # Sphinx
 _build
