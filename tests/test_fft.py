@@ -17,8 +17,6 @@ import numpy as np
 
 import os, os.path
 
-from pyshell.util import remove
-
 import matplotlib.pyplot as plt
 
 from .util import npeq_, PIDLYTests, npeq_or_save

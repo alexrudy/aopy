@@ -14,7 +14,6 @@ import numpy as np
 
 import os, os.path
 
-from pyshell.util import remove
 import pidly
 
 from .util import npeq_, PIDLYTests, npeq_or_save

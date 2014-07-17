@@ -23,9 +23,6 @@ import abc
 import numpy as np
 from astropy.utils.misc import lazyproperty
 
-# Personal Modules
-import pyshell
-
 # Local imports
 from ..util.math import complexmp, ignoredivide
 from ..util.basic import resolve
@@ -42,7 +39,6 @@ class FourierTransformReconstructor(object):
     
     def __init__(self, n):
         super(FourierTransformReconstructor, self).__init__()
-        self.log = pyshell.getLogger()
         self._n = n
         
     @property
@@ -129,7 +125,6 @@ class FixedFilterFTR(FourierTransformReconstructor):
         if hasattr(self, filter_function_name):
             getattr(self, filter_function_name)()
             self._filtername = filtername
-            self.log.info("Using {filter} filter.".format(filter=filtername))
         else:
             try:
                 gx, gy = resolve(filtername)(n=self.n)

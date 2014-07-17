@@ -16,9 +16,17 @@ from nose.plugins.attrib import attr
 
 import os, os.path
 import numpy as np
+import warnings
 
-from pyshell.util import remove
-
+def remove(path, warn=False, name='path'):
+    """A silent remove."""
+    try:
+        os.remove(path)
+    except OSError:
+        if warn:
+            warnings.warn("{name} '{path}' does not exist!".format(
+                name=name.capitalize(), path=path
+            )
 
 def npeq_(a,b,msg, rtol=1e-8, atol=1e-4):
     """Assert numpy equal"""
