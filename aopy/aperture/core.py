@@ -31,17 +31,14 @@ class Aperture(object):
     
     """
     def __init__(self, response):
+        self._response = None
+        self._edgemask = False
         super(Aperture, self).__init__()
         self.response = response
         if self.response.ndim != 2:
             raise ValueError, "{0!r} response dimesnions should be 2, not {0.response.ndim:d}".format(
                 self
             )
-        
-    
-    _response = None
-    _edgemask_generated = True
-    _edgemask = False
     
     def __shape_str__(self):
         """Turn the shape of the aperture into a string."""
@@ -71,10 +68,8 @@ class Aperture(object):
             response = np.ones(response,dtype=np.float)
         if not isinstance(self._edgemask,np.ndarray):
             pass 
-        elif self._edgemask_generated:
+        else:
             self._edgemask = False
-        elif self._edgemask.shape != response.shape:
-            raise ValueError("Response {0!s} and Edgemask {0!s} must have the same shape.")
         self._response = response
         self._response.flags.writeable = False
         
@@ -88,20 +83,6 @@ class Aperture(object):
             self._edgemask = edgemask(self._response).astype(np.int)
             self._edgemask_generated = True
             return self._edgemask
-            
-    @edgemask.setter
-    def edgemask(self,mask):
-        """Set the edgemask"""
-        if not isinstance(mask,np.ndarray) and mask is False:
-            self._edgemask = False
-        else:
-            mask = np.array(mask)
-            if mask.shape != self.response.shape:
-                raise ValueError("New edgemask {0!s} must have the same shape as the response matrix {0!s}".format(
-                    mask.shape, self.response.shape
-                ))
-            self._edgemask = mask
-            self._edgemask_generated = False
     
     @property
     def shape(self):
