@@ -26,7 +26,7 @@ def slope_management(ap, xs, ys):
     :param xs: The x slopes.
     :param ys: The y slopes.
     
-    The slopes must be within an aperture that has spac on the edges for correction.
+    The slopes must be within an aperture that has space on the edges for correction.
     
     """
     
