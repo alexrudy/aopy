@@ -11,6 +11,14 @@
 :mod:`ftr` – The Fourier Transfomr reconstructor
 ================================================
 
+The fourier transform reconstructor converts slopes (x and y slope grids) to
+phase values. The reconstruction works using the fourier transform of the x
+and y slopes, and applying a filter, which accounts for the way in which those
+slopes map to phase.
+
+The concept for the reconstructor, and the filters documented here, are taken
+from Lisa Poyneer's 2007 dissertaiton.
+
 """
 
 from __future__ import (absolute_import, unicode_literals, division,
@@ -21,6 +29,7 @@ import abc
 
 # Scientific Python Imports
 import numpy as np
+import scipy.fftpack
 from astropy.utils.misc import lazyproperty
 
 # Local imports
@@ -28,7 +37,8 @@ from ..util.math import complexmp, ignoredivide
 from ..util.basic import resolve
 
 class FourierTransformReconstructor(object):
-    """Fourier Transform Reconstruction Base"""
+    """Fourier Transform Reconstruction Base
+    """
     
     _gx = None
     _gy = None
@@ -59,9 +69,8 @@ class FourierTransformReconstructor(object):
     @gx.setter
     def gx(self, gx):
         """Set the x filter"""
-        if self._gx is not None:
-            raise ValueError("Cannot change filter.")
         self._gx = self._validate_filter(gx)
+        self._denominator = None
         
     @property
     def gy(self):
@@ -71,39 +80,64 @@ class FourierTransformReconstructor(object):
     @gy.setter
     def gy(self, gy):
         """Set and validate the y filter"""
-        if self._gy is not None:
-            raise ValueError("Cannot change filter.")
         self._gy = self._validate_filter(gy)
+        self._denominator = None
         
     def _validate_filter(self, _filter):
-        """docstring for _validate_filter"""
-        gf = np.array(_filter).astype(np.complex)
+        """Ensure that a filter is the correct shape.
+        
+        This method checks the shape and that the filter is all finite.
+        
+        :param _filter: The filter array to check.
+        :returns: The filter, correctly typed and checked for consistency.
+        """
+        gf = np.asarray(_filter).astype(np.complex)
         if gf.shape != (self.n, self.n):
             raise ValueError("Filter should be same shape as input data. Found {}, expected {}.".format(gf.shape, (self.n, self.n)))
         if not np.isfinite(gf).all():
             raise ValueError("Filter must be finite at all points!")
         return gf
         
-    @lazyproperty
+    @property
     def denominator(self):
         """Filter denominator"""
+        if self._denominator is not None:
+            return self._denominator
         denominator = np.abs(self.gx)**2.0 + np.abs(self.gy)**2.0
-        self._dzero = (denominator == 0.0)
-        denominator[self._dzero] = 1.0
+        denominator[(denominator == 0.0)] = 1.0
+        self._denominator = denominator
         return denominator
+        
+    def filter(self, xs_ft, ys_ft):
+        """Apply the filter to the FFT'd values.
+        
+        :param xs_ft: The x fourier transform
+        :param ys_ft: THe y fourier transform
+        :returns: The filtered estimate, fourier transformed.
+        
+        """
+        return (np.conj(self.gx) * xs_ft + np.conj(self.gy) * ys_ft)/self.denominator
         
     def reconstruct(self, xs, ys):
         """The reconstruction method"""
-        import scipy.fftpack
         
         xs_ft = scipy.fftpack.fftn(xs)
         ys_ft = scipy.fftpack.fftn(ys)
         
-        est_ft = (np.conj(self.gx) * xs_ft + np.conj(self.gy) * ys_ft)/self.denominator
+        est_ft = self.filter(xs_ft, ys_ft)
         
         estimate = np.real(scipy.fftpack.ifftn(est_ft))
         
         return estimate
+        
+    def __call__(self, xs, ys):
+        """Reconstruct the phase.
+        
+        :param xs: The x slopes.
+        :param ys: The y slopes.
+        
+        """
+        return self.reconstruct(xs, ys)
         
         
 class FixedFilterFTR(FourierTransformReconstructor):
@@ -135,7 +169,11 @@ class FixedFilterFTR(FourierTransformReconstructor):
                 self._filtername = filtername
         
     def use_mod_hud_filter(self):
-        """Apply the modified hudgin filter."""
+        """The modified hudgins filter is a geomoetry similar to
+        a Fried geometry, but where the slope measurements, rather than
+        being the difference between two adjacent points, the slope is
+        taken to be the real slope at the point in the center of four
+        phase measurement points."""
         import scipy.fftpack
         ff = scipy.fftpack.fftfreq(self.n, 1/(2*np.pi))
         fx, fy = np.meshgrid(ff, ff)
@@ -150,8 +188,16 @@ class FixedFilterFTR(FourierTransformReconstructor):
         self.gy = gy
         
     def use_fried_filter(self):
-        """docstring for use_fried_filter"""
-        import scipy.fftpack
+        """The fried filter is for a system geometry where the
+        slope measruement points are taken to be the difference
+        between two adjacent points. As such, the slopes are
+        reconstructed to be the phase points 1/2 a subaperture
+        away from the measured point.
+        
+        In this scheme, the slope measruement in the center of 
+        four phase measurement points is taken (in the x-direction)
+        to be the average of the x slope between the top measruements
+        and the x slope between the bottom measurement."""
         ff = scipy.fftpack.fftfreq(self.n, 1/(2*np.pi))
         fx, fy = np.meshgrid(ff, ff)
         
@@ -166,7 +212,6 @@ class FixedFilterFTR(FourierTransformReconstructor):
     
     def use_no_filter(self):
         """Don't apply a filter"""
-        import scipy.fftpack
         ff = scipy.fftpack.fftfreq(self.n, 1/(2*np.pi))
         fx, fy = np.meshgrid(ff, ff)
         
@@ -181,8 +226,9 @@ class FixedFilterFTR(FourierTransformReconstructor):
         
     
     def use_ideal_filter(self):
-        """Apply an Ideal Filter"""
-        import scipy.fftpack
+        """An Ideal filter represents a phase where the slope
+        measurements are taken to be a continuous sampling of
+        the phase between phase measurement points. """
         ff = scipy.fftpack.fftfreq(self.n, 1/(2*np.pi))
         fx, fy = np.meshgrid(ff, ff)
         
