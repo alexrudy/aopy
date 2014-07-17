@@ -18,11 +18,29 @@ from __future__ import (absolute_import, unicode_literals, division,
 
 import collections
 
-from pyshell.util import is_type_factory
-
 __all__ = ['istype', 'resolve', 'configure_class', 'ConsoleContext', '_ConsoleContext']
 
-def istype(instance, ttype):
+def is_type_factory(ttype):
+    """Return a function which checks if an object can be cast as a given 
+    type. Basic usage allows for checking string-casting to a specific type.
+    
+    :param ttype: Usually a ``type`` but really, any function which takes one
+        argument and which will raise a :exc:`ValueError` if that one argument can't be 
+        cast correctly.
+        
+    """
+    def is_type(obj): # pylint: disable = missing-docstring
+        try:
+            ttype(obj)
+        except ValueError:
+            return False
+        else:
+            return True
+    is_type.__doc__ = "Checks if obj can be *cast* as {!r}.".format(ttype)
+    is_type.__hlp__ = "Input must be an {!s}".format(ttype)
+    return is_type
+
+def is_type(instance, ttype):
     """Tests whether an instance is of a current type."""
     return is_type_factory(ttype)(instance)
         

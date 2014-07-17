@@ -37,6 +37,7 @@ from __future__ import (absolute_import, unicode_literals, division,
 import functools, contextlib
 import numpy as np
 
+
 def complexmp(mag, phase):
     """docstring for complexmp"""
     return mag * np.cos(phase) + mag * 1j * np.sin(phase)
