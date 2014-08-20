@@ -62,3 +62,5 @@ profile/*
 .ipynb_checkpoints
 
 development/*
+
+aopy/cython_version.py
