@@ -69,6 +69,7 @@ class PhasePlayer(pyshell.CLIEngine):
         import matplotlib
         matplotlib.use('TkAgg')
         matplotlib.rcParams['text.usetex'] = False
+        matplotlib.rcParams['savefig.dpi'] = 300
         
         if self.opts.verbose:
             from matplotlib import verbose

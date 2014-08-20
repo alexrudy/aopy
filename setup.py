@@ -95,6 +95,11 @@ except ImportError: # compatibility with Astropy 0.2 - can be removed in cases
                          package_info['package_data'], package_info['packages'],
                          package_info['package_dir'])
 
+
+package_info['entry_points'] = {
+    'console_scripts' : ['PhasePlayer = aopy.wavefront.cli:PhasePlayer.script']
+}
+
 setup(name=PACKAGENAME,
       version=VERSION,
       description=DESCRIPTION,

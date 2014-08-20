@@ -15,7 +15,7 @@ This module is useful for representing apertures. It uses algorithms from :ref:`
 from __future__ import (absolute_import, unicode_literals, division,
                         print_function)
 
-from ..util.basic import istype
+from ..util.basic import is_type
 
 import numpy as np
 
@@ -120,7 +120,7 @@ class DMAperture(Aperture):
                 h = hx
             else:
                 ValueError("{!r} does not have a square aperture visible: X({},{}) Y({},{})".format(self,lx,hx,ly,hy))
-        elif istype(n,int):
+        elif is_type(n,int):
             l = l or 0
             h = h or n
             response = np.zeros((n,n),dtype=np.float)
