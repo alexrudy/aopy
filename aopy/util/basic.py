@@ -49,12 +49,14 @@ def resolve(name):
     name = name.split('.')
     used = name.pop(0)
     found = __import__(used)
+    reload(found)
     for n in name:
         used = used + '.' + n
         try:
             found = getattr(found, n)
         except AttributeError:
-            __import__(used)
+            module = __import__(used)
+            reload(module)
             found = getattr(found, n)
     return found
     
@@ -77,8 +79,8 @@ class _ConsoleContext(object):
     _console = False
     _looper = None
     
-    def __init__(self):
-        super(_ConsoleContext, self).__init__()
+    def __init__(self, *args, **kwargs):
+        super(_ConsoleContext, self).__init__(*args, **kwargs)
         self._looper = self._pseudoloop
         self.console = True
     
