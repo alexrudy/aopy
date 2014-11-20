@@ -163,6 +163,7 @@ class PhasePlayer(pyshell.CLIEngine):
         self.parser.add_argument('--fft', action='store_true', help='FFT data before display')
         self.parser.add_argument('-v','--verbose', action='store_true', help='be verbose')
         self.parser.add_argument('--idl', help='IDL Scope to use for .sav files', default='')
+        self.parser.add_argument('--hdf5', type=six.text_type, help='Data path for HDF5 files.')
         self.parser.add_argument('file', help="The input FITS file.", metavar="file.fits")
         
         
@@ -172,6 +173,8 @@ class PhasePlayer(pyshell.CLIEngine):
             return self.get_idl_data(filename)
         elif filename.endswith('.fits') or filename.endswith('.fit') or filename.endswith('.gz'):
             return self.get_fits_data(filename)
+        elif filename.endswith('.hdf5'):
+            return self.get_hdf5_data(filename)
         else:
             self.log.warning("File is assumed to be FITS: '{}'".format(filename))
             return self.get_fits_data(filename)
@@ -196,6 +199,13 @@ class PhasePlayer(pyshell.CLIEngine):
             self.log.critical("Data is not an ndarray.")
             raise ValueError("Data: {!r}".format(data))
         
+    def get_hdf5_data(self, filename):
+        """Read the data from an HDF5 file."""
+        import h5py
+        with h5py.File(filename) as f:
+            d = f.get(self.opts.hdf5)
+            return d[...]
+    
         
     def _setup_matplotlib(self):
         """Setup the matploblit environment"""
