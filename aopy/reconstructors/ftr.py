@@ -149,14 +149,14 @@ class FourierTransformReconstructor(object):
         
         return estimate
         
-    def __call__(self, xs, ys):
+    def __call__(self, xs, ys, axes=(0,1)):
         """Reconstruct the phase.
         
         :param xs: The x slopes.
         :param ys: The y slopes.
         
         """
-        return self.reconstruct(xs, ys)
+        return self.reconstruct(xs, ys, axes=axes)
         
     _REGISTRY = {}
         
