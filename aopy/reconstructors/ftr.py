@@ -135,17 +135,17 @@ class FourierTransformReconstructor(object):
         :returns: The filtered estimate, fourier transformed.
         
         """
-        return (np.conj(self.gx) * xs_ft + np.conj(self.gy) * ys_ft)/self.denominator
+        return (xs_ft * np.conj(self.gx) + ys_ft * np.conj(self.gy))/self.denominator
         
-    def reconstruct(self, xs, ys):
+    def reconstruct(self, xs, ys, axes=(0,1)):
         """The reconstruction method"""
         
-        xs_ft = scipy.fftpack.fftn(xs)
-        ys_ft = scipy.fftpack.fftn(ys)
+        xs_ft = scipy.fftpack.fftn(xs, axes=axes)
+        ys_ft = scipy.fftpack.fftn(ys, axes=axes)
         
         est_ft = self.apply_filter(xs_ft, ys_ft)
         
-        estimate = np.real(scipy.fftpack.ifftn(est_ft))
+        estimate = np.real(scipy.fftpack.ifftn(est_ft, axes=axes))
         
         return estimate
         
