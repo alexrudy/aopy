@@ -20,7 +20,7 @@ import os, os.path
 
 class PhaseMovieView(object):
     """A view for a phase movie"""
-    def __init__(self, ax, cube, norm=None, cmap='jet', title='Phase at {0: 5.0f}/{1:05.0f}', cb_show=True, cb_label='phase error', time=None, **kwargs):
+    def __init__(self, ax, cube, norm=None, cmap='jet', title='Phase at {0: 5.0f}/{1:05.0f}', cb_show=True, cb_label='Phase error (nm)', time=None, **kwargs):
         super(PhaseMovieView, self).__init__()
         from matplotlib.colors import Normalize
         
@@ -123,6 +123,66 @@ class PhaseSummaryPlot(object):
             t = self.time[self._index]
         vline_xdata[:] = np.array([t, t], dtype=np.float)
         self._playbar.set_data(vline_xdata, vline_ydata)
+        
+class PhaseInteraction(object):
+    """A phase player interaction"""
+    def __init__(self, summary, dataviews, ntime):
+        super(PhaseInteraction, self).__init__()
+        self.summary = summary
+        self.dataviews = dataviews
+        self.fig = summary.ax.figure
+        self.paused = False
+        self.index = 0
+        self.ntime = int(ntime)
+        self.connections = {}
+        self.pbar = None
+        
+    def __call__(self):
+        """Call this object to interact."""
+        import matplotlib.pyplot as plt
+        self.connections["mouse_press"] = self.fig.canvas.mpl_connect('button_press_event', self.on_click)
+        self.connections["key_press"] = self.fig.canvas.mpl_connect('key_press_event', self.on_key)
+        self.animation()
+        plt.show()
+        
+    def animation(self, pbar=None):
+        """Make and return the animation object."""
+        from matplotlib import animation
+        
+        self.anim = animation.FuncAnimation(self.fig, self.animate, frames=self.ntime, interval=1)
+        self.pbar = pbar
+        return self.anim
+    
+    def animate(self, n):
+        """Animate the screen!"""
+        if not self.paused and self.index < self.ntime - 1:
+            self.index += 1
+        for image in self.dataviews:
+            image.update(self.index)
+        self.summary.update(self.index)
+        if self.pbar is not None:
+            self.pbar.update(self.index)
+    
+    def on_click(self, event):
+        """On click button press handler."""
+        if (event.inaxes != self.summary.ax):
+            self.paused = not self.paused
+        elif (event.inaxes == self.summary.ax):
+            self.index = event.xdata
+    
+    def on_key(self, event):
+        """On key"""
+        import matplotlib.pyplot as plt
+        if event.key in ["q","Q"]:
+            self.anim._stop()
+            plt.close(self.fig)
+        if event.key in [" "]:
+            self.paused = not self.paused
+        if event.key in ["left"] and self.index > 0:
+            self.index -= 1
+        if event.key in ["right"] and self.index < self.ntime - 1:
+            self.index += 1
+    
 
 class PhasePlayer(pyshell.CLIEngine):
     """Play me some phase!"""
